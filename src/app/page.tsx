@@ -3,71 +3,64 @@ import Image from "next/image";
 export default function Home() {
   return (
     <div className="min-h-screen bg-sand">
+
+
       {/* Hero Section */}
-      <section className="relative min-h-screen flex flex-col items-center justify-center px-4 py-20 bg-gradient-to-b from-sand to-ivory">
-        {/* Subtle texture overlay */}
-        <div className="absolute inset-0 opacity-20 bg-texture-ink-wash"></div>
+      <section className="relative min-h-screen flex flex-col items-center justify-center overflow-hidden">
+        {/* Background Image */}
+        <div className="absolute inset-0 z-0">
+          <Image
+            src="/hero-bg.jpg"
+            alt="Atmospheric clouds background"
+            fill
+            className="object-cover object-center"
+            priority
+            quality={100}
+          />
+          {/* Dark overlay for better text contrast */}
+          <div className="absolute inset-0 bg-black/40"></div>
+          {/* Gradient overlay for depth */}
+          <div className="absolute inset-0 bg-gradient-to-b from-black/20 via-transparent to-black/30"></div>
+        </div>
         
-        <div className="relative z-10 text-center max-w-4xl mx-auto">
-          {/* Primary Logo */}
-          <div className="mb-12">
+                <div className="relative z-10 max-w-7xl mx-auto px-4 py-20 flex items-center min-h-screen">
+          {/* Hero Text - Left Side */}
+          <div className="w-1/2 pr-8">
+            <div className="space-y-12">
+              <div className="space-y-8">
+                <h1 className="text-3xl md:text-5xl lg:text-6xl font-bold text-white leading-tight tracking-wide font-acumin drop-shadow-2xl">
+                  A NATURAL
+                  <br />
+                  <span className="text-sand">CREATIVE REFUGE</span>
+                </h1>
+                
+                <div className="text-lg md:text-xl text-white/90 leading-relaxed font-titillium">
+                  <p className="drop-shadow-lg">
+                  Nestled in serene mountains just outside of Chattanooga, TN- Lula Lake Sound offers artists a natural creative refuge. The studio is designed to inspire creativity and relaxation, providing the perfect environment for your sonic adventures.
+                  <br/>
+                  With state-of-the-art equipment, comfortable accommodations, and breathtaking surroundings, Lula Lake Sound is a space where artists can fully immerse themselves in their both nature and music. 
+                  </p>
+                </div>
+              </div>
+              
+              <div className="pt-8">
+                <p className="text-base text-sand/80 font-medium tracking-wider font-titillium drop-shadow-lg">
+                  LOOKOUT MOUNTAIN, CHATTANOOGA, TN
+                </p>
+              </div>
+            </div>
+          </div>
+          
+          {/* Logo - Right Side */}
+          <div className="w-1/2 flex justify-center">
             <Image
               src="/lula-lake-logo.png"
               alt="Lula Lake Sound Logo"
-              width={400}
-              height={300}
-              className="mx-auto max-w-sm md:max-w-md"
+              width={500}
+              height={375}
+              className="max-w-full h-auto filter brightness-0 invert"
               priority
             />
-          </div>
-          
-          {/* Hero Text */}
-          <div className="space-y-8">
-            <h1 className="text-4xl md:text-6xl font-bold text-forest leading-tight tracking-wide font-acumin">
-              LULA LAKE SOUND
-            </h1>
-            
-            <div className="text-lg md:text-xl text-washed-black leading-relaxed space-y-6 font-titillium max-w-3xl mx-auto">
-              <p>
-                Nestled in serene mountains just outside of Chattanooga, TN- Lula Lake Sound offers artists a natural creative refuge. The studio is designed to inspire creativity and relaxation, providing the perfect environment for your sonic adventures.
-              </p>
-              
-              <p>
-                With state-of-the-art equipment, comfortable accommodations, and breathtaking surroundings, Lula Lake Sound is a space where artists can fully immerse themselves in their both nature and music.
-              </p>
-            </div>
-            
-            <p className="text-base text-rust font-medium tracking-wider font-titillium">
-              LOOKOUT MOUNTAIN, CHATTANOOGA, TN
-            </p>
-          </div>
-        </div>
-        
-        {/* Subtle Chladni pattern overlay */}
-        <div className="absolute bottom-0 left-0 right-0 h-32 opacity-10 bg-chladni-pattern"></div>
-      </section>
-
-      {/* Studio Description Section */}
-      <section className="py-20 px-4 bg-ivory relative">
-        <div className="absolute inset-0 opacity-30 bg-texture-canvas"></div>
-        
-        <div className="relative z-10 max-w-4xl mx-auto text-center">
-          <h2 className="text-3xl md:text-4xl font-bold text-forest mb-12 tracking-wide font-acumin">
-            THE EXPERIENCE
-          </h2>
-          
-          <div className="space-y-8 text-lg text-washed-black leading-relaxed font-titillium">
-            <p>
-              The environment reflects a deep respect for the natural world and the creative process alike. Clean lines, raw textures, and quiet hospitality offer a rare kind of clarity. An adjoining organic farm carries that ethos even further, grounding the space in rhythm, restoration, and care.
-            </p>
-            
-            <p>
-              There's no hard sell here—just a studio with nothing to prove and everything to offer. Its presence spreads quietly, from artist to artist, rooted in experience rather than exposure.
-            </p>
-            
-            <p className="text-sage font-medium italic">
-              A place where music breathes a little deeper.
-            </p>
           </div>
         </div>
       </section>
@@ -92,28 +85,6 @@ export default function Home() {
                 </p>
               </div>
             ))}
-          </div>
-        </div>
-      </section>
-
-      {/* Philosophy Section */}
-      <section className="py-20 px-4 bg-sage relative">
-        <div className="absolute inset-0 opacity-30 bg-texture-stone"></div>
-        <div className="absolute top-0 right-0 w-64 h-64 opacity-20 bg-chladni-accent"></div>
-        
-        <div className="relative z-10 max-w-4xl mx-auto text-center">
-          <h2 className="text-3xl md:text-4xl font-bold text-ivory mb-12 tracking-wide font-acumin">
-            OUR APPROACH
-          </h2>
-          
-          <div className="space-y-8 text-lg text-ivory leading-relaxed font-titillium">
-            <p className="text-xl font-medium">
-              "Think Wilco, Father John Misty, and the thoughtful textures of Big Thief or Fleet Foxes. Not inspirations to replicate, but signals that this is a place where music breathes a little deeper."
-            </p>
-            
-            <p>
-              Every element here is designed to support the creative process: calm, grounded, and thoughtfully made. This isn't a marketing tool—it's a space built for artists who need room to slow down and create.
-            </p>
           </div>
         </div>
       </section>
@@ -144,11 +115,8 @@ export default function Home() {
             </p>
             
             <div className="space-y-2">
-              <p className="font-medium text-rust">
-                hello@lulalakesound.com
-              </p>
               <p className="text-base">
-                Lookout Mountain, Chattanooga, Tennessee
+                Chattanooga, Tennessee
               </p>
             </div>
           </div>
