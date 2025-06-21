@@ -9,11 +9,16 @@ export default function Home() {
         <div className="absolute inset-0 opacity-20 bg-texture-ink-wash"></div>
         
         <div className="relative z-10 text-center max-w-4xl mx-auto">
-          {/* Primary Logo Placeholder */}
+          {/* Primary Logo */}
           <div className="mb-12">
-            <div className="w-48 h-16 mx-auto bg-forest/20 rounded-sm flex items-center justify-center border border-forest/30">
-              <span className="text-forest font-medium text-sm">LULA LAKE SOUND LOGO</span>
-            </div>
+            <Image
+              src="/lula-lake-logo.png"
+              alt="Lula Lake Sound Logo"
+              width={400}
+              height={300}
+              className="mx-auto max-w-sm md:max-w-md"
+              priority
+            />
           </div>
           
           {/* Hero Text */}
@@ -118,15 +123,15 @@ export default function Home() {
         <div className="absolute inset-0 opacity-20 bg-texture-canvas"></div>
         
         <div className="relative z-10 max-w-3xl mx-auto text-center">
-          {/* Stacked Logo Placeholder */}
+          {/* Graphic Logo */}
           <div className="mb-12">
-            <div className="w-32 h-24 mx-auto bg-forest/20 rounded-sm flex flex-col items-center justify-center border border-forest/30">
-              <div className="text-forest font-bold text-xs space-y-1">
-                <div>LULA</div>
-                <div>LAKE</div>
-                <div>SOUND</div>
-              </div>
-            </div>
+            <Image
+              src="/favicon.png"
+              alt="Lula Lake Sound Symbol"
+              width={64}
+              height={64}
+              className="mx-auto"
+            />
           </div>
           
           <h2 className="text-2xl md:text-3xl font-bold text-forest mb-8 tracking-wide font-acumin">
