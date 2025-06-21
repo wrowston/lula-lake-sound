@@ -1,26 +1,67 @@
+/* Import brand fonts from Google Fonts */
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Space+Grotesk:wght@400;500;600;700&display=swap');
+
 @import "tailwindcss";
 
-:root {
-  --background: #ffffff;
-  --foreground: #171717;
-}
+@theme {
+  /* Lula Lake Sound Brand Colors */
+  --color-washed-black: #1f1e1c;
+  --color-rust: #54340d;
+  --color-ivory: #bfbbb5;
+  --color-forest: #1c1e15;
+  --color-gold: #a3822e;
+  --color-sand: #c6bda0;
+  --color-fire: #ef3c23;
+  --color-sage: #55656a;
+  --color-pond: #5a4c1b;
+  --color-maroon: #3d1516;
 
-@theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
-}
-
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+  /* Font families */
+  --font-family-acumin: Space Grotesk, system-ui, -apple-system, sans-serif;
+  --font-family-titillium: Inter, system-ui, -apple-system, sans-serif;
 }
 
 body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  background-color: #c6bda0;
+  color: #1f1e1c;
+  font-family: Inter, system-ui, -apple-system, sans-serif;
+  font-feature-settings: "rlig" 1, "calt" 1;
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+/* Custom background patterns and textures */
+.bg-texture-ink-wash {
+  background-image: 
+    radial-gradient(circle at 25% 25%, rgba(28, 30, 21, 0.1) 0%, transparent 50%),
+    radial-gradient(circle at 75% 75%, rgba(84, 52, 13, 0.08) 0%, transparent 50%);
+}
+
+.bg-texture-canvas {
+  background-image: 
+    linear-gradient(45deg, transparent 48%, rgba(28, 30, 21, 0.03) 49%, rgba(28, 30, 21, 0.03) 51%, transparent 52%),
+    linear-gradient(-45deg, transparent 48%, rgba(84, 52, 13, 0.02) 49%, rgba(84, 52, 13, 0.02) 51%, transparent 52%);
+  background-size: 8px 8px;
+}
+
+.bg-texture-stone {
+  background-image: 
+    radial-gradient(circle at 20% 80%, rgba(85, 101, 106, 0.1) 0%, transparent 50%),
+    radial-gradient(circle at 80% 20%, rgba(163, 130, 46, 0.08) 0%, transparent 50%),
+    radial-gradient(circle at 40% 40%, rgba(31, 30, 28, 0.05) 0%, transparent 50%);
+}
+
+.bg-chladni-pattern {
+  background-image: 
+    radial-gradient(ellipse 100px 50px at 50% 0%, rgba(85, 101, 106, 0.15) 0%, transparent 40%),
+    radial-gradient(ellipse 80px 40px at 25% 50%, rgba(84, 52, 13, 0.1) 0%, transparent 40%),
+    radial-gradient(ellipse 120px 60px at 75% 100%, rgba(28, 30, 21, 0.08) 0%, transparent 40%);
+}
+
+.bg-chladni-accent {
+  background-image: 
+    radial-gradient(ellipse 150px 75px at 0% 0%, rgba(191, 187, 181, 0.15) 0%, transparent 50%),
+    radial-gradient(ellipse 100px 50px at 100% 100%, rgba(85, 101, 106, 0.1) 0%, transparent 50%);
 }

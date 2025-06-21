@@ -2,102 +2,153 @@ import Image from "next/image";
 
 export default function Home() {
   return (
-    <div className="grid grid-rows-[20px_1fr_20px] items-center justify-items-center min-h-screen p-8 pb-20 gap-16 sm:p-20 font-[family-name:var(--font-geist-sans)]">
-      <main className="flex flex-col gap-[32px] row-start-2 items-center sm:items-start">
-        <Image
-          className="dark:invert"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={180}
-          height={38}
-          priority
-        />
-        <ol className="list-inside list-decimal text-sm/6 text-center sm:text-left font-[family-name:var(--font-geist-mono)]">
-          <li className="mb-2 tracking-[-.01em]">
-            Get started by editing{" "}
-            <code className="bg-black/[.05] dark:bg-white/[.06] px-1 py-0.5 rounded font-[family-name:var(--font-geist-mono)] font-semibold">
-              src/app/page.tsx
-            </code>
-            .
-          </li>
-          <li className="tracking-[-.01em]">
-            Save and see your changes instantly.
-          </li>
-        </ol>
-
-        <div className="flex gap-4 items-center flex-col sm:flex-row">
-          <a
-            className="rounded-full border border-solid border-transparent transition-colors flex items-center justify-center bg-foreground text-background gap-2 hover:bg-[#383838] dark:hover:bg-[#ccc] font-medium text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5 sm:w-auto"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={20}
-              height={20}
-            />
-            Deploy now
-          </a>
-          <a
-            className="rounded-full border border-solid border-black/[.08] dark:border-white/[.145] transition-colors flex items-center justify-center hover:bg-[#f2f2f2] dark:hover:bg-[#1a1a1a] hover:border-transparent font-medium text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5 w-full sm:w-auto md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Read our docs
-          </a>
+    <div className="min-h-screen bg-sand">
+      {/* Hero Section */}
+      <section className="relative min-h-screen flex flex-col items-center justify-center px-4 py-20 bg-gradient-to-b from-sand to-ivory">
+        {/* Subtle texture overlay */}
+        <div className="absolute inset-0 opacity-20 bg-texture-ink-wash"></div>
+        
+        <div className="relative z-10 text-center max-w-4xl mx-auto">
+          {/* Primary Logo Placeholder */}
+          <div className="mb-12">
+            <div className="w-48 h-16 mx-auto bg-forest/20 rounded-sm flex items-center justify-center border border-forest/30">
+              <span className="text-forest font-medium text-sm">LULA LAKE SOUND LOGO</span>
+            </div>
+          </div>
+          
+          {/* Hero Text */}
+          <div className="space-y-8">
+            <h1 className="text-4xl md:text-6xl font-bold text-forest leading-tight tracking-wide font-acumin">
+              LULA LAKE SOUND
+            </h1>
+            
+            <div className="text-lg md:text-xl text-washed-black leading-relaxed space-y-6 font-titillium max-w-3xl mx-auto">
+              <p>
+                Nestled in serene mountains just outside of Chattanooga, TN- Lula Lake Sound offers artists a natural creative refuge. The studio is designed to inspire creativity and relaxation, providing the perfect environment for your sonic adventures.
+              </p>
+              
+              <p>
+                With state-of-the-art equipment, comfortable accommodations, and breathtaking surroundings, Lula Lake Sound is a space where artists can fully immerse themselves in their both nature and music.
+              </p>
+            </div>
+            
+            <p className="text-base text-rust font-medium tracking-wider font-titillium">
+              LOOKOUT MOUNTAIN, CHATTANOOGA, TN
+            </p>
+          </div>
         </div>
-      </main>
-      <footer className="row-start-3 flex gap-[24px] flex-wrap items-center justify-center">
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/file.svg"
-            alt="File icon"
-            width={16}
-            height={16}
-          />
-          Learn
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/window.svg"
-            alt="Window icon"
-            width={16}
-            height={16}
-          />
-          Examples
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/globe.svg"
-            alt="Globe icon"
-            width={16}
-            height={16}
-          />
-          Go to nextjs.org →
-        </a>
-      </footer>
+        
+        {/* Subtle Chladni pattern overlay */}
+        <div className="absolute bottom-0 left-0 right-0 h-32 opacity-10 bg-chladni-pattern"></div>
+      </section>
+
+      {/* Studio Description Section */}
+      <section className="py-20 px-4 bg-ivory relative">
+        <div className="absolute inset-0 opacity-30 bg-texture-canvas"></div>
+        
+        <div className="relative z-10 max-w-4xl mx-auto text-center">
+          <h2 className="text-3xl md:text-4xl font-bold text-forest mb-12 tracking-wide font-acumin">
+            THE EXPERIENCE
+          </h2>
+          
+          <div className="space-y-8 text-lg text-washed-black leading-relaxed font-titillium">
+            <p>
+              The environment reflects a deep respect for the natural world and the creative process alike. Clean lines, raw textures, and quiet hospitality offer a rare kind of clarity. An adjoining organic farm carries that ethos even further, grounding the space in rhythm, restoration, and care.
+            </p>
+            
+            <p>
+              There's no hard sell here—just a studio with nothing to prove and everything to offer. Its presence spreads quietly, from artist to artist, rooted in experience rather than exposure.
+            </p>
+            
+            <p className="text-sage font-medium italic">
+              A place where music breathes a little deeper.
+            </p>
+          </div>
+        </div>
+      </section>
+
+      {/* Photo Gallery Placeholder Section */}
+      <section className="py-20 px-4 bg-washed-black relative">
+        <div className="absolute inset-0 opacity-40 bg-texture-stone"></div>
+        
+        <div className="relative z-10 max-w-6xl mx-auto">
+          <h2 className="text-3xl md:text-4xl font-bold text-ivory mb-16 text-center tracking-wide font-acumin">
+            THE SPACE
+          </h2>
+          
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+            {[1, 2, 3, 4, 5, 6].map((item) => (
+              <div key={item} className="aspect-[4/3] bg-sage/20 border-2 border-rust/60 rounded-sm flex flex-col items-center justify-center p-8">
+                <div className="w-16 h-16 bg-sage/40 rounded-sm flex items-center justify-center mb-4">
+                  <span className="text-sage text-xs">LLS</span>
+                </div>
+                <p className="text-ivory/70 text-sm font-titillium text-center">
+                  Photo {item} - Studio Space
+                </p>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* Philosophy Section */}
+      <section className="py-20 px-4 bg-sage relative">
+        <div className="absolute inset-0 opacity-30 bg-texture-stone"></div>
+        <div className="absolute top-0 right-0 w-64 h-64 opacity-20 bg-chladni-accent"></div>
+        
+        <div className="relative z-10 max-w-4xl mx-auto text-center">
+          <h2 className="text-3xl md:text-4xl font-bold text-ivory mb-12 tracking-wide font-acumin">
+            OUR APPROACH
+          </h2>
+          
+          <div className="space-y-8 text-lg text-ivory leading-relaxed font-titillium">
+            <p className="text-xl font-medium">
+              "Think Wilco, Father John Misty, and the thoughtful textures of Big Thief or Fleet Foxes. Not inspirations to replicate, but signals that this is a place where music breathes a little deeper."
+            </p>
+            
+            <p>
+              Every element here is designed to support the creative process: calm, grounded, and thoughtfully made. This isn't a marketing tool—it's a space built for artists who need room to slow down and create.
+            </p>
+          </div>
+        </div>
+      </section>
+
+      {/* Contact Section */}
+      <section className="py-20 px-4 bg-sand relative">
+        <div className="absolute inset-0 opacity-20 bg-texture-canvas"></div>
+        
+        <div className="relative z-10 max-w-3xl mx-auto text-center">
+          {/* Stacked Logo Placeholder */}
+          <div className="mb-12">
+            <div className="w-32 h-24 mx-auto bg-forest/20 rounded-sm flex flex-col items-center justify-center border border-forest/30">
+              <div className="text-forest font-bold text-xs space-y-1">
+                <div>LULA</div>
+                <div>LAKE</div>
+                <div>SOUND</div>
+              </div>
+            </div>
+          </div>
+          
+          <h2 className="text-2xl md:text-3xl font-bold text-forest mb-8 tracking-wide font-acumin">
+            ARTIST INQUIRIES
+          </h2>
+          
+          <div className="space-y-6 text-lg text-washed-black font-titillium">
+            <p>
+              Ready to create something meaningful? Reach out to discuss your project and discover how Lula Lake Sound can serve your artistic vision.
+            </p>
+            
+            <div className="space-y-2">
+              <p className="font-medium text-rust">
+                hello@lulalakesound.com
+              </p>
+              <p className="text-base">
+                Lookout Mountain, Chattanooga, Tennessee
+              </p>
+            </div>
+          </div>
+        </div>
+      </section>
     </div>
   );
 }
