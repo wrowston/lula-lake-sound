@@ -72,12 +72,6 @@ export default function Home() {
                   </p>
                 </div>
               </div>
-              
-              <div className="pt-4 md:pt-8">
-                <p className="text-sm md:text-base text-sand/80 font-medium tracking-wider font-titillium drop-shadow-lg">
-                  CHATTANOOGA, TN
-                </p>
-              </div>
             </div>
           </div>
         </div>
@@ -103,6 +97,106 @@ export default function Home() {
                 </p>
               </div>
             ))}
+          </div>
+        </div>
+      </section>
+
+      {/* Local Favorites Section */}
+      <section className="py-20 px-4 bg-forest relative">
+        <div className="absolute inset-0 opacity-20 bg-texture-stone"></div>
+        
+        <div className="relative z-10 max-w-6xl mx-auto">
+          <h2 className="text-3xl md:text-4xl font-bold text-sand mb-16 text-center tracking-wide font-acumin">
+            LOCAL FAVORITES
+          </h2>
+          
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+            {/* Massey's Kitchen */}
+            <div className="bg-sage/10 border-2 border-rust/60 rounded-sm p-6 hover:bg-sage/20 transition-all duration-300 group">
+              <div className="space-y-4">
+                <div className="space-y-2">
+                  <h3 className="text-xl font-bold text-sand font-acumin group-hover:text-ivory transition-colors">
+                    Massey's Kitchen
+                  </h3>
+                  <p className="text-sand/90 text-sm font-medium font-titillium tracking-wide">
+                    MEDITERRANEAN CUISINE
+                  </p>
+                </div>
+                
+                <p className="text-ivory/80 text-sm leading-relaxed font-titillium">
+                  Elevated dining experience featuring made-from-scratch Mediterranean dishes. Authentic flavors crafted with imported ingredients and techniques learned from travels across the Mediterranean region.
+                </p>
+                
+                <div className="pt-2">
+                  <a 
+                    href="https://www.masseyskitchen.com" 
+                    target="_blank" 
+                    rel="noopener noreferrer"
+                    className="inline-block text-sage hover:text-sand text-sm font-medium font-titillium tracking-wide transition-colors border-b border-sage/40 hover:border-sand/60"
+                  >
+                    Visit Website →
+                  </a>
+                </div>
+              </div>
+            </div>
+
+            {/* Canopy Coffee and Wine Bar */}
+            <div className="bg-sage/10 border-2 border-rust/60 rounded-sm p-6 hover:bg-sage/20 transition-all duration-300 group">
+              <div className="space-y-4">
+                <div className="space-y-2">
+                  <h3 className="text-xl font-bold text-sand font-acumin group-hover:text-ivory transition-colors">
+                    Canopy Coffee & Wine Bar
+                  </h3>
+                  <p className="text-sand/90 text-sm font-medium font-titillium tracking-wide">
+                    COFFEE • WINE • CRAFT BEER
+                  </p>
+                </div>
+                
+                <p className="text-ivory/80 text-sm leading-relaxed font-titillium">
+                  Authentic Lookout Mountain experience in a casual, cozy atmosphere. Perfect community gathering spot with excellent coffee, local beer selections, and wine in a trendy yet laid-back setting.
+                </p>
+                
+                <div className="pt-2">
+                  <a 
+                    href="http://www.canopylkt.com" 
+                    target="_blank" 
+                    rel="noopener noreferrer"
+                    className="inline-block text-sage hover:text-sand text-sm font-medium font-titillium tracking-wide transition-colors border-b border-sage/40 hover:border-sand/60"
+                  >
+                    Visit Website →
+                  </a>
+                </div>
+              </div>
+            </div>
+
+            {/* Canyon Grill */}
+            <div className="bg-sage/10 border-2 border-rust/60 rounded-sm p-6 hover:bg-sage/20 transition-all duration-300 group">
+              <div className="space-y-4">
+                <div className="space-y-2">
+                  <h3 className="text-xl font-bold text-sand font-acumin group-hover:text-ivory transition-colors">
+                    Canyon Grill
+                  </h3>
+                  <p className="text-sand/90 text-sm font-medium font-titillium tracking-wide">
+                    FINE DINING • FRESH SEAFOOD
+                  </p>
+                </div>
+                
+                <p className="text-ivory/80 text-sm leading-relaxed font-titillium">
+                  Relaxed fine dining featuring sustainably sourced seafood and hickory wood-grilled specialties. Simple, careful preparation highlights natural flavors with ingredients stored on ice for optimal freshness.
+                </p>
+                
+                <div className="pt-2">
+                  <a 
+                    href="https://www.canyongrill.com" 
+                    target="_blank" 
+                    rel="noopener noreferrer"
+                    className="inline-block text-sage hover:text-sand text-sm font-medium font-titillium tracking-wide transition-colors border-b border-sage/40 hover:border-sand/60"
+                  >
+                    Visit Website →
+                  </a>
+                </div>
+              </div>
+            </div>
           </div>
         </div>
       </section>
