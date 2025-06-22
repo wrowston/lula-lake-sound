@@ -5,7 +5,6 @@ import { useState, useEffect } from "react";
 
 export default function Home() {
   const [scrollY, setScrollY] = useState(0);
-  const [activeSection, setActiveSection] = useState("hero");
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
   useEffect(() => {
@@ -297,7 +296,7 @@ export default function Home() {
               <div className="space-y-4">
                 <div className="space-y-2">
                   <h3 className="text-xl font-bold text-sand font-acumin group-hover:text-ivory transition-colors">
-                    Massey's Kitchen
+                    {`Massey's Kitchen`}
                   </h3>
                   <p className="text-sand/90 text-sm font-medium font-titillium tracking-wide">
                     MEDITERRANEAN CUISINE
