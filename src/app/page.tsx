@@ -125,7 +125,7 @@ export default function Home() {
               className="text-sand hover:text-ivory transition-colors duration-300 font-acumin font-medium tracking-wide relative group"
               style={{ fontSize: `${lerp(16, 16, scrollProgress)}px` }}
             >
-              Local Favorites
+              Amenities Nearby
               <span className="absolute bottom-0 left-0 w-0 h-0.5 bg-sand transition-all duration-300 group-hover:w-full"></span>
             </button>
             <button
@@ -185,7 +185,7 @@ export default function Home() {
                 onClick={() => scrollToSection('local-favorites')}
                 className="text-sand hover:text-ivory transition-colors duration-300 font-acumin font-medium tracking-wide text-lg text-left"
               >
-                Local Favorites
+                Amenities Nearby
               </button>
               <button
                 onClick={() => scrollToSection('artist-inquiries')}
@@ -281,13 +281,13 @@ export default function Home() {
         </div>
       </section>
 
-      {/* Local Favorites Section */}
+      {/* Amenities Nearby Section */}
       <section id="local-favorites" className="py-20 px-4 bg-forest relative">
         <div className="absolute inset-0 opacity-20 bg-texture-stone"></div>
         
         <div className="relative z-10 max-w-6xl mx-auto">
           <h2 className="text-3xl md:text-4xl font-bold text-sand mb-16 text-center tracking-wide font-acumin">
-            LOCAL FAVORITES
+            AMENITIES NEARBY
           </h2>
           
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
