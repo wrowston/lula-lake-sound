@@ -6,6 +6,7 @@ import { useState, useEffect } from "react";
 export default function Home() {
   const [scrollY, setScrollY] = useState(0);
   const [activeSection, setActiveSection] = useState("hero");
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
   useEffect(() => {
     const handleScroll = () => setScrollY(window.scrollY);
@@ -54,6 +55,8 @@ export default function Home() {
         top: offsetTop,
         behavior: 'smooth'
       });
+      // Close mobile menu after navigation
+      setMobileMenuOpen(false);
     }
   };
   return (
@@ -137,7 +140,10 @@ export default function Home() {
           </nav>
 
           {/* Mobile Menu Button */}
-          <button className="md:hidden text-sand hover:text-ivory transition-colors">
+          <button 
+            className="md:hidden text-sand hover:text-ivory transition-colors"
+            onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+          >
             <svg 
               className="transition-all duration-500" 
               fill="none" 
@@ -148,11 +154,50 @@ export default function Home() {
                 height: `${lerp(24, 22, scrollProgress)}px`
               }}
             >
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
+              {mobileMenuOpen ? (
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+              ) : (
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
+              )}
             </svg>
           </button>
         </div>
       </header>
+
+      {/* Mobile Menu Overlay */}
+      {mobileMenuOpen && (
+        <div className="fixed inset-0 z-40 md:hidden">
+          {/* Backdrop */}
+          <div 
+            className="absolute inset-0 bg-black/50 backdrop-blur-sm"
+            onClick={() => setMobileMenuOpen(false)}
+          ></div>
+          
+          {/* Menu Panel */}
+          <div className="absolute top-20 left-4 right-4 bg-washed-black/95 backdrop-blur-md rounded-lg border border-sage/20 p-6">
+            <nav className="flex flex-col space-y-6">
+              <button
+                onClick={() => scrollToSection('the-space')}
+                className="text-sand hover:text-ivory transition-colors duration-300 font-acumin font-medium tracking-wide text-lg text-left"
+              >
+                The Space
+              </button>
+              <button
+                onClick={() => scrollToSection('local-favorites')}
+                className="text-sand hover:text-ivory transition-colors duration-300 font-acumin font-medium tracking-wide text-lg text-left"
+              >
+                Local Favorites
+              </button>
+              <button
+                onClick={() => scrollToSection('artist-inquiries')}
+                className="text-sand hover:text-ivory transition-colors duration-300 font-acumin font-medium tracking-wide text-lg text-left"
+              >
+                Artist Inquiries
+              </button>
+            </nav>
+          </div>
+        </div>
+      )}
 
       {/* Hero Section */}
       <section id="hero" className="relative min-h-screen flex flex-col items-center justify-center overflow-hidden pt-20">
