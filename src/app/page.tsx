@@ -38,6 +38,7 @@ export default function Home() {
                   <p className="drop-shadow-lg">
                   Nestled in serene mountains just outside of Chattanooga, TN- Lula Lake Sound offers artists a natural creative refuge. The studio is designed to inspire creativity and relaxation, providing the perfect environment for your sonic adventures.
                   <br/>
+                  <br/>
                   With state-of-the-art equipment, comfortable accommodations, and breathtaking surroundings, Lula Lake Sound is a space where artists can fully immerse themselves in their both nature and music. 
                   </p>
                 </div>
@@ -45,7 +46,7 @@ export default function Home() {
               
               <div className="pt-8">
                 <p className="text-base text-sand/80 font-medium tracking-wider font-titillium drop-shadow-lg">
-                  LOOKOUT MOUNTAIN, CHATTANOOGA, TN
+                  CHATTANOOGA, TN
                 </p>
               </div>
             </div>
@@ -97,7 +98,7 @@ export default function Home() {
           {/* Graphic Logo */}
           <div className="mb-12">
             <Image
-              src="/favicon.png"
+              src="/LLS_Logo_Full_Tar.png"
               alt="Lula Lake Sound Symbol"
               width={64}
               height={64}
@@ -113,7 +114,10 @@ export default function Home() {
             <p>
               Ready to create something meaningful? Reach out to discuss your project and discover how Lula Lake Sound can serve your artistic vision.
             </p>
-            
+            <p>
+              <a href="mailto:lulalakesound@gmail.com">lulalakesound@gmail.com</a>
+            </p>
+
             <div className="space-y-2">
               <p className="text-base">
                 Chattanooga, Tennessee
