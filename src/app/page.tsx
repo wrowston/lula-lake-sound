@@ -5,21 +5,107 @@ import { useState, useEffect } from "react";
 
 export default function Home() {
   const [scrollY, setScrollY] = useState(0);
+  const [activeSection, setActiveSection] = useState("hero");
 
   useEffect(() => {
     const handleScroll = () => setScrollY(window.scrollY);
-    window.addEventListener("scroll", handleScroll);
-    return () => window.removeEventListener("scroll", handleScroll);
+    
+    // Throttled scroll handler for performance
+    let ticking = false;
+    const scrollHandler = () => {
+      if (!ticking) {
+        requestAnimationFrame(() => {
+          handleScroll();
+          ticking = false;
+        });
+        ticking = true;
+      }
+    };
+
+    window.addEventListener("scroll", scrollHandler);
+    return () => window.removeEventListener("scroll", scrollHandler);
   }, []);
 
   // Calculate logo scale based on scroll position (scale from 1 to 0.7)
   const logoScale = Math.max(0.7, 1 - scrollY * 0.0008);
+  
+  // Header background opacity based on scroll
+  const headerOpacity = Math.min(0.95, scrollY * 0.005);
+  
+  // Smooth scroll to section
+  const scrollToSection = (sectionId: string) => {
+    const element = document.getElementById(sectionId);
+    if (element) {
+      const headerHeight = 80; // Account for fixed header
+      const offsetTop = element.offsetTop - headerHeight;
+      window.scrollTo({
+        top: offsetTop,
+        behavior: 'smooth'
+      });
+    }
+  };
   return (
     <div className="min-h-screen bg-sand">
+      {/* Header */}
+      <header 
+        className="fixed top-0 left-0 right-0 z-50 transition-all duration-300"
+        style={{
+          backgroundColor: `rgba(42, 39, 37, ${headerOpacity})`,
+          backdropFilter: scrollY > 50 ? 'blur(8px)' : 'none',
+        }}
+      >
+        <div className="max-w-7xl mx-auto px-4 py-4 flex items-center justify-between">
+          {/* Logo */}
+          <button
+            onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
+            className="flex items-center transition-transform duration-300 hover:scale-105"
+          >
+            <Image
+              src="/LLS_Logo_Full_Tar.png"
+              alt="Lula Lake Sound Logo"
+              width={60}
+              height={60}
+              className="h-12 w-auto filter brightness-0 invert"
+              priority
+            />
+          </button>
 
+          {/* Desktop Navigation */}
+          <nav className="hidden md:flex items-center space-x-8">
+            <button
+              onClick={() => scrollToSection('the-space')}
+              className="text-sand hover:text-ivory transition-colors duration-300 font-acumin font-medium tracking-wide relative group"
+            >
+              The Space
+              <span className="absolute bottom-0 left-0 w-0 h-0.5 bg-sand transition-all duration-300 group-hover:w-full"></span>
+            </button>
+            <button
+              onClick={() => scrollToSection('local-favorites')}
+              className="text-sand hover:text-ivory transition-colors duration-300 font-acumin font-medium tracking-wide relative group"
+            >
+              Local Favorites
+              <span className="absolute bottom-0 left-0 w-0 h-0.5 bg-sand transition-all duration-300 group-hover:w-full"></span>
+            </button>
+            <button
+              onClick={() => scrollToSection('artist-inquiries')}
+              className="text-sand hover:text-ivory transition-colors duration-300 font-acumin font-medium tracking-wide relative group"
+            >
+              Artist Inquiries
+              <span className="absolute bottom-0 left-0 w-0 h-0.5 bg-sand transition-all duration-300 group-hover:w-full"></span>
+            </button>
+          </nav>
+
+          {/* Mobile Menu Button */}
+          <button className="md:hidden text-sand hover:text-ivory transition-colors">
+            <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
+            </svg>
+          </button>
+        </div>
+      </header>
 
       {/* Hero Section */}
-      <section className="relative min-h-screen flex flex-col items-center justify-center overflow-hidden">
+      <section id="hero" className="relative min-h-screen flex flex-col items-center justify-center overflow-hidden pt-20">
         {/* Background Image */}
         <div className="absolute inset-0 z-0">
           <Image
@@ -78,7 +164,7 @@ export default function Home() {
       </section>
 
       {/* Photo Gallery Placeholder Section */}
-      <section className="py-20 px-4 bg-washed-black relative">
+      <section id="the-space" className="py-20 px-4 bg-washed-black relative">
         <div className="absolute inset-0 opacity-40 bg-texture-stone"></div>
         
         <div className="relative z-10 max-w-6xl mx-auto">
@@ -102,7 +188,7 @@ export default function Home() {
       </section>
 
       {/* Local Favorites Section */}
-      <section className="py-20 px-4 bg-forest relative">
+      <section id="local-favorites" className="py-20 px-4 bg-forest relative">
         <div className="absolute inset-0 opacity-20 bg-texture-stone"></div>
         
         <div className="relative z-10 max-w-6xl mx-auto">
@@ -202,7 +288,7 @@ export default function Home() {
       </section>
 
       {/* Contact Section */}
-      <section className="py-20 px-4 bg-sand relative">
+      <section id="artist-inquiries" className="py-20 px-4 bg-sand relative">
         <div className="absolute inset-0 opacity-20 bg-texture-canvas"></div>
         
         <div className="relative z-10 max-w-3xl mx-auto text-center">
