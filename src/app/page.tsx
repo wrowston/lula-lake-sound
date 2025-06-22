@@ -1,6 +1,19 @@
+"use client";
+
 import Image from "next/image";
+import { useState, useEffect } from "react";
 
 export default function Home() {
+  const [scrollY, setScrollY] = useState(0);
+
+  useEffect(() => {
+    const handleScroll = () => setScrollY(window.scrollY);
+    window.addEventListener("scroll", handleScroll);
+    return () => window.removeEventListener("scroll", handleScroll);
+  }, []);
+
+  // Calculate logo scale based on scroll position (scale from 1 to 0.7)
+  const logoScale = Math.max(0.7, 1 - scrollY * 0.0008);
   return (
     <div className="min-h-screen bg-sand">
 
@@ -23,18 +36,34 @@ export default function Home() {
           <div className="absolute inset-0 bg-gradient-to-b from-black/20 via-transparent to-black/30"></div>
         </div>
         
-                <div className="relative z-10 max-w-7xl mx-auto px-4 py-20 flex items-center min-h-screen">
-          {/* Hero Text - Left Side */}
-          <div className="w-1/2 pr-8">
-            <div className="space-y-12">
-              <div className="space-y-8">
+                <div className="relative z-10 max-w-7xl mx-auto px-4 py-20 flex flex-col md:flex-row items-center min-h-screen">
+          {/* Logo - Top on Mobile, Right on Desktop */}
+          <div className="w-full md:w-1/2 flex justify-center md:order-2 mb-8 md:mb-0">
+            <Image
+              src="/lula-lake-logo.png"
+              alt="Lula Lake Sound Logo"
+              width={500}
+              height={375}
+              className="max-w-full h-auto filter brightness-0 invert transition-transform duration-300 ease-out"
+              style={{ 
+                transform: `scale(${logoScale})`,
+                maxWidth: '90%'
+              }}
+              priority
+            />
+          </div>
+          
+          {/* Hero Text - Bottom on Mobile, Left on Desktop */}
+          <div className="w-full md:w-1/2 md:pr-8 md:order-1 text-center md:text-left">
+            <div className="space-y-8 md:space-y-12">
+              <div className="space-y-6 md:space-y-8">
                 <h1 className="text-3xl md:text-5xl lg:text-6xl font-bold text-white leading-tight tracking-wide font-acumin drop-shadow-2xl">
                   A NATURAL
                   <br />
                   <span className="text-sand">CREATIVE REFUGE</span>
                 </h1>
                 
-                <div className="text-lg md:text-xl text-white/90 leading-relaxed font-titillium">
+                <div className="text-base md:text-lg lg:text-xl text-white/90 leading-relaxed font-titillium">
                   <p className="drop-shadow-lg">
                   Nestled in serene mountains just outside of Chattanooga, TN- Lula Lake Sound offers artists a natural creative refuge. The studio is designed to inspire creativity and relaxation, providing the perfect environment for your sonic adventures.
                   <br/>
@@ -44,24 +73,12 @@ export default function Home() {
                 </div>
               </div>
               
-              <div className="pt-8">
-                <p className="text-base text-sand/80 font-medium tracking-wider font-titillium drop-shadow-lg">
+              <div className="pt-4 md:pt-8">
+                <p className="text-sm md:text-base text-sand/80 font-medium tracking-wider font-titillium drop-shadow-lg">
                   CHATTANOOGA, TN
                 </p>
               </div>
             </div>
-          </div>
-          
-          {/* Logo - Right Side */}
-          <div className="w-1/2 flex justify-center">
-            <Image
-              src="/lula-lake-logo.png"
-              alt="Lula Lake Sound Logo"
-              width={500}
-              height={375}
-              className="max-w-full h-auto filter brightness-0 invert"
-              priority
-            />
           </div>
         </div>
       </section>
