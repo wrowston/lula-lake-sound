@@ -1,5 +1,5 @@
-/* Import brand fonts from Google Fonts */
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Space+Grotesk:wght@400;500;600;700&display=swap');
+/* Import Adobe Fonts - Acumin and Titillium Web */
+@import url('https://fonts.googleapis.com/css2?family=Acumin+Variable:wght@400;500;600;700&family=Titillium+Web:wght@300;400;600;700&display=swap');
 
 @import "tailwindcss";
 
@@ -16,20 +16,67 @@
   --color-pond: #5a4c1b;
   --color-maroon: #3d1516;
 
-  /* Font families */
-  --font-family-acumin: Space Grotesk, system-ui, -apple-system, sans-serif;
-  --font-family-titillium: Inter, system-ui, -apple-system, sans-serif;
+  /* Font families - Adobe Fonts */
+  --font-family-acumin: "Acumin Variable", system-ui, -apple-system, sans-serif;
+  --font-family-titillium: "Titillium Web", system-ui, -apple-system, sans-serif;
+
+  /* Typography scale and spacing */
+  --font-size-h1: 3.5rem;
+  --font-size-h2: 2.5rem;
+  --font-size-h3: 1.875rem;
+  --font-size-body: 1rem;
+  --font-size-small: 0.875rem;
+  
+  /* Generous tracking for headlines */
+  --letter-spacing-headline: 0.02em;
+  --letter-spacing-wide: 0.05em;
+  
+  /* Ample leading for headlines */
+  --line-height-headline: 1.2;
+  --line-height-relaxed: 1.6;
+  --line-height-loose: 1.8;
 }
 
 body {
   background-color: #c6bda0;
   color: #1f1e1c;
-  font-family: Inter, system-ui, -apple-system, sans-serif;
+  font-family: "Titillium Web", system-ui, -apple-system, sans-serif;
+  font-weight: 400;
   font-feature-settings: "rlig" 1, "calt" 1;
+  line-height: var(--line-height-relaxed);
 }
 
 html {
   scroll-behavior: smooth;
+}
+
+/* Typography utility classes following Adobe Font guidelines */
+.headline-primary {
+  font-family: var(--font-family-acumin);
+  font-weight: 600; /* Semi-bold */
+  font-stretch: expanded; /* Wide */
+  letter-spacing: var(--letter-spacing-headline);
+  line-height: var(--line-height-headline);
+}
+
+.headline-secondary {
+  font-family: var(--font-family-acumin);
+  font-weight: 600;
+  letter-spacing: var(--letter-spacing-headline);
+  line-height: var(--line-height-headline);
+}
+
+.body-text {
+  font-family: var(--font-family-titillium);
+  font-weight: 400; /* Regular */
+  line-height: var(--line-height-relaxed);
+}
+
+.body-text-small {
+  font-family: var(--font-family-titillium);
+  font-weight: 400;
+  line-height: var(--line-height-relaxed);
+  font-size: var(--font-size-small);
 }
 
 /* Custom background patterns and textures */
@@ -64,4 +111,14 @@ html {
   background-image: 
     radial-gradient(ellipse 150px 75px at 0% 0%, rgba(191, 187, 181, 0.15) 0%, transparent 50%),
     radial-gradient(ellipse 100px 50px at 100% 100%, rgba(85, 101, 106, 0.1) 0%, transparent 50%);
+}
+
+/* Hide scrollbar utility */
+.scrollbar-hide {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
+.scrollbar-hide::-webkit-scrollbar {
+  display: none;
 }

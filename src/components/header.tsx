@@ -5,7 +5,6 @@ import { useState } from "react";
 
 interface HeaderProps {
   readonly scrollY: number;
-  readonly scrollToSection: (sectionId: string) => void;
 }
 
 // Helper function for smooth interpolation
@@ -13,7 +12,7 @@ function lerp(start: number, end: number, progress: number): number {
   return start + (end - start) * progress;
 }
 
-export function Header({ scrollY, scrollToSection }: HeaderProps) {
+export function Header({ scrollY }: HeaderProps) {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
   // Calculate transformations based on scroll position
@@ -25,8 +24,7 @@ export function Header({ scrollY, scrollToSection }: HeaderProps) {
   const headerWidth = scrollProgress > 0.3 ? 'auto' : '100%';
   const headerMargin = lerp(0, 16, scrollProgress);
 
-  function handleNavigation(sectionId: string) {
-    scrollToSection(sectionId);
+  function handleNavigation() {
     setIsMobileMenuOpen(false);
   }
 
@@ -37,6 +35,15 @@ export function Header({ scrollY, scrollToSection }: HeaderProps) {
   function toggleMobileMenu() {
     setIsMobileMenuOpen(!isMobileMenuOpen);
   }
+
+  // Navigation items for the music studio
+  const navigationItems = [
+    { id: 'the-space', label: 'The Studio' },
+    { id: 'equipment-specs', label: 'Gear List' },
+    { id: 'local-favorites', label: 'Amenities Nearby' },
+    { id: 'faq', label: 'FAQ' },
+    { id: 'artist-inquiries', label: 'Book Your Session' },
+  ];
 
   return (
     <>
@@ -85,41 +92,28 @@ export function Header({ scrollY, scrollToSection }: HeaderProps) {
 
           {/* Desktop Navigation */}
           <nav 
-            className="hidden md:flex items-center justify-center transition-all duration-500" 
+            className="hidden lg:flex items-center justify-center transition-all duration-500" 
             style={{ 
-              gap: `${lerp(32, 24, scrollProgress)}px`,
+              gap: `${lerp(24, 20, scrollProgress)}px`,
               marginLeft: `${lerp(0, 40, scrollProgress)}px`
             }}
           >
-            <button
-              onClick={() => handleNavigation('the-space')}
-              className="text-sand hover:text-ivory transition-colors duration-300 font-acumin font-medium tracking-wide relative group"
-              style={{ fontSize: `${lerp(16, 16, scrollProgress)}px` }}
-            >
-              The Space
-              <span className="absolute bottom-0 left-0 w-0 h-0.5 bg-sand transition-all duration-300 group-hover:w-full"></span>
-            </button>
-            <button
-              onClick={() => handleNavigation('local-favorites')}
-              className="text-sand hover:text-ivory transition-colors duration-300 font-acumin font-medium tracking-wide relative group"
-              style={{ fontSize: `${lerp(16, 16, scrollProgress)}px` }}
-            >
-              Amenities Nearby
-              <span className="absolute bottom-0 left-0 w-0 h-0.5 bg-sand transition-all duration-300 group-hover:w-full"></span>
-            </button>
-            <button
-              onClick={() => handleNavigation('artist-inquiries')}
-              className="text-sand hover:text-ivory transition-colors duration-300 font-acumin font-medium tracking-wide relative group"
-              style={{ fontSize: `${lerp(16, 16, scrollProgress)}px` }}
-            >
-              Artist Inquiries
-              <span className="absolute bottom-0 left-0 w-0 h-0.5 bg-sand transition-all duration-300 group-hover:w-full"></span>
-            </button>
+            {navigationItems.map((item) => (
+              <a
+                key={item.id}
+                href={`#${item.id}`}
+                className="body-text text-sand hover:text-ivory transition-colors duration-300 relative group whitespace-nowrap"
+                style={{ fontSize: `${lerp(15, 14, scrollProgress)}px` }}
+              >
+                {item.label}
+                <span className="absolute bottom-0 left-0 w-0 h-0.5 bg-sand transition-all duration-300 group-hover:w-full"></span>
+              </a>
+            ))}
           </nav>
 
           {/* Mobile Menu Button */}
           <button 
-            className="md:hidden text-sand hover:text-ivory transition-colors"
+            className="lg:hidden text-sand hover:text-ivory transition-colors"
             onClick={toggleMobileMenu}
           >
             <svg 
@@ -144,7 +138,7 @@ export function Header({ scrollY, scrollToSection }: HeaderProps) {
 
       {/* Mobile Menu Overlay */}
       {isMobileMenuOpen && (
-        <div className="fixed inset-0 z-40 md:hidden">
+        <div className="fixed inset-0 z-40 lg:hidden">
           {/* Backdrop */}
           <div 
             className="absolute inset-0 bg-black/50 backdrop-blur-sm"
@@ -154,24 +148,18 @@ export function Header({ scrollY, scrollToSection }: HeaderProps) {
           {/* Menu Panel */}
           <div className="absolute top-20 left-4 right-4 bg-washed-black/95 backdrop-blur-md rounded-lg border border-sage/20 p-6">
             <nav className="flex flex-col space-y-6">
-              <button
-                onClick={() => handleNavigation('the-space')}
-                className="text-sand hover:text-ivory transition-colors duration-300 font-acumin font-medium tracking-wide text-lg text-left"
-              >
-                The Space
-              </button>
-              <button
-                onClick={() => handleNavigation('local-favorites')}
-                className="text-sand hover:text-ivory transition-colors duration-300 font-acumin font-medium tracking-wide text-lg text-left"
-              >
-                Amenities Nearby
-              </button>
-              <button
-                onClick={() => handleNavigation('artist-inquiries')}
-                className="text-sand hover:text-ivory transition-colors duration-300 font-acumin font-medium tracking-wide text-lg text-left"
-              >
-                Artist Inquiries
-              </button>
+              {navigationItems.map((item) => (
+                <a
+                  key={item.id}
+                  href={`#${item.id}`}
+                  onClick={handleNavigation}
+                  className="headline-secondary text-sand hover:text-ivory transition-colors duration-300 text-lg text-left"
+                >
+                  {item.label}
+                </a>
+              ))}
+              
+
             </nav>
           </div>
         </div>

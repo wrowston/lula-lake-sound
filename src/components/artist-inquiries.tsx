@@ -100,11 +100,11 @@ export function ArtistInquiries() {
             />
           </div>
           
-          <h2 className="text-3xl md:text-4xl font-bold text-sand mb-8 tracking-wide font-acumin">
-            ARTIST INQUIRIES
+          <h2 className="headline-primary text-3xl md:text-4xl text-sand mb-8">
+            Artist Inquiries
           </h2>
           
-          <p className="text-lg text-ivory/80 font-titillium max-w-2xl mx-auto leading-relaxed">
+          <p className="body-text text-lg text-ivory/80 max-w-2xl mx-auto">
             Ready to create something meaningful? Share your project details below and we&apos;ll get back to you to discuss how Lula Lake Sound can serve your artistic vision.
           </p>
         </div>
@@ -115,8 +115,8 @@ export function ArtistInquiries() {
             {/* Artist/Band Name & Contact Name Row */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <div>
-                <label htmlFor="artistName" className="block text-sm font-medium text-sand mb-3 font-acumin tracking-wide">
-                  ARTIST/BAND NAME *
+                <label htmlFor="artistName" className="block headline-secondary text-sm text-sand mb-3">
+                  Artist/Band Name *
                 </label>
                 <input
                   type="text"
@@ -125,14 +125,14 @@ export function ArtistInquiries() {
                   required
                   value={formData.artistName}
                   onChange={handleInputChange}
-                  className="w-full px-0 py-3 bg-transparent border-0 border-b-2 border-sage/40 text-ivory placeholder-ivory/50 font-titillium focus:border-sand focus:outline-none transition-colors"
+                  className="body-text w-full px-0 py-3 bg-transparent border-0 border-b-2 border-sage/40 text-ivory placeholder-ivory/50 focus:border-sand focus:outline-none transition-colors"
                   placeholder="Your artist or band name"
                 />
               </div>
 
               <div>
-                <label htmlFor="contactName" className="block text-sm font-medium text-sand mb-3 font-acumin tracking-wide">
-                  CONTACT NAME *
+                <label htmlFor="contactName" className="block headline-secondary text-sm text-sand mb-3">
+                  Contact Name *
                 </label>
                 <input
                   type="text"
@@ -141,7 +141,7 @@ export function ArtistInquiries() {
                   required
                   value={formData.contactName}
                   onChange={handleInputChange}
-                  className="w-full px-0 py-3 bg-transparent border-0 border-b-2 border-sage/40 text-ivory placeholder-ivory/50 font-titillium focus:border-sand focus:outline-none transition-colors"
+                  className="body-text w-full px-0 py-3 bg-transparent border-0 border-b-2 border-sage/40 text-ivory placeholder-ivory/50 focus:border-sand focus:outline-none transition-colors"
                   placeholder="Your full name"
                 />
               </div>
@@ -150,8 +150,8 @@ export function ArtistInquiries() {
             {/* Email and Phone Row */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <div>
-                <label htmlFor="email" className="block text-sm font-medium text-sand mb-3 font-acumin tracking-wide">
-                  EMAIL ADDRESS *
+                <label htmlFor="email" className="block headline-secondary text-sm text-sand mb-3">
+                  Email Address *
                 </label>
                 <input
                   type="email"
@@ -160,14 +160,14 @@ export function ArtistInquiries() {
                   required
                   value={formData.email}
                   onChange={handleInputChange}
-                  className="w-full px-0 py-3 bg-transparent border-0 border-b-2 border-sage/40 text-ivory placeholder-ivory/50 font-titillium focus:border-sand focus:outline-none transition-colors"
+                  className="body-text w-full px-0 py-3 bg-transparent border-0 border-b-2 border-sage/40 text-ivory placeholder-ivory/50 focus:border-sand focus:outline-none transition-colors"
                   placeholder="your@email.com"
                 />
               </div>
               
               <div>
-                <label htmlFor="phone" className="block text-sm font-medium text-sand mb-3 font-acumin tracking-wide">
-                  PHONE NUMBER
+                <label htmlFor="phone" className="block headline-secondary text-sm text-sand mb-3">
+                  Phone Number
                 </label>
                 <input
                   type="tel"
@@ -175,7 +175,7 @@ export function ArtistInquiries() {
                   name="phone"
                   value={formData.phone}
                   onChange={handleInputChange}
-                  className="w-full px-0 py-3 bg-transparent border-0 border-b-2 border-sage/40 text-ivory placeholder-ivory/50 font-titillium focus:border-sand focus:outline-none transition-colors"
+                  className="body-text w-full px-0 py-3 bg-transparent border-0 border-b-2 border-sage/40 text-ivory placeholder-ivory/50 focus:border-sand focus:outline-none transition-colors"
                   placeholder="(555) 123-4567"
                 />
               </div>
@@ -183,8 +183,8 @@ export function ArtistInquiries() {
 
             {/* Project Type */}
             <div>
-              <label htmlFor="projectType" className="block text-sm font-medium text-sand mb-3 font-acumin tracking-wide">
-                PROJECT TYPE *
+              <label htmlFor="projectType" className="block headline-secondary text-sm text-sand mb-3">
+                Project Type *
               </label>
               <select
                 id="projectType"
@@ -192,7 +192,7 @@ export function ArtistInquiries() {
                 required
                 value={formData.projectType}
                 onChange={handleInputChange}
-                className="w-full px-0 py-3 bg-transparent border-0 border-b-2 border-sage/40 text-ivory font-titillium focus:border-sand focus:outline-none transition-colors"
+                className="body-text w-full px-0 py-3 bg-transparent border-0 border-b-2 border-sage/40 text-ivory focus:border-sand focus:outline-none transition-colors"
               >
                 <option value="" className="bg-washed-black text-ivory">Select project type</option>
                 <option value="album" className="bg-washed-black text-ivory">Full Album</option>
@@ -209,15 +209,15 @@ export function ArtistInquiries() {
             {/* Budget and Timeline Row */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <div>
-                <label htmlFor="budget" className="block text-sm font-medium text-sand mb-3 font-acumin tracking-wide">
-                  BUDGET RANGE
+                <label htmlFor="budget" className="block headline-secondary text-sm text-sand mb-3">
+                  Budget Range
                 </label>
                 <select
                   id="budget"
                   name="budget"
                   value={formData.budget}
                   onChange={handleInputChange}
-                  className="w-full px-0 py-3 bg-transparent border-0 border-b-2 border-sage/40 text-ivory font-titillium focus:border-sand focus:outline-none transition-colors"
+                  className="body-text w-full px-0 py-3 bg-transparent border-0 border-b-2 border-sage/40 text-ivory focus:border-sand focus:outline-none transition-colors"
                 >
                   <option value="" className="bg-washed-black text-ivory">Prefer to discuss</option>
                   <option value="under-1k" className="bg-washed-black text-ivory">Under $1,000</option>
@@ -229,15 +229,15 @@ export function ArtistInquiries() {
               </div>
               
               <div>
-                <label htmlFor="timeline" className="block text-sm font-medium text-sand mb-3 font-acumin tracking-wide">
-                  DESIRED TIMELINE
+                <label htmlFor="timeline" className="block headline-secondary text-sm text-sand mb-3">
+                  Desired Timeline
                 </label>
                 <select
                   id="timeline"
                   name="timeline"
                   value={formData.timeline}
                   onChange={handleInputChange}
-                  className="w-full px-0 py-3 bg-transparent border-0 border-b-2 border-sage/40 text-ivory font-titillium focus:border-sand focus:outline-none transition-colors"
+                  className="body-text w-full px-0 py-3 bg-transparent border-0 border-b-2 border-sage/40 text-ivory focus:border-sand focus:outline-none transition-colors"
                 >
                   <option value="" className="bg-washed-black text-ivory">Flexible</option>
                   <option value="asap" className="bg-washed-black text-ivory">ASAP</option>
@@ -251,8 +251,8 @@ export function ArtistInquiries() {
 
             {/* Message */}
             <div>
-              <label htmlFor="message" className="block text-sm font-medium text-sand mb-3 font-acumin tracking-wide">
-                TELL US ABOUT YOUR PROJECT *
+              <label htmlFor="message" className="block headline-secondary text-sm text-sand mb-3">
+                Tell Us About Your Project *
               </label>
               <textarea
                 id="message"
@@ -261,7 +261,7 @@ export function ArtistInquiries() {
                 rows={6}
                 value={formData.message}
                 onChange={handleInputChange}
-                className="w-full px-0 py-3 bg-transparent border-0 border-b-2 border-sage/40 text-ivory placeholder-ivory/50 font-titillium focus:border-sand focus:outline-none transition-colors resize-none"
+                className="body-text w-full px-0 py-3 bg-transparent border-0 border-b-2 border-sage/40 text-ivory placeholder-ivory/50 focus:border-sand focus:outline-none transition-colors resize-none"
                 placeholder="Describe your musical style, project goals, what you're looking for from the studio experience, any specific requirements, or questions you have..."
               />
             </div>
@@ -269,7 +269,7 @@ export function ArtistInquiries() {
             {/* Submit Status Messages */}
             {submitStatus === 'success' && (
               <div className="p-6 bg-forest/60 border border-sand/30 rounded-sm">
-                <p className="text-sand font-titillium text-center">
+                <p className="body-text text-sand text-center">
                   Thank you! Your inquiry has been sent successfully. We&apos;ll get back to you soon via email.
                 </p>
               </div>
@@ -277,13 +277,13 @@ export function ArtistInquiries() {
             
             {submitStatus === 'error' && (
               <div className="p-6 bg-rust/40 border border-fire/30 rounded-sm">
-                <p className="text-ivory font-titillium text-center mb-2">
+                <p className="body-text text-ivory text-center mb-2">
                   {errorMessage}
                 </p>
-                <p className="text-ivory/70 font-titillium text-sm text-center">
+                <p className="body-text-small text-ivory/70 text-center">
                   If the problem persists, please email us directly at{' '}
-                  <a href="mailto:lulalakesound@gmail.com" className="text-sand hover:underline">
-                    lulalakesound@gmail.com
+                  <a href="mailto:info@lulalakesound.com" className="text-sand hover:underline">
+                    info@lulalakesound.com
                   </a>
                 </p>
               </div>
@@ -294,24 +294,24 @@ export function ArtistInquiries() {
               <button
                 type="submit"
                 disabled={isSubmitting}
-                className="px-12 py-4 bg-transparent border-2 border-sand text-sand font-medium font-acumin tracking-wide hover:bg-sand hover:text-washed-black transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed"
+                className="body-text px-12 py-4 bg-transparent border-2 border-sand text-sand hover:bg-sand hover:text-washed-black transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed"
               >
-                {isSubmitting ? 'SENDING...' : 'SEND INQUIRY'}
+                {isSubmitting ? 'Sending...' : 'Send Inquiry'}
               </button>
             </div>
           </form>
 
           {/* Alternative Contact Info */}
           <div className="mt-16 pt-8 border-t border-sage/30 text-center">
-            <p className="text-sm text-ivory/60 font-titillium mb-4">
+            <p className="body-text-small text-ivory/60 mb-4">
               Prefer to reach out directly?
             </p>
-            <p className="text-sand font-medium font-acumin tracking-wide mb-2">
-              <a href="mailto:lulalakesound@gmail.com" className="hover:text-ivory transition-colors">
-                LULALAKESOUND@GMAIL.COM
+            <p className="headline-secondary text-sand mb-2">
+              <a href="mailto:info@lulalakesound.com" className="hover:text-ivory transition-colors">
+                info@lulalakesound.com
               </a>
             </p>
-            <p className="text-sm text-ivory/60 font-titillium">
+            <p className="body-text-small text-ivory/60">
               Chattanooga, Tennessee
             </p>
           </div>

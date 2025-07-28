@@ -1,4 +1,5 @@
 import Image from "next/image";
+import { Button } from "@/components/ui/button";
 
 interface HeroProps {
   readonly logoScale: number;
@@ -57,6 +58,18 @@ export function Hero({ logoScale }: HeroProps) {
                 <br/>
                 With state-of-the-art equipment, comfortable accommodations, and breathtaking surroundings, Lula Lake Sound is a space where artists can fully immerse themselves in their both nature and music. 
                 </p>
+              </div>
+              
+              {/* Call to Action Button */}
+              <div className="pt-4">
+                <Button 
+                  variant="primary"
+                  size="lg"
+                  onClick={() => document.getElementById('artist-inquiries')?.scrollIntoView({ behavior: 'smooth' })}
+                  className="drop-shadow-xl"
+                >
+                  Get in touch
+                </Button>
               </div>
             </div>
           </div>
