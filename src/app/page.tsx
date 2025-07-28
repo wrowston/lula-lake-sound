@@ -3,8 +3,14 @@
 import { useState, useEffect } from "react";
 import { Header } from "@/components/header";
 import { Hero } from "@/components/hero";
+import { AudioPortfolio } from "@/components/audio-portfolio";
+import { ServicesAndPricing } from "@/components/services-pricing";
 import { TheSpace } from "@/components/the-space";
+import { EquipmentSpecs } from "@/components/equipment-specs";
+import { ArtistTestimonials } from "@/components/artist-testimonials";
+import { BookingAvailability } from "@/components/booking-availability";
 import { AmenitiesNearby } from "@/components/amenities-nearby";
+import { FAQ } from "@/components/faq";
 import { ArtistInquiries } from "@/components/artist-inquiries";
 
 // Helper function for calculating logo scale
@@ -57,9 +63,11 @@ export default function Home() {
   return (
     <div className="min-h-screen bg-sand">
       <Header scrollY={scrollY} scrollToSection={scrollToSection} />
-      <Hero logoScale={logoScale} />
+      <Hero logoScale={logoScale} scrollToSection={scrollToSection} />
       <TheSpace />
+      <EquipmentSpecs />
       <AmenitiesNearby />
+      <FAQ />
       <ArtistInquiries />
     </div>
   );
