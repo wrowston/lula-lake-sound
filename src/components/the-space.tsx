@@ -77,9 +77,9 @@ const STUDIO_IMAGES = [
   "/studio-images/JFD04656.jpg", 
   "/studio-images/JFD04782.jpg",
   "/studio-images/JFD04580.jpg",
+  "/studio-images/JFD04775.jpg",
   "/studio-images/IMG_4038.jpg",
-  "/studio-images/JFD04785.jpg",
-  "/studio-images/JFD04775.jpg"
+  "/studio-images/JFD04785.jpg"
 ] as const;
 
 function StudioGallery() {
