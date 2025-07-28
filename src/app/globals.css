@@ -112,3 +112,13 @@ html {
     radial-gradient(ellipse 150px 75px at 0% 0%, rgba(191, 187, 181, 0.15) 0%, transparent 50%),
     radial-gradient(ellipse 100px 50px at 100% 100%, rgba(85, 101, 106, 0.1) 0%, transparent 50%);
 }
+
+/* Hide scrollbar utility */
+.scrollbar-hide {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
+.scrollbar-hide::-webkit-scrollbar {
+  display: none;
+}

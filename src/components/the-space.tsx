@@ -1,4 +1,6 @@
 import { Button } from "@/components/ui/button";
+import Image from "next/image";
+import { useEffect, useRef, useState } from "react";
 
 // Studio spaces data with detailed descriptions
 const STUDIO_SPACES = [
@@ -69,6 +71,157 @@ const STUDIO_HIGHLIGHTS = [
   }
 ] as const;
 
+// Studio gallery images
+const STUDIO_IMAGES = [
+  "/studio-images/IMG_4034.jpg",
+  "/studio-images/JFD04656.jpg", 
+  "/studio-images/JFD04782.jpg",
+  "/studio-images/JFD04580.jpg",
+  "/studio-images/IMG_4038.jpg",
+  "/studio-images/JFD04785.jpg",
+  "/studio-images/JFD04775.jpg"
+] as const;
+
+function StudioGallery() {
+  const scrollRef = useRef<HTMLDivElement>(null);
+  const [isHovered, setIsHovered] = useState(false);
+  const [currentIndex, setCurrentIndex] = useState(0);
+
+  // Auto-scroll functionality
+  useEffect(() => {
+    if (isHovered) return;
+    
+    const interval = setInterval(() => {
+      if (scrollRef.current) {
+        const { scrollLeft, scrollWidth, clientWidth } = scrollRef.current;
+        const maxScroll = scrollWidth - clientWidth;
+        
+        if (scrollLeft >= maxScroll) {
+          // Reset to beginning
+          scrollRef.current.scrollTo({ left: 0, behavior: 'smooth' });
+          setCurrentIndex(0);
+        } else {
+          // Scroll to next image
+          const imageWidth = clientWidth * 0.8; // Approximate image width
+          const nextScrollPosition = scrollLeft + imageWidth;
+          scrollRef.current.scrollTo({ left: nextScrollPosition, behavior: 'smooth' });
+          setCurrentIndex(prev => (prev + 1) % STUDIO_IMAGES.length);
+        }
+      }
+    }, 4000); // Change image every 4 seconds
+
+    return () => clearInterval(interval);
+  }, [isHovered]);
+
+  const scrollToImage = (index: number) => {
+    if (scrollRef.current) {
+      const imageWidth = scrollRef.current.clientWidth * 0.8;
+      scrollRef.current.scrollTo({ 
+        left: index * imageWidth, 
+        behavior: 'smooth' 
+      });
+      setCurrentIndex(index);
+    }
+  };
+
+  return (
+    <div className="mb-12">
+      <h3 className="headline-secondary text-2xl text-sand mb-8 text-center">Studio Gallery</h3>
+      
+      {/* Horizontal Scrolling Container */}
+      <div 
+        className="relative group"
+        onMouseEnter={() => setIsHovered(true)}
+        onMouseLeave={() => setIsHovered(false)}
+      >
+        <div
+          ref={scrollRef}
+          className="flex gap-6 overflow-x-auto scrollbar-hide pb-4"
+          style={{
+            scrollSnapType: 'x mandatory',
+            scrollBehavior: 'smooth'
+          }}
+        >
+          {STUDIO_IMAGES.map((image, index) => (
+            <div
+              key={index}
+              className="flex-shrink-0 relative group cursor-pointer"
+              style={{
+                scrollSnapAlign: 'start',
+                width: '80vw',
+                maxWidth: '600px',
+                minWidth: '300px'
+              }}
+              onClick={() => scrollToImage(index)}
+            >
+              <div className="aspect-[16/10] relative overflow-hidden rounded-sm bg-sage/20">
+                <Image
+                  src={image}
+                  alt={`Studio image ${index + 1}`}
+                  fill
+                  className="object-cover transition-transform duration-500 group-hover:scale-105"
+                  sizes="(max-width: 768px) 80vw, (max-width: 1200px) 60vw, 600px"
+                />
+                
+                {/* Overlay */}
+                <div className="absolute inset-0 bg-gradient-to-t from-washed-black/60 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
+                
+                {/* Image Counter */}
+                <div className="absolute bottom-4 right-4 bg-washed-black/80 text-sand px-3 py-1 rounded-sm text-sm">
+                  {index + 1} / {STUDIO_IMAGES.length}
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
+
+        {/* Navigation Dots */}
+        <div className="flex justify-center mt-6 gap-2">
+          {STUDIO_IMAGES.map((_, index) => (
+            <button
+              key={index}
+              onClick={() => scrollToImage(index)}
+              className={`w-2 h-2 rounded-full transition-all duration-300 ${
+                index === currentIndex 
+                  ? 'bg-sand w-8' 
+                  : 'bg-sage/40 hover:bg-sage/60'
+              }`}
+            />
+          ))}
+        </div>
+
+        {/* Navigation Arrows */}
+        <button
+          onClick={() => scrollToImage(Math.max(0, currentIndex - 1))}
+          className="absolute left-4 top-1/2 transform -translate-y-1/2 bg-washed-black/80 hover:bg-washed-black text-sand p-2 rounded-full transition-all duration-300 opacity-0 group-hover:opacity-100"
+          disabled={currentIndex === 0}
+        >
+          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+          </svg>
+        </button>
+        
+        <button
+          onClick={() => scrollToImage(Math.min(STUDIO_IMAGES.length - 1, currentIndex + 1))}
+          className="absolute right-4 top-1/2 transform -translate-y-1/2 bg-washed-black/80 hover:bg-washed-black text-sand p-2 rounded-full transition-all duration-300 opacity-0 group-hover:opacity-100"
+          disabled={currentIndex === STUDIO_IMAGES.length - 1}
+        >
+          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+          </svg>
+        </button>
+      </div>
+
+      {/* Gallery Description */}
+      <div className="text-center mt-8 max-w-2xl mx-auto">
+        <p className="body-text text-ivory/70">
+          Take a visual tour through our recording spaces. Each room is carefully designed and acoustically treated to capture the perfect sound for your musical vision.
+        </p>
+      </div>
+    </div>
+  );
+}
+
 export function TheSpace() {
   return (
     <section id="the-space" className="py-20 px-4 bg-washed-black relative">
@@ -96,42 +249,8 @@ export function TheSpace() {
           ))}
         </div>
 
-        {/* Studio Spaces Gallery */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 mb-12">
-          {STUDIO_SPACES.map((space) => (
-            <div key={space.id} className="bg-forest/20 border border-sage/30 rounded-sm overflow-hidden hover:border-sand/50 transition-all duration-300 group">
-              {/* Image Placeholder */}
-              <div className="aspect-[4/3] bg-sage/20 flex flex-col items-center justify-center p-8 group-hover:bg-sage/30 transition-colors">
-                <div className="w-16 h-16 bg-sand/20 rounded-sm flex items-center justify-center mb-4">
-                  <svg className="w-8 h-8 text-sand" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
-                  </svg>
-                </div>
-                <p className="body-text-small text-sage/60 text-center">
-                  {space.name} Photo
-                </p>
-              </div>
-              
-              {/* Content */}
-              <div className="p-6">
-                <h3 className="headline-secondary text-sand text-xl mb-3">{space.name}</h3>
-                <p className="body-text text-ivory/80 mb-4">
-                  {space.description}
-                </p>
-                
-                {/* Features List */}
-                <ul className="space-y-2">
-                  {space.features.map((feature, featureIndex) => (
-                    <li key={featureIndex} className="flex items-start space-x-2">
-                      <span className="text-sand text-xs mt-1">•</span>
-                      <span className="body-text-small text-ivory/70">{feature}</span>
-                    </li>
-                  ))}
-                </ul>
-              </div>
-            </div>
-          ))}
-        </div>
+        {/* Studio Gallery */}
+        <StudioGallery />
 
         {/* Virtual Tour CTA */}
         <div className="text-center bg-sage/10 border border-sage/30 rounded-sm p-8">
@@ -157,26 +276,6 @@ export function TheSpace() {
             >
               View Equipment List
             </Button>
-          </div>
-        </div>
-
-        {/* Studio Stats */}
-        <div className="mt-12 grid grid-cols-2 md:grid-cols-4 gap-8 text-center">
-          <div>
-            <div className="headline-secondary text-3xl text-sand mb-2">6</div>
-            <div className="body-text-small text-ivory/70 uppercase tracking-wide">Recording Spaces</div>
-          </div>
-          <div>
-            <div className="headline-secondary text-3xl text-sand mb-2">24&apos;</div>
-            <div className="body-text-small text-ivory/70 uppercase tracking-wide">Live Room Length</div>
-          </div>
-          <div>
-            <div className="headline-secondary text-3xl text-sand mb-2">12&apos;</div>
-            <div className="body-text-small text-ivory/70 uppercase tracking-wide">Ceiling Height</div>
-          </div>
-          <div>
-            <div className="headline-secondary text-3xl text-sand mb-2">API</div>
-            <div className="body-text-small text-ivory/70 uppercase tracking-wide">Mixing Console</div>
           </div>
         </div>
       </div>
