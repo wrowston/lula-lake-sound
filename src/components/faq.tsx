@@ -15,7 +15,7 @@ const FAQ_CATEGORIES = [
       {
         id: 2,
         question: "Do you provide instruments and amplifiers?",
-        answer: "Yes! We have a collection of professional instruments including a Steinway Model B grand piano, Hammond B3 organ, vintage Fender and Marshall amplifiers, and various guitars and basses. Additional instrument rentals are available for $50/day. Check our equipment list for specific items."
+        answer: "Yes! Please see our gear list for a list of our available instruments and amplifiers."
       },
       {
         id: 3,
@@ -30,42 +30,12 @@ const FAQ_CATEGORIES = [
     ]
   },
   {
-    category: "Pricing & Packages",
-    questions: [
-      {
-        id: 5,
-        question: "What's included in your daily rate?",
-        answer: "Our $400 daily rate (8 hours) includes studio time, an experienced engineer, all equipment use, and access to our comfortable lounge and kitchen facilities. This covers recording time - mixing and mastering are separate services unless you book a production package."
-      },
-      {
-        id: 6,
-        question: "Do you offer discounts for multi-day bookings?",
-        answer: "Yes! We offer package deals for album projects and multi-day sessions. Our 3-day album package is $1,200 (saving $200), and we have custom packages for longer projects. Contact us to discuss rates for your specific project needs."
-      },
-      {
-        id: 7,
-        question: "What are your payment terms?",
-        answer: "We require a 50% deposit to secure your booking, with the balance due at the start of your session. We accept cash, check, and major credit cards. For larger projects, we can arrange payment plans - just ask!"
-      }
-    ]
-  },
-  {
     category: "Studio Logistics",
     questions: [
       {
-        id: 8,
-        question: "Where exactly are you located?",
-        answer: "We're located in the mountains just outside Chattanooga, Tennessee, about 20 minutes from downtown. The peaceful, natural setting provides the perfect creative environment away from city distractions. We'll provide exact directions and parking information when you book."
-      },
-      {
         id: 9,
         question: "Is there accommodation nearby?",
-        answer: "Yes! We have partnerships with local accommodations ranging from $80-120/night. Options include cozy cabins, B&Bs, and hotels in nearby Lookout Mountain. We can help arrange lodging for out-of-town artists. Many artists love staying nearby to maintain the creative flow between sessions."
-      },
-      {
-        id: 10,
-        question: "What's your cancellation policy?",
-        answer: "We require 24-hour notice for cancellations. With 24+ hours notice, we'll refund your deposit minus a $50 processing fee. Last-minute cancellations forfeit the deposit, though we try to be flexible with genuine emergencies or illness."
+        answer: "Yes! We can help arrange lodging for out-of-town artists. Many artists love staying nearby to maintain the creative flow between sessions."
       }
     ]
   }
