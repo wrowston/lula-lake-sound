@@ -2,29 +2,6 @@ import { Button } from "@/components/ui/button";
 import Image from "next/image";
 import { useEffect, useRef, useState } from "react";
 
-const STUDIO_HIGHLIGHTS = [
-  {
-    icon: "🎸",
-    title: "Vintage Instruments",
-    description: "1978 Gibson 335, vintage Martin & Gibson acoustics, boutique amplifiers"
-  },
-  {
-    icon: "🎛️",
-    title: "API 2448 Console",
-    description: "Professional mixing console with 24 API EQs and analog signal path"
-  },
-  {
-    icon: "🎤",
-    title: "Microphone Collection",
-    description: "Neumann U47/U67/M49, AEA ribbons, and extensive dynamic selection"
-  },
-  {
-    icon: "⚡",
-    title: "Boutique Outboard",
-    description: "Fairchild 670s, Neve 1073s, Distressors, and vintage compressors"
-  }
-] as const;
-
 // Studio gallery images
 const STUDIO_IMAGES = [
   "/studio-images/IMG_4034.jpg",
@@ -169,7 +146,7 @@ function StudioGallery() {
       {/* Gallery Description */}
       <div className="text-center mt-8 max-w-2xl mx-auto">
         <p className="body-text text-ivory/70">
-          Take a visual tour through our recording spaces. Each room is carefully designed and acoustically treated to capture the perfect sound for your musical vision.
+          Take a visual tour through our space. Lula Lake Sound is carefully designed and acoustically treated to capture the perfect sound for your musical vision.
         </p>
       </div>
     </div>
@@ -192,17 +169,6 @@ export function TheSpace() {
           </p>
         </div>
 
-        {/* Studio Highlights */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-16">
-          {STUDIO_HIGHLIGHTS.map((highlight, index) => (
-            <div key={index} className="text-center bg-forest/20 border border-sage/30 rounded-sm p-6">
-              <div className="text-4xl mb-4">{highlight.icon}</div>
-              <h3 className="headline-secondary text-sand text-lg mb-3">{highlight.title}</h3>
-              <p className="body-text-small text-ivory/70">{highlight.description}</p>
-            </div>
-          ))}
-        </div>
-
         {/* Studio Gallery */}
         <StudioGallery />
 
@@ -213,7 +179,7 @@ export function TheSpace() {
           </h3>
           <p className="body-text text-ivory/70 mb-6 max-w-2xl mx-auto">
             Want to see more? Schedule a studio tour or start planning your recording session. 
-            We&apos;d love to show you around and discuss how our space can serve your musical vision.
+            We&apos;d love to show you around and discuss how our space can serve your recording and mixing needs.
           </p>
           <div className="flex flex-col sm:flex-row gap-4 justify-center">
             <Button 
