@@ -36,7 +36,6 @@ const BOOKING_STEPS = [
 ] as const;
 
 export function BookingAvailability() {
-  const [selectedStep, setSelectedStep] = useState(1);
   const [selectedDate, setSelectedDate] = useState<number | null>(null);
 
   return (
@@ -58,7 +57,7 @@ export function BookingAvailability() {
           {BOOKING_STEPS.map((step) => (
             <div key={step.step} className="text-center">
               <div className={`w-12 h-12 rounded-full mx-auto mb-4 flex items-center justify-center font-acumin font-bold ${
-                selectedStep >= step.step ? 'bg-sand text-washed-black' : 'bg-sage/20 text-sage'
+                1 >= step.step ? 'bg-sand text-washed-black' : 'bg-sage/20 text-sage'
               }`}>
                 {step.step}
               </div>

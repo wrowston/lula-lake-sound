@@ -140,7 +140,7 @@ export function TheSpace() {
           </h3>
           <p className="body-text text-ivory/70 mb-6 max-w-2xl mx-auto">
             Want to see more? Schedule a studio tour or start planning your recording session. 
-            We'd love to show you around and discuss how our space can serve your musical vision.
+            We&apos;d love to show you around and discuss how our space can serve your musical vision.
           </p>
           <div className="flex flex-col sm:flex-row gap-4 justify-center">
             <Button 
@@ -167,11 +167,11 @@ export function TheSpace() {
             <div className="body-text-small text-ivory/70 uppercase tracking-wide">Recording Spaces</div>
           </div>
           <div>
-            <div className="headline-secondary text-3xl text-sand mb-2">24'</div>
+            <div className="headline-secondary text-3xl text-sand mb-2">24&apos;</div>
             <div className="body-text-small text-ivory/70 uppercase tracking-wide">Live Room Length</div>
           </div>
           <div>
-            <div className="headline-secondary text-3xl text-sand mb-2">12'</div>
+            <div className="headline-secondary text-3xl text-sand mb-2">12&apos;</div>
             <div className="body-text-small text-ivory/70 uppercase tracking-wide">Ceiling Height</div>
           </div>
           <div>

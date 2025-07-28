@@ -5,7 +5,6 @@ import { useState } from "react";
 
 interface HeaderProps {
   readonly scrollY: number;
-  readonly scrollToSection: (sectionId: string) => void;
 }
 
 // Helper function for smooth interpolation
@@ -13,7 +12,7 @@ function lerp(start: number, end: number, progress: number): number {
   return start + (end - start) * progress;
 }
 
-export function Header({ scrollY, scrollToSection }: HeaderProps) {
+export function Header({ scrollY }: HeaderProps) {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
   // Calculate transformations based on scroll position
@@ -25,10 +24,6 @@ export function Header({ scrollY, scrollToSection }: HeaderProps) {
   const headerWidth = scrollProgress > 0.3 ? 'auto' : '100%';
   const headerMargin = lerp(0, 16, scrollProgress);
 
-  function handleNavigation(sectionId: string) {
-    scrollToSection(sectionId);
-    setIsMobileMenuOpen(false);
-  }
 
   function handleLogoClick() {
     window.scrollTo({ top: 0, behavior: 'smooth' });
@@ -70,7 +65,7 @@ export function Header({ scrollY, scrollToSection }: HeaderProps) {
           }}
         >
           {/* Logo */}
-          <button
+          <a
             onClick={handleLogoClick}
             className="flex items-center transition-transform duration-300 hover:scale-105"
             style={{
@@ -89,7 +84,7 @@ export function Header({ scrollY, scrollToSection }: HeaderProps) {
               }}
               priority
             />
-          </button>
+          </a>
 
           {/* Desktop Navigation */}
           <nav 
@@ -100,20 +95,20 @@ export function Header({ scrollY, scrollToSection }: HeaderProps) {
             }}
           >
             {navigationItems.map((item) => (
-              <button
+              <a
                 key={item.id}
-                onClick={() => handleNavigation(item.id)}
+                href={`#${item.id}`} onClick={() => setIsMobileMenuOpen(false)}
                 className="body-text text-sand hover:text-ivory transition-colors duration-300 relative group whitespace-nowrap"
                 style={{ fontSize: `${lerp(15, 14, scrollProgress)}px` }}
               >
                 {item.label}
                 <span className="absolute bottom-0 left-0 w-0 h-0.5 bg-sand transition-all duration-300 group-hover:w-full"></span>
-              </button>
+              </a>
             ))}
           </nav>
 
           {/* Mobile Menu Button */}
-          <button 
+          <a 
             className="lg:hidden text-sand hover:text-ivory transition-colors"
             onClick={toggleMobileMenu}
           >
@@ -133,7 +128,7 @@ export function Header({ scrollY, scrollToSection }: HeaderProps) {
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
               )}
             </svg>
-          </button>
+          </a>
         </div>
       </header>
 
@@ -150,29 +145,29 @@ export function Header({ scrollY, scrollToSection }: HeaderProps) {
           <div className="absolute top-20 left-4 right-4 bg-washed-black/95 backdrop-blur-md rounded-lg border border-sage/20 p-6">
             <nav className="flex flex-col space-y-6">
               {navigationItems.map((item) => (
-                <button
+                <a
                   key={item.id}
-                  onClick={() => handleNavigation(item.id)}
+                  href={`#${item.id}`} onClick={() => setIsMobileMenuOpen(false)}
                   className="headline-secondary text-sand hover:text-ivory transition-colors duration-300 text-lg text-left"
                 >
                   {item.label}
-                </button>
+                </a>
               ))}
               
               {/* Additional mobile-only links */}
               <div className="border-t border-sage/30 pt-6 space-y-4">
-                <button
-                  onClick={() => handleNavigation('faq')}
+                <a
+                  href="#faq" onClick={() => setIsMobileMenuOpen(false)}
                   className="body-text text-ivory/70 hover:text-ivory transition-colors duration-300 text-left"
                 >
                   FAQ
-                </button>
-                <button
-                  onClick={() => handleNavigation('local-favorites')}
+                </a>
+                <a
+                  href="#local-favorites" onClick={() => setIsMobileMenuOpen(false)}
                   className="body-text text-ivory/70 hover:text-ivory transition-colors duration-300 text-left"
                 >
                   Amenities Nearby
-                </button>
+                </a>
               </div>
             </nav>
           </div>

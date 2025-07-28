@@ -105,7 +105,7 @@ export function ArtistInquiries() {
           </h2>
           
           <p className="body-text text-lg text-ivory/80 max-w-2xl mx-auto">
-            Ready to create something meaningful? Share your project details below and we'll get back to you to discuss how Lula Lake Sound can serve your artistic vision.
+            Ready to create something meaningful? Share your project details below and we&apos;ll get back to you to discuss how Lula Lake Sound can serve your artistic vision.
           </p>
         </div>
 
@@ -270,7 +270,7 @@ export function ArtistInquiries() {
             {submitStatus === 'success' && (
               <div className="p-6 bg-forest/60 border border-sand/30 rounded-sm">
                 <p className="body-text text-sand text-center">
-                  Thank you! Your inquiry has been sent successfully. We'll get back to you soon via email.
+                  Thank you! Your inquiry has been sent successfully. We&apos;ll get back to you soon via email.
                 </p>
               </div>
             )}

@@ -92,7 +92,7 @@ export function FAQ() {
             Frequently Asked Questions
           </h2>
           <p className="body-text text-lg text-ivory/80 max-w-3xl mx-auto">
-            Everything you need to know about recording at Lula Lake Sound. Don't see your question? Just ask!
+            Everything you need to know about recording at Lula Lake Sound. Don&apos;t see your question? Just ask!
           </p>
         </div>
 
@@ -145,7 +145,7 @@ export function FAQ() {
             Still Have Questions?
           </h3>
           <p className="body-text text-ivory/70 mb-6 max-w-2xl mx-auto">
-            We're here to help make your recording experience perfect. Reach out with any questions about our studio, services, or your specific project needs.
+            We&apos;re here to help make your recording experience perfect. Reach out with any questions about our studio, services, or your specific project needs.
           </p>
           <div className="flex flex-col sm:flex-row gap-4 justify-center">
             <a 

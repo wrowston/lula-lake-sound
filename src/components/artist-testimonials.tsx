@@ -56,7 +56,7 @@ export function ArtistTestimonials() {
             ARTIST TESTIMONIALS
           </h2>
           <p className="text-lg text-washed-black/80 font-titillium max-w-3xl mx-auto leading-relaxed">
-            Hear from the artists who've trusted Lula Lake Sound with their most important musical projects.
+            Hear from the artists who&apos;ve trusted Lula Lake Sound with their most important musical projects.
           </p>
         </div>
 
@@ -80,7 +80,7 @@ export function ArtistTestimonials() {
                   <path d="M14.017 21v-7.391c0-5.704 3.731-9.57 8.983-10.609l.995 2.151c-2.432.917-3.995 3.638-3.995 5.849h4v10h-9.983zm-14.017 0v-7.391c0-5.704 3.748-9.57 9-10.609l.996 2.151c-2.433.917-3.996 3.638-3.996 5.849h4v10h-10z"/>
                 </svg>
                 <p className="text-washed-black/80 font-titillium text-lg leading-relaxed italic">
-                  "{testimonial.quote}"
+                  &quot;{testimonial.quote}&quot;
                 </p>
               </div>
               
@@ -110,7 +110,7 @@ export function ArtistTestimonials() {
               FEATURED SUCCESS STORY
             </h3>
             <p className="text-washed-black/80 font-titillium text-lg mb-4 leading-relaxed">
-              "Mountain Echo's album recorded at Lula Lake Sound debuted at #3 on the Billboard Independent Charts and was nominated for a Grammy Award for Best Americana Album."
+              &quot;Mountain Echo&apos;s album recorded at Lula Lake Sound debuted at #3 on the Billboard Independent Charts and was nominated for a Grammy Award for Best Americana Album.&quot;
             </p>
             <div className="text-forest font-acumin font-bold">
               - Nashville Scene, Music Industry Review
