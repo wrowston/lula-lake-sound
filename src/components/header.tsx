@@ -24,6 +24,9 @@ export function Header({ scrollY }: HeaderProps) {
   const headerWidth = scrollProgress > 0.3 ? 'auto' : '100%';
   const headerMargin = lerp(0, 16, scrollProgress);
 
+  function handleNavigation() {
+    setIsMobileMenuOpen(false);
+  }
 
   function handleLogoClick() {
     window.scrollTo({ top: 0, behavior: 'smooth' });
@@ -36,7 +39,8 @@ export function Header({ scrollY }: HeaderProps) {
   // Navigation items for the music studio
   const navigationItems = [
     { id: 'the-space', label: 'The Studio' },
-    { id: 'amenities-nearby', label: 'Amenities Nearby' },
+    { id: 'equipment-specs', label: 'Gear List' },
+    { id: 'local-favorites', label: 'Amenities Nearby' },
     { id: 'faq', label: 'FAQ' },
     { id: 'artist-inquiries', label: 'Book Your Session' },
   ];
@@ -65,7 +69,7 @@ export function Header({ scrollY }: HeaderProps) {
           }}
         >
           {/* Logo */}
-          <a
+          <button
             onClick={handleLogoClick}
             className="flex items-center transition-transform duration-300 hover:scale-105"
             style={{
@@ -84,7 +88,7 @@ export function Header({ scrollY }: HeaderProps) {
               }}
               priority
             />
-          </a>
+          </button>
 
           {/* Desktop Navigation */}
           <nav 
@@ -97,7 +101,7 @@ export function Header({ scrollY }: HeaderProps) {
             {navigationItems.map((item) => (
               <a
                 key={item.id}
-                href={`#${item.id}`} onClick={() => setIsMobileMenuOpen(false)}
+                href={`#${item.id}`}
                 className="body-text text-sand hover:text-ivory transition-colors duration-300 relative group whitespace-nowrap"
                 style={{ fontSize: `${lerp(15, 14, scrollProgress)}px` }}
               >
@@ -108,7 +112,7 @@ export function Header({ scrollY }: HeaderProps) {
           </nav>
 
           {/* Mobile Menu Button */}
-          <a 
+          <button 
             className="lg:hidden text-sand hover:text-ivory transition-colors"
             onClick={toggleMobileMenu}
           >
@@ -128,7 +132,7 @@ export function Header({ scrollY }: HeaderProps) {
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
               )}
             </svg>
-          </a>
+          </button>
         </div>
       </header>
 
@@ -147,28 +151,15 @@ export function Header({ scrollY }: HeaderProps) {
               {navigationItems.map((item) => (
                 <a
                   key={item.id}
-                  href={`#${item.id}`} onClick={() => setIsMobileMenuOpen(false)}
+                  href={`#${item.id}`}
+                  onClick={handleNavigation}
                   className="headline-secondary text-sand hover:text-ivory transition-colors duration-300 text-lg text-left"
                 >
                   {item.label}
                 </a>
               ))}
               
-              {/* Additional mobile-only links */}
-              <div className="border-t border-sage/30 pt-6 space-y-4">
-                <a
-                  href="#faq" onClick={() => setIsMobileMenuOpen(false)}
-                  className="body-text text-ivory/70 hover:text-ivory transition-colors duration-300 text-left"
-                >
-                  FAQ
-                </a>
-                <a
-                  href="#local-favorites" onClick={() => setIsMobileMenuOpen(false)}
-                  className="body-text text-ivory/70 hover:text-ivory transition-colors duration-300 text-left"
-                >
-                  Amenities Nearby
-                </a>
-              </div>
+
             </nav>
           </div>
         </div>

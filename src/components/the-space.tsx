@@ -6,14 +6,14 @@ const STUDIO_SPACES = [
     id: 1,
     name: "Live Room",
     description: "20' x 24' main recording space with 12-foot ceilings and custom acoustic treatment",
-    features: ["Natural wood acoustics", "Steinway Model B grand piano", "Full drum kit setup", "Multiple instrument stations"],
+    features: ["Natural wood acoustics", "DW & vintage Rogers drum kits", "Multiple instrument stations", "Vintage guitar & bass collection"],
     image: "/studio-live-room.jpg"
   },
   {
     id: 2,
     name: "Control Room",
-    description: "Professional mixing environment with SSL console and pristine monitoring",
-    features: ["SSL 4000 Series Console", "Genelec 1032A monitors", "Pro Tools HDX system", "Vintage outboard gear"],
+    description: "Professional mixing environment with API console and pristine monitoring",
+    features: ["API 2448 Console with 24 EQs", "Genelec 1032A monitors", "Universal Audio Apollo x16 interfaces", "Extensive outboard collection"],
     image: "/studio-control-room.jpg"
   },
   {
@@ -41,31 +41,31 @@ const STUDIO_SPACES = [
     id: 6,
     name: "Equipment Room",
     description: "Climate-controlled storage for our extensive gear collection",
-    features: ["Vintage amplifiers", "Rare instruments", "Microphone library", "Pedal collection"],
+    features: ["Boutique tube amplifiers", "Premium microphone collection", "Vintage compressors & EQs", "Guitar & bass selection"],
     image: "/studio-equipment.jpg"
   }
 ] as const;
 
 const STUDIO_HIGHLIGHTS = [
   {
-    icon: "🎹",
-    title: "Premium Instruments",
-    description: "Steinway grand piano, Hammond B3 organ, vintage guitars and amps"
+    icon: "🎸",
+    title: "Vintage Instruments",
+    description: "1978 Gibson 335, vintage Martin & Gibson acoustics, boutique amplifiers"
   },
   {
     icon: "🎛️",
-    title: "Professional Console",
-    description: "SSL 4000 Series mixing desk with premium analog signal path"
+    title: "API 2448 Console",
+    description: "Professional mixing console with 24 API EQs and analog signal path"
   },
   {
-    icon: "🏔️",
-    title: "Natural Setting",
-    description: "Mountain location providing inspiration and creative energy"
+    icon: "🎤",
+    title: "Microphone Collection",
+    description: "Neumann U47/U67/M49, AEA ribbons, and extensive dynamic selection"
   },
   {
-    icon: "🎧",
-    title: "Pristine Acoustics",
-    description: "Custom-designed rooms optimized for recording excellence"
+    icon: "⚡",
+    title: "Boutique Outboard",
+    description: "Fairchild 670s, Neve 1073s, Distressors, and vintage compressors"
   }
 ] as const;
 
@@ -175,7 +175,7 @@ export function TheSpace() {
             <div className="body-text-small text-ivory/70 uppercase tracking-wide">Ceiling Height</div>
           </div>
           <div>
-            <div className="headline-secondary text-3xl text-sand mb-2">SSL</div>
+            <div className="headline-secondary text-3xl text-sand mb-2">API</div>
             <div className="body-text-small text-ivory/70 uppercase tracking-wide">Mixing Console</div>
           </div>
         </div>
