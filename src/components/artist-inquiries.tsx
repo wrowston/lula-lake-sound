@@ -282,8 +282,8 @@ export function ArtistInquiries() {
                 </p>
                 <p className="body-text-small text-ivory/70 text-center">
                   If the problem persists, please email us directly at{' '}
-                  <a href="mailto:lulalakesound@gmail.com" className="text-sand hover:underline">
-                    lulalakesound@gmail.com
+                  <a href="mailto:info@lulalakesound.com" className="text-sand hover:underline">
+                    info@lulalakesound.com
                   </a>
                 </p>
               </div>
@@ -307,8 +307,8 @@ export function ArtistInquiries() {
               Prefer to reach out directly?
             </p>
             <p className="headline-secondary text-sand mb-2">
-              <a href="mailto:lulalakesound@gmail.com" className="hover:text-ivory transition-colors">
-                lulalakesound@gmail.com
+              <a href="mailto:info@lulalakesound.com" className="hover:text-ivory transition-colors">
+                info@lulalakesound.com
               </a>
             </p>
             <p className="body-text-small text-ivory/60">

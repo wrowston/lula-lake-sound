@@ -149,7 +149,7 @@ export function FAQ() {
           </p>
           <div className="flex flex-col sm:flex-row gap-4 justify-center">
             <a 
-              href="mailto:lulalakesound@gmail.com"
+              href="mailto:info@lulalakesound.com"
               className="body-text px-6 py-3 bg-sand text-washed-black hover:bg-sand/90 transition-colors"
             >
               Email Us Directly

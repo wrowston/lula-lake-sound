@@ -196,10 +196,10 @@ export function BookingAvailability() {
                 <div className="text-center">
                   <p className="text-ivory/60 font-titillium text-sm mb-2">Or contact us directly:</p>
                   <a 
-                    href="mailto:lulalakesound@gmail.com" 
+                    href="mailto:info@lulalakesound.com" 
                     className="text-sand hover:text-ivory transition-colors font-acumin font-medium"
                   >
-                    lulalakesound@gmail.com
+                    info@lulalakesound.com
                   </a>
                 </div>
               </div>
