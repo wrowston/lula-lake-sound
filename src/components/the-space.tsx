@@ -2,52 +2,6 @@ import { Button } from "@/components/ui/button";
 import Image from "next/image";
 import { useEffect, useRef, useState } from "react";
 
-// Studio spaces data with detailed descriptions
-const STUDIO_SPACES = [
-  {
-    id: 1,
-    name: "Live Room",
-    description: "20' x 24' main recording space with 12-foot ceilings and custom acoustic treatment",
-    features: ["Natural wood acoustics", "DW & vintage Rogers drum kits", "Multiple instrument stations", "Vintage guitar & bass collection"],
-    image: "/studio-live-room.jpg"
-  },
-  {
-    id: 2,
-    name: "Control Room",
-    description: "Professional mixing environment with API console and pristine monitoring",
-    features: ["API 2448 Console with 24 EQs", "Genelec 1032A monitors", "Universal Audio Apollo x16 interfaces", "Extensive outboard collection"],
-    image: "/studio-control-room.jpg"
-  },
-  {
-    id: 3,
-    name: "Isolation Booth A",
-    description: "Intimate vocal recording space with exceptional sound isolation",
-    features: ["Vocal-optimized acoustics", "Premium microphone selection", "Real-time monitoring", "Comfortable environment"],
-    image: "/studio-vocal-booth.jpg"
-  },
-  {
-    id: 4,
-    name: "Isolation Booth B",
-    description: "Versatile instrumental recording booth for guitars, bass, and more",
-    features: ["Amp cabinet isolation", "Guitar and bass setups", "Direct recording options", "Quick setup changes"],
-    image: "/studio-instrument-booth.jpg"
-  },
-  {
-    id: 5,
-    name: "Lounge Area",
-    description: "Comfortable relaxation space for breaks and creative discussions",
-    features: ["Mountain views", "Kitchen facilities", "Comfortable seating", "Inspiring atmosphere"],
-    image: "/studio-lounge.jpg"
-  },
-  {
-    id: 6,
-    name: "Equipment Room",
-    description: "Climate-controlled storage for our extensive gear collection",
-    features: ["Boutique tube amplifiers", "Premium microphone collection", "Vintage compressors & EQs", "Guitar & bass selection"],
-    image: "/studio-equipment.jpg"
-  }
-] as const;
-
 const STUDIO_HIGHLIGHTS = [
   {
     icon: "🎸",
