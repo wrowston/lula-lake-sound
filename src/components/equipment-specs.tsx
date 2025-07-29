@@ -143,7 +143,7 @@ const EQUIPMENT_CATEGORIES: EquipmentCategory[] = [
       { name: "1990s Fender Stratocaster"},
       { name: "Custom Hamer Partscaster Tele"},
       { name: "1978 Gibson 335 with Bigsby"},
-      { name: "2013 Gibson Les Paul Goldtop"},
+      { name: "2013 ‘57 Reissue Gibson Les Paul Goldtopp"},
       { name: "1958 Gibson J-50 Acoustic"},
       { name: "1971 Martin D-28"},
       { name: "2005 Martin HD-28"},
