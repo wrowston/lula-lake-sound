@@ -10,9 +10,6 @@ export function ArtistInquiries() {
     contactName: '',
     email: '',
     phone: '',
-    projectType: '',
-    budget: '',
-    timeline: '',
     message: ''
   });
   
@@ -42,9 +39,6 @@ export function ArtistInquiries() {
           contactName: formData.contactName,
           email: formData.email,
           phone: formData.phone || undefined,
-          projectType: formData.projectType,
-          budget: formData.budget || undefined,
-          timeline: formData.timeline || undefined,
           message: formData.message,
         },
       });
@@ -64,9 +58,6 @@ export function ArtistInquiries() {
           contactName: '',
           email: '',
           phone: '',
-          projectType: '',
-          budget: '',
-          timeline: '',
           message: ''
         });
       } else {
@@ -181,73 +172,7 @@ export function ArtistInquiries() {
               </div>
             </div>
 
-            {/* Project Type */}
-            <div>
-              <label htmlFor="projectType" className="block headline-secondary text-sm text-sand mb-3">
-                Project Type *
-              </label>
-              <select
-                id="projectType"
-                name="projectType"
-                required
-                value={formData.projectType}
-                onChange={handleInputChange}
-                className="body-text w-full px-0 py-3 bg-transparent border-0 border-b-2 border-sage/40 text-ivory focus:border-sand focus:outline-none transition-colors"
-              >
-                <option value="" className="bg-washed-black text-ivory">Select project type</option>
-                <option value="album" className="bg-washed-black text-ivory">Full Album</option>
-                <option value="ep" className="bg-washed-black text-ivory">EP</option>
-                <option value="single" className="bg-washed-black text-ivory">Single</option>
-                <option value="demo" className="bg-washed-black text-ivory">Demo</option>
-                <option value="mixing" className="bg-washed-black text-ivory">Mixing Only</option>
-                <option value="mastering" className="bg-washed-black text-ivory">Mastering Only</option>
-                <option value="production" className="bg-washed-black text-ivory">Production</option>
-                <option value="other" className="bg-washed-black text-ivory">Other</option>
-              </select>
-            </div>
 
-            {/* Budget and Timeline Row */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              <div>
-                <label htmlFor="budget" className="block headline-secondary text-sm text-sand mb-3">
-                  Budget Range
-                </label>
-                <select
-                  id="budget"
-                  name="budget"
-                  value={formData.budget}
-                  onChange={handleInputChange}
-                  className="body-text w-full px-0 py-3 bg-transparent border-0 border-b-2 border-sage/40 text-ivory focus:border-sand focus:outline-none transition-colors"
-                >
-                  <option value="" className="bg-washed-black text-ivory">Prefer to discuss</option>
-                  <option value="under-1k" className="bg-washed-black text-ivory">Under $1,000</option>
-                  <option value="1k-3k" className="bg-washed-black text-ivory">$1,000 - $3,000</option>
-                  <option value="3k-5k" className="bg-washed-black text-ivory">$3,000 - $5,000</option>
-                  <option value="5k-10k" className="bg-washed-black text-ivory">$5,000 - $10,000</option>
-                  <option value="over-10k" className="bg-washed-black text-ivory">$10,000+</option>
-                </select>
-              </div>
-              
-              <div>
-                <label htmlFor="timeline" className="block headline-secondary text-sm text-sand mb-3">
-                  Desired Timeline
-                </label>
-                <select
-                  id="timeline"
-                  name="timeline"
-                  value={formData.timeline}
-                  onChange={handleInputChange}
-                  className="body-text w-full px-0 py-3 bg-transparent border-0 border-b-2 border-sage/40 text-ivory focus:border-sand focus:outline-none transition-colors"
-                >
-                  <option value="" className="bg-washed-black text-ivory">Flexible</option>
-                  <option value="asap" className="bg-washed-black text-ivory">ASAP</option>
-                  <option value="1-month" className="bg-washed-black text-ivory">Within 1 month</option>
-                  <option value="2-3-months" className="bg-washed-black text-ivory">2-3 months</option>
-                  <option value="3-6-months" className="bg-washed-black text-ivory">3-6 months</option>
-                  <option value="6-months-plus" className="bg-washed-black text-ivory">6+ months</option>
-                </select>
-              </div>
-            </div>
 
             {/* Message */}
             <div>
