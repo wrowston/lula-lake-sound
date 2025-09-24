@@ -1,58 +1,45 @@
 import { Button } from "@/components/ui/button";
 import Image from "next/image";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useState } from "react";
 
 // Studio gallery images
 const STUDIO_IMAGES = [
-  "/studio-images/IMG_4034.jpg",
-  "/studio-images/JFD04656.jpg", 
-  "/studio-images/JFD04782.jpg",
-  "/studio-images/JFD04580.jpg",
-  "/studio-images/JFD04775.jpg",
-  "/studio-images/IMG_4038.jpg",
-  "/studio-images/JFD04785.jpg"
+  "/studio-images/recordingstudio-2.jpg",
+  "/studio-images/recordingstudio-6.jpg", 
+  "/studio-images/recordingstudio-9.jpg",
+  "/studio-images/recordingstudio-10.jpg",
+  "/studio-images/recordingstudio-11.jpg",
+  "/studio-images/recordingstudio-14.jpg",
+  "/studio-images/recordingstudio-12.jpg",
+  "/studio-images/recordingstudio-15.jpg",
+  "/studio-images/recordingstudio-26.jpg"
 ] as const;
 
 function StudioGallery() {
-  const scrollRef = useRef<HTMLDivElement>(null);
   const [isHovered, setIsHovered] = useState(false);
   const [currentIndex, setCurrentIndex] = useState(0);
 
   // Auto-scroll functionality
   useEffect(() => {
     if (isHovered) return;
-    
+
     const interval = setInterval(() => {
-      if (scrollRef.current) {
-        const { scrollLeft, scrollWidth, clientWidth } = scrollRef.current;
-        const maxScroll = scrollWidth - clientWidth;
-        
-        if (scrollLeft >= maxScroll) {
-          // Reset to beginning
-          scrollRef.current.scrollTo({ left: 0, behavior: 'smooth' });
-          setCurrentIndex(0);
-        } else {
-          // Scroll to next image
-          const imageWidth = clientWidth * 0.8; // Approximate image width
-          const nextScrollPosition = scrollLeft + imageWidth;
-          scrollRef.current.scrollTo({ left: nextScrollPosition, behavior: 'smooth' });
-          setCurrentIndex(prev => (prev + 1) % STUDIO_IMAGES.length);
-        }
-      }
+      setCurrentIndex(prev => (prev + 1) % STUDIO_IMAGES.length);
     }, 4000); // Change image every 4 seconds
 
     return () => clearInterval(interval);
   }, [isHovered]);
 
-  const scrollToImage = (index: number) => {
-    if (scrollRef.current) {
-      const imageWidth = scrollRef.current.clientWidth * 0.8;
-      scrollRef.current.scrollTo({ 
-        left: index * imageWidth, 
-        behavior: 'smooth' 
-      });
-      setCurrentIndex(index);
-    }
+  const goToImage = (index: number) => {
+    setCurrentIndex(index);
+  };
+
+  const goToPrevious = () => {
+    setCurrentIndex(prev => prev === 0 ? STUDIO_IMAGES.length - 1 : prev - 1);
+  };
+
+  const goToNext = () => {
+    setCurrentIndex(prev => (prev + 1) % STUDIO_IMAGES.length);
   };
 
   return (
@@ -65,45 +52,24 @@ function StudioGallery() {
         onMouseEnter={() => setIsHovered(true)}
         onMouseLeave={() => setIsHovered(false)}
       >
-        <div
-          ref={scrollRef}
-          className="flex gap-6 overflow-x-auto scrollbar-hide pb-4"
-          style={{
-            scrollSnapType: 'x mandatory',
-            scrollBehavior: 'smooth'
-          }}
-        >
-          {STUDIO_IMAGES.map((image, index) => (
-            <div
-              key={index}
-              className="flex-shrink-0 relative group cursor-pointer"
-              style={{
-                scrollSnapAlign: 'start',
-                width: '80vw',
-                maxWidth: '600px',
-                minWidth: '300px'
-              }}
-              onClick={() => scrollToImage(index)}
-            >
-              <div className="aspect-[16/10] relative overflow-hidden rounded-sm bg-sage/20">
-                <Image
-                  src={image}
-                  alt={`Studio image ${index + 1}`}
-                  fill
-                  className="object-cover transition-transform duration-500 group-hover:scale-105"
-                  sizes="(max-width: 768px) 80vw, (max-width: 1200px) 60vw, 600px"
-                />
-                
-                {/* Overlay */}
-                <div className="absolute inset-0 bg-gradient-to-t from-washed-black/60 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
-                
-                {/* Image Counter */}
-                <div className="absolute bottom-4 right-4 bg-washed-black/80 text-sand px-3 py-1 rounded-sm text-sm">
-                  {index + 1} / {STUDIO_IMAGES.length}
-                </div>
-              </div>
+        <div className="relative w-full max-w-6xl mx-auto">
+          <div className="relative overflow-hidden rounded-sm bg-washed-black">
+            <div className="relative w-full h-[60vh] flex items-center justify-center">
+              <Image
+                src={STUDIO_IMAGES[currentIndex]}
+                alt={`Studio image ${currentIndex + 1}`}
+                fill
+                className="object-contain transition-opacity duration-500"
+                sizes="(max-width: 768px) 100vw, (max-width: 1200px) 90vw, 1200px"
+                priority={currentIndex === 0}
+              />
             </div>
-          ))}
+
+            {/* Image Counter */}
+            <div className="absolute bottom-4 right-4 bg-washed-black/90 text-sand px-3 py-1 rounded-sm text-sm backdrop-blur-sm">
+              {currentIndex + 1} / {STUDIO_IMAGES.length}
+            </div>
+          </div>
         </div>
 
         {/* Navigation Dots */}
@@ -111,10 +77,10 @@ function StudioGallery() {
           {STUDIO_IMAGES.map((_, index) => (
             <button
               key={index}
-              onClick={() => scrollToImage(index)}
+              onClick={() => goToImage(index)}
               className={`w-2 h-2 rounded-full transition-all duration-300 ${
-                index === currentIndex 
-                  ? 'bg-sand w-8' 
+                index === currentIndex
+                  ? 'bg-sand w-8'
                   : 'bg-sage/40 hover:bg-sage/60'
               }`}
             />
@@ -123,21 +89,19 @@ function StudioGallery() {
 
         {/* Navigation Arrows */}
         <button
-          onClick={() => scrollToImage(Math.max(0, currentIndex - 1))}
-          className="absolute left-4 top-1/2 transform -translate-y-1/2 bg-washed-black/80 hover:bg-washed-black text-sand p-2 rounded-full transition-all duration-300 opacity-0 group-hover:opacity-100"
-          disabled={currentIndex === 0}
+          onClick={goToPrevious}
+          className="absolute left-4 top-1/2 transform -translate-y-1/2 bg-washed-black/80 hover:bg-washed-black text-sand p-3 rounded-full transition-all duration-300 opacity-0 group-hover:opacity-100"
         >
-          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
           </svg>
         </button>
-        
+
         <button
-          onClick={() => scrollToImage(Math.min(STUDIO_IMAGES.length - 1, currentIndex + 1))}
-          className="absolute right-4 top-1/2 transform -translate-y-1/2 bg-washed-black/80 hover:bg-washed-black text-sand p-2 rounded-full transition-all duration-300 opacity-0 group-hover:opacity-100"
-          disabled={currentIndex === STUDIO_IMAGES.length - 1}
+          onClick={goToNext}
+          className="absolute right-4 top-1/2 transform -translate-y-1/2 bg-washed-black/80 hover:bg-washed-black text-sand p-3 rounded-full transition-all duration-300 opacity-0 group-hover:opacity-100"
         >
-          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
           </svg>
         </button>
