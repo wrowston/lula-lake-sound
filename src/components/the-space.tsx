@@ -1,45 +1,50 @@
 import { Button } from "@/components/ui/button";
 import Image from "next/image";
 import { useEffect, useState } from "react";
-
-// Studio gallery images
-const STUDIO_IMAGES = [
-  "/studio-images/recordingstudio-2.jpg",
-  "/studio-images/recordingstudio-6.jpg", 
-  "/studio-images/recordingstudio-9.jpg",
-  "/studio-images/recordingstudio-10.jpg",
-  "/studio-images/recordingstudio-11.jpg",
-  "/studio-images/recordingstudio-14.jpg",
-  "/studio-images/recordingstudio-12.jpg",
-  "/studio-images/recordingstudio-15.jpg",
-  "/studio-images/recordingstudio-26.jpg"
-] as const;
+import { getStudioImages, type StudioImage } from "@/lib/storage";
 
 function StudioGallery() {
   const [isHovered, setIsHovered] = useState(false);
   const [currentIndex, setCurrentIndex] = useState(0);
+  const [images, setImages] = useState<StudioImage[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  // Load images from Supabase
+  useEffect(() => {
+    async function loadImages() {
+      try {
+        const studioImages = await getStudioImages();
+        setImages(studioImages);
+      } catch (error) {
+        console.error('Failed to load studio images:', error);
+      } finally {
+        setLoading(false);
+      }
+    }
+    loadImages();
+  }, []);
 
   // Auto-scroll functionality
   useEffect(() => {
-    if (isHovered) return;
+    if (isHovered || images.length === 0) return;
 
     const interval = setInterval(() => {
-      setCurrentIndex(prev => (prev + 1) % STUDIO_IMAGES.length);
+      setCurrentIndex(prev => (prev + 1) % images.length);
     }, 4000); // Change image every 4 seconds
 
     return () => clearInterval(interval);
-  }, [isHovered]);
+  }, [isHovered, images.length]);
 
   const goToImage = (index: number) => {
     setCurrentIndex(index);
   };
 
   const goToPrevious = () => {
-    setCurrentIndex(prev => prev === 0 ? STUDIO_IMAGES.length - 1 : prev - 1);
+    setCurrentIndex(prev => prev === 0 ? images.length - 1 : prev - 1);
   };
 
   const goToNext = () => {
-    setCurrentIndex(prev => (prev + 1) % STUDIO_IMAGES.length);
+    setCurrentIndex(prev => (prev + 1) % images.length);
   };
 
   return (
@@ -55,56 +60,74 @@ function StudioGallery() {
         <div className="relative w-full max-w-6xl mx-auto">
           <div className="relative overflow-hidden rounded-sm bg-washed-black">
             <div className="relative w-full h-[60vh] flex items-center justify-center">
-              <Image
-                src={STUDIO_IMAGES[currentIndex]}
-                alt={`Studio image ${currentIndex + 1}`}
-                fill
-                className="object-contain transition-opacity duration-500"
-                sizes="(max-width: 768px) 100vw, (max-width: 1200px) 90vw, 1200px"
-                priority={currentIndex === 0}
-              />
+              {loading ? (
+                <div className="flex items-center justify-center h-full">
+                  <div className="text-sand">Loading gallery...</div>
+                </div>
+              ) : images.length > 0 ? (
+                <Image
+                  src={images[currentIndex]?.url}
+                  alt={`Studio image ${currentIndex + 1}`}
+                  fill
+                  className="object-contain transition-opacity duration-500"
+                  sizes="(max-width: 768px) 100vw, (max-width: 1200px) 90vw, 1200px"
+                  priority={currentIndex === 0}
+                />
+              ) : (
+                <div className="flex items-center justify-center h-full">
+                  <div className="text-sand">No images available</div>
+                </div>
+              )}
             </div>
 
             {/* Image Counter */}
-            <div className="absolute bottom-4 right-4 bg-washed-black/90 text-sand px-3 py-1 rounded-sm text-sm backdrop-blur-sm">
-              {currentIndex + 1} / {STUDIO_IMAGES.length}
-            </div>
+            {!loading && images.length > 0 && (
+              <div className="absolute bottom-4 right-4 bg-washed-black/90 text-sand px-3 py-1 rounded-sm text-sm backdrop-blur-sm">
+                {currentIndex + 1} / {images.length}
+              </div>
+            )}
           </div>
         </div>
 
         {/* Navigation Dots */}
-        <div className="flex justify-center mt-6 gap-2">
-          {STUDIO_IMAGES.map((_, index) => (
-            <button
-              key={index}
-              onClick={() => goToImage(index)}
-              className={`w-2 h-2 rounded-full transition-all duration-300 ${
-                index === currentIndex
-                  ? 'bg-sand w-8'
-                  : 'bg-sage/40 hover:bg-sage/60'
-              }`}
-            />
-          ))}
-        </div>
+        {!loading && images.length > 0 && (
+          <div className="flex justify-center mt-6 gap-2">
+            {images.map((_, index) => (
+              <button
+                key={index}
+                onClick={() => goToImage(index)}
+                className={`w-2 h-2 rounded-full transition-all duration-300 ${
+                  index === currentIndex
+                    ? 'bg-sand w-8'
+                    : 'bg-sage/40 hover:bg-sage/60'
+                }`}
+              />
+            ))}
+          </div>
+        )}
 
         {/* Navigation Arrows */}
-        <button
-          onClick={goToPrevious}
-          className="absolute left-4 top-1/2 transform -translate-y-1/2 bg-washed-black/80 hover:bg-washed-black text-sand p-3 rounded-full transition-all duration-300 opacity-0 group-hover:opacity-100"
-        >
-          <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
-          </svg>
-        </button>
+        {!loading && images.length > 1 && (
+          <>
+            <button
+              onClick={goToPrevious}
+              className="absolute left-4 top-1/2 transform -translate-y-1/2 bg-washed-black/80 hover:bg-washed-black text-sand p-3 rounded-full transition-all duration-300 opacity-0 group-hover:opacity-100"
+            >
+              <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+              </svg>
+            </button>
 
-        <button
-          onClick={goToNext}
-          className="absolute right-4 top-1/2 transform -translate-y-1/2 bg-washed-black/80 hover:bg-washed-black text-sand p-3 rounded-full transition-all duration-300 opacity-0 group-hover:opacity-100"
-        >
-          <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-          </svg>
-        </button>
+            <button
+              onClick={goToNext}
+              className="absolute right-4 top-1/2 transform -translate-y-1/2 bg-washed-black/80 hover:bg-washed-black text-sand p-3 rounded-full transition-all duration-300 opacity-0 group-hover:opacity-100"
+            >
+              <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+              </svg>
+            </button>
+          </>
+        )}
       </div>
 
       {/* Gallery Description */}
