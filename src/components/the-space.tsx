@@ -72,6 +72,7 @@ function StudioGallery() {
                   className="object-contain transition-opacity duration-500"
                   sizes="(max-width: 768px) 100vw, (max-width: 1200px) 90vw, 1200px"
                   priority={currentIndex === 0}
+                  quality={80}
                 />
               ) : (
                 <div className="flex items-center justify-center h-full">
