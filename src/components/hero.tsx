@@ -49,7 +49,7 @@ export function Hero({ logoScale }: HeroProps) {
         <div className="w-full md:w-1/2 md:pr-12 md:order-1 text-center md:text-left">
           <div className="space-y-8 md:space-y-10">
             <p className="label-text text-sand/80 tracking-widest">
-              Lookout Mountain &middot; Chattanooga, TN
+              Chattanooga, TN
             </p>
 
             <h1 className="headline-primary text-3xl md:text-5xl lg:text-6xl text-warm-white leading-tight">
