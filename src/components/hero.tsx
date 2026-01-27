@@ -7,7 +7,10 @@ interface HeroProps {
 
 export function Hero({ logoScale }: HeroProps) {
   return (
-    <section id="hero" className="relative min-h-screen flex flex-col items-center justify-center overflow-hidden pt-20">
+    <section
+      id="hero"
+      className="relative min-h-screen flex flex-col items-center justify-center overflow-hidden"
+    >
       {/* Background Image */}
       <div className="absolute inset-0 z-0">
         <Image
@@ -16,64 +19,72 @@ export function Hero({ logoScale }: HeroProps) {
           fill
           className="object-cover object-center"
           priority
-          quality={100}
+          quality={85}
         />
-        {/* Dark overlay for better text contrast */}
-        <div className="absolute inset-0 bg-black/40"></div>
-        {/* Gradient overlay for depth */}
-        <div className="absolute inset-0 bg-gradient-to-b from-black/20 via-transparent to-black/30"></div>
+        {/* Cinematic overlays */}
+        <div className="absolute inset-0 bg-washed-black/50" />
+        <div className="absolute inset-0 bg-gradient-to-b from-washed-black/40 via-transparent to-washed-black/80" />
+        <div className="absolute inset-0 bg-gradient-to-r from-washed-black/30 via-transparent to-transparent" />
       </div>
-      
-      <div className="relative z-10 max-w-7xl mx-auto px-4 py-20 flex flex-col md:flex-row items-center min-h-screen">
-        {/* Logo - Top on Mobile, Right on Desktop */}
-        <div className="w-full md:w-1/2 flex justify-center md:order-2 mb-8 md:mb-0">
+
+      {/* Content */}
+      <div className="relative z-10 w-full max-w-6xl mx-auto px-6 md:px-12 py-20 flex flex-col md:flex-row items-center min-h-screen">
+        {/* Logo — right on desktop, top on mobile */}
+        <div className="w-full md:w-1/2 flex justify-center md:order-2 mb-12 md:mb-0">
           <Image
             src="/lula-lake-logo.png"
             alt="Lula Lake Sound Logo"
             width={500}
             height={375}
-            className="max-w-full h-auto filter brightness-0 invert transition-transform duration-300 ease-out"
-            style={{ 
+            className="max-w-full h-auto filter brightness-0 invert transition-transform duration-700 ease-out"
+            style={{
               transform: `scale(${logoScale})`,
-              maxWidth: '90%'
+              maxWidth: "85%",
             }}
             priority
           />
         </div>
-        
-        {/* Hero Text - Bottom on Mobile, Left on Desktop */}
-        <div className="w-full md:w-1/2 md:pr-8 md:order-1 text-center md:text-left">
-          <div className="space-y-8 md:space-y-12">
-            <div className="space-y-6 md:space-y-8">
-              <h1 className="text-3xl md:text-5xl lg:text-6xl font-bold text-white leading-tight tracking-wide font-acumin drop-shadow-2xl">
-                A NATURAL
-                <br />
-                <span className="text-sand">CREATIVE REFUGE</span>
-              </h1>
-              
-              <div className="text-base md:text-lg lg:text-xl text-white/90 leading-relaxed font-titillium">
-                <p className="drop-shadow-lg">
-                Nestled in serene mountains just outside of Chattanooga, TN- Lula Lake Sound offers artists a natural creative refuge. The studio is designed to inspire creativity and relaxation, providing the perfect environment for your sonic adventures.
-                <br/>
-                <br/>
-                With state-of-the-art equipment, comfortable accommodations, and breathtaking surroundings, Lula Lake Sound is a space where artists can fully immerse themselves in both nature and music. 
-                </p>
-              </div>
-              
-              {/* Call to Action Button */}
-              <div className="pt-4">
-                <Button 
-                  variant="primary"
-                  size="lg"
-                  onClick={() => document.getElementById('artist-inquiries')?.scrollIntoView({ behavior: 'smooth' })}
-                  className="drop-shadow-xl"
-                >
-                  Get in touch
-                </Button>
-              </div>
+
+        {/* Hero Text — left on desktop, bottom on mobile */}
+        <div className="w-full md:w-1/2 md:pr-12 md:order-1 text-center md:text-left">
+          <div className="space-y-8 md:space-y-10">
+            <p className="label-text text-sand/80 tracking-widest">
+              Lookout Mountain &middot; Chattanooga, TN
+            </p>
+
+            <h1 className="headline-primary text-3xl md:text-5xl lg:text-6xl text-warm-white leading-tight">
+              A Natural
+              <br />
+              <span className="text-sand italic">Creative Refuge</span>
+            </h1>
+
+            <p className="body-text text-lg text-ivory/70 max-w-lg leading-relaxed">
+              Nestled in serene mountains just outside of Chattanooga, TN &mdash; Lula Lake Sound
+              offers artists a space where state-of-the-art equipment, comfortable accommodations,
+              and breathtaking surroundings converge to fuel your sonic vision.
+            </p>
+
+            <div className="pt-2">
+              <Button
+                variant="outline"
+                size="lg"
+                onClick={() =>
+                  document
+                    .getElementById("artist-inquiries")
+                    ?.scrollIntoView({ behavior: "smooth" })
+                }
+              >
+                Get in touch
+              </Button>
             </div>
           </div>
         </div>
+      </div>
+
+      {/* Scroll indicator */}
+      <div className="absolute bottom-8 left-1/2 -translate-x-1/2 z-10 flex flex-col items-center gap-2 opacity-50">
+        <span className="label-text text-sand/60 text-[10px]">Scroll</span>
+        <div className="w-px h-8 bg-gradient-to-b from-sand/40 to-transparent" />
       </div>
     </section>
   );

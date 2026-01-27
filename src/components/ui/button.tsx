@@ -8,39 +8,39 @@ interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
   className?: string;
 }
 
-export function Button({ 
-  variant = "primary", 
-  size = "md", 
-  children, 
+export function Button({
+  variant = "primary",
+  size = "md",
+  children,
   className,
-  ...props 
+  ...props
 }: ButtonProps) {
-  const baseStyles = "body-text transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed focus:outline-none focus:ring-2 focus:ring-sand/50";
-  
+  const baseStyles =
+    "body-text inline-flex items-center justify-center transition-all duration-300 disabled:opacity-40 disabled:cursor-not-allowed focus:outline-none focus-visible:ring-2 focus-visible:ring-sand/40 focus-visible:ring-offset-2 focus-visible:ring-offset-washed-black";
+
   const variants = {
-    primary: "bg-sand text-washed-black hover:bg-sand/90 focus:bg-sand/90",
-    secondary: "bg-forest text-sand hover:bg-forest/80 focus:bg-forest/80",
-    outline: "bg-transparent border-2 border-sand text-sand hover:bg-sand hover:text-washed-black focus:bg-sand focus:text-washed-black",
-    ghost: "bg-transparent text-sand hover:bg-sand/10 focus:bg-sand/10"
+    primary:
+      "bg-sand text-washed-black hover:bg-warm-white",
+    secondary:
+      "bg-charcoal text-sand border border-sand/20 hover:border-sand/40",
+    outline:
+      "bg-transparent border border-sand/40 text-sand hover:bg-sand/10 hover:border-sand/60",
+    ghost:
+      "bg-transparent text-sand hover:bg-sand/5",
   };
 
   const sizes = {
-    sm: "px-4 py-2 text-sm",
-    md: "px-6 py-3 text-base",
-    lg: "px-8 py-4 text-lg"
+    sm: "px-5 py-2 text-sm tracking-wide",
+    md: "px-7 py-3 text-sm tracking-wide",
+    lg: "px-9 py-3.5 text-sm tracking-wide",
   };
 
   return (
     <button
-      className={clsx(
-        baseStyles,
-        variants[variant],
-        sizes[size],
-        className
-      )}
+      className={clsx(baseStyles, variants[variant], sizes[size], className)}
       {...props}
     >
       {children}
     </button>
   );
-} 
+}
