@@ -18,6 +18,15 @@ Open [http://localhost:3000](http://localhost:3000) with your browser to see the
 
 You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
 
+## Convex, Resend, and environment variables
+
+The contact form (`POST /api/contact`) saves inquiries to **Convex** and sends email with **Resend**.
+
+1. Copy [`.env.example`](./.env.example) to `.env.local` and fill in values.
+2. Create a Convex project and deploy functions: run `npm run convex:dev` (or `npx convex dev`) once, then use `npm run convex:deploy` for production.
+3. Set `NEXT_PUBLIC_CONVEX_URL` from the [Convex dashboard](https://dashboard.convex.dev).
+4. Add a [Resend](https://resend.com) API key and a verified `RESEND_FROM_EMAIL` address.
+
 This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
 
 ## Learn More

@@ -2,7 +2,6 @@
 
 import Image from "next/image";
 import { useState } from "react";
-import { supabase } from "@/lib/supabase";
 
 export function ArtistInquiries() {
   const [formData, setFormData] = useState({
@@ -11,6 +10,7 @@ export function ArtistInquiries() {
     email: "",
     phone: "",
     message: "",
+    website: "",
   });
 
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -31,26 +31,44 @@ export function ArtistInquiries() {
     setErrorMessage("");
 
     try {
-      const { data, error } = await supabase.functions.invoke("send-contact-email", {
-        body: {
+      const response = await fetch("/api/contact", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
           artistName: formData.artistName,
           contactName: formData.contactName,
           email: formData.email,
           phone: formData.phone || undefined,
           message: formData.message,
-        },
+          website: formData.website,
+        }),
       });
 
-      if (error) {
-        console.error("Edge function error:", error);
+      let data: { success?: boolean; message?: string } = {};
+      try {
+        data = (await response.json()) as { success?: boolean; message?: string };
+      } catch {
         setSubmitStatus("error");
-        setErrorMessage(error.message || "Failed to send your inquiry. Please try again.");
+        setErrorMessage("Something went wrong. Please try again.");
+        return;
+      }
+
+      if (!response.ok) {
+        setSubmitStatus("error");
+        setErrorMessage(data?.message || "Failed to send your inquiry. Please try again.");
         return;
       }
 
       if (data?.success) {
         setSubmitStatus("success");
-        setFormData({ artistName: "", contactName: "", email: "", phone: "", message: "" });
+        setFormData({
+          artistName: "",
+          contactName: "",
+          email: "",
+          phone: "",
+          message: "",
+          website: "",
+        });
       } else {
         setSubmitStatus("error");
         setErrorMessage(data?.message || "Something went wrong. Please try again.");
@@ -97,7 +115,7 @@ export function ArtistInquiries() {
 
         {/* Contact Form */}
         <div className="max-w-xl mx-auto reveal reveal-delay-2">
-          <form onSubmit={handleSubmit} className="space-y-8">
+          <form onSubmit={handleSubmit} className="relative space-y-8">
             {/* Artist/Band Name & Contact Name */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
               <div>
@@ -163,6 +181,20 @@ export function ArtistInquiries() {
                   placeholder="(555) 123-4567"
                 />
               </div>
+            </div>
+
+            {/* Honeypot — leave empty (bots often fill hidden fields) */}
+            <div className="absolute left-[-10000px] top-auto h-px w-px overflow-hidden" aria-hidden="true">
+              <label htmlFor="website">Do not fill this out</label>
+              <input
+                type="text"
+                id="website"
+                name="website"
+                tabIndex={-1}
+                autoComplete="off"
+                value={formData.website}
+                onChange={handleInputChange}
+              />
             </div>
 
             {/* Message */}
