@@ -59,7 +59,7 @@ export function Hero({ logoScale }: HeroProps) {
             </h1>
 
             <p className="body-text text-lg text-ivory/70 max-w-lg leading-relaxed">
-              Nestled in serene mountains just outside of Chattanooga, TN &mdash; Lula Lake Sound
+              Nestled in serene mountains just outside of Chattanooga, TN, Lula Lake Sound recording studio
               offers artists a space where state-of-the-art equipment, comfortable accommodations,
               and breathtaking surroundings converge to fuel your sonic vision.
             </p>
