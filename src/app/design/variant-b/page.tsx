@@ -347,15 +347,22 @@ function RecordingsSection() {
         className="w-full group"
       >
         <div className={`flex items-center gap-4 py-4 px-3 transition-all duration-300 ${isPlaying ? "bg-gold/[0.06]" : "hover:bg-warm-white/[0.02]"}`}>
-          {/* Play / number */}
-          <div className="w-8 flex-shrink-0 text-center">
+          {/* Play button */}
+          <div className="w-9 h-9 flex-shrink-0 rounded-full border flex items-center justify-center transition-all duration-300"
+            style={{
+              borderColor: isPlaying ? "rgba(163, 130, 46, 0.8)" : "rgba(163, 130, 46, 0.2)",
+              backgroundColor: isPlaying ? "rgba(163, 130, 46, 0.15)" : "transparent",
+            }}
+          >
             {isPlaying ? (
-              <svg className="w-4 h-4 mx-auto text-gold" fill="currentColor" viewBox="0 0 24 24">
+              <svg className="w-3.5 h-3.5 text-gold" fill="currentColor" viewBox="0 0 24 24">
                 <rect x="6" y="4" width="4" height="16" rx="1" />
                 <rect x="14" y="4" width="4" height="16" rx="1" />
               </svg>
             ) : (
-              <span className="headline-primary text-ivory/25 text-sm">{track.track}</span>
+              <svg className="w-3.5 h-3.5 ml-0.5 text-gold/50 group-hover:text-gold transition-colors" fill="currentColor" viewBox="0 0 24 24">
+                <path d="M8 5v14l11-7z" />
+              </svg>
             )}
           </div>
 

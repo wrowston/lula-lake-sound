@@ -370,20 +370,24 @@ function RecordingsSection() {
                   transition-all duration-400
                   ${playing === i ? "bg-charcoal/60" : "hover:bg-charcoal/30"}
                 `}>
-                  {/* Play indicator */}
-                  <div className="w-10 flex-shrink-0 hidden md:flex items-center justify-center">
-                    {playing === i ? (
-                      <div className="flex items-end gap-[3px] h-4">
-                        <span className="w-[3px] bg-gold animate-pulse" style={{ height: "60%", animationDelay: "0s" }} />
-                        <span className="w-[3px] bg-gold animate-pulse" style={{ height: "100%", animationDelay: "0.15s" }} />
-                        <span className="w-[3px] bg-gold animate-pulse" style={{ height: "40%", animationDelay: "0.3s" }} />
-                        <span className="w-[3px] bg-gold animate-pulse" style={{ height: "80%", animationDelay: "0.1s" }} />
-                      </div>
-                    ) : (
-                      <span className="label-text text-ivory/25 text-xs">
-                        {String(i + 1).padStart(2, "0")}
-                      </span>
-                    )}
+                  {/* Play button */}
+                  <div className="w-10 flex-shrink-0 flex items-center justify-center">
+                    <div className={`w-9 h-9 rounded-full border flex items-center justify-center transition-all duration-300 ${
+                      playing === i
+                        ? "bg-gold border-gold text-washed-black"
+                        : "border-sand/25 text-sand/60 group-hover:border-sand/50 group-hover:text-sand"
+                    }`}>
+                      {playing === i ? (
+                        <svg className="w-3.5 h-3.5" fill="currentColor" viewBox="0 0 24 24">
+                          <rect x="6" y="4" width="4" height="16" rx="1" />
+                          <rect x="14" y="4" width="4" height="16" rx="1" />
+                        </svg>
+                      ) : (
+                        <svg className="w-3.5 h-3.5 ml-0.5" fill="currentColor" viewBox="0 0 24 24">
+                          <path d="M8 5v14l11-7z" />
+                        </svg>
+                      )}
+                    </div>
                   </div>
 
                   {/* Track info */}

@@ -366,7 +366,7 @@ function RecordingsSection() {
         {/* Table header */}
         <Reveal delay={0.05}>
           <div className="hidden md:grid grid-cols-12 gap-4 px-4 pb-3 border-b border-sand/12">
-            <span className="col-span-1 label-text text-ivory/25 text-[10px]">#</span>
+            <span className="col-span-1 label-text text-ivory/25 text-[10px]">Play</span>
             <span className="col-span-3 label-text text-ivory/25 text-[10px]">Title</span>
             <span className="col-span-2 label-text text-ivory/25 text-[10px]">Artist</span>
             <span className="col-span-2 label-text text-ivory/25 text-[10px]">Role</span>
@@ -394,16 +394,23 @@ function RecordingsSection() {
                     transition-all duration-300
                     ${isPlaying ? "bg-sage/[0.08]" : "hover:bg-charcoal/40"}
                   `}>
-                    <div className="col-span-1">
-                      {isPlaying ? (
-                        <div className="flex items-end gap-[2px] h-3">
-                          <span className="w-[2px] bg-sand animate-pulse" style={{ height: "50%", animationDelay: "0s" }} />
-                          <span className="w-[2px] bg-sand animate-pulse" style={{ height: "100%", animationDelay: "0.1s" }} />
-                          <span className="w-[2px] bg-sand animate-pulse" style={{ height: "70%", animationDelay: "0.2s" }} />
-                        </div>
-                      ) : (
-                        <span className="label-text text-ivory/20 text-[10px] tabular-nums">{String(i + 1).padStart(2, "0")}</span>
-                      )}
+                    <div className="col-span-1 flex items-center">
+                      <div className={`w-8 h-8 rounded-full border flex items-center justify-center transition-all duration-300 ${
+                        isPlaying
+                          ? "bg-sand border-sand text-washed-black"
+                          : "border-ivory/15 text-ivory/30 group-hover:border-sand/40 group-hover:text-sand"
+                      }`}>
+                        {isPlaying ? (
+                          <svg className="w-3 h-3" fill="currentColor" viewBox="0 0 24 24">
+                            <rect x="6" y="4" width="4" height="16" rx="1" />
+                            <rect x="14" y="4" width="4" height="16" rx="1" />
+                          </svg>
+                        ) : (
+                          <svg className="w-3 h-3 ml-0.5" fill="currentColor" viewBox="0 0 24 24">
+                            <path d="M8 5v14l11-7z" />
+                          </svg>
+                        )}
+                      </div>
                     </div>
                     <h4 className={`col-span-3 headline-secondary text-sm text-left transition-colors ${isPlaying ? "text-sand" : "text-warm-white/90 group-hover:text-sand"}`}>
                       {track.title}
@@ -423,15 +430,22 @@ function RecordingsSection() {
                     transition-all duration-300
                     ${isPlaying ? "bg-sage/[0.08]" : "hover:bg-charcoal/40"}
                   `}>
-                    <div className="w-8 flex-shrink-0 text-center">
+                    <div className="w-8 h-8 flex-shrink-0 rounded-full border flex items-center justify-center transition-all duration-300"
+                      style={{
+                        borderColor: isPlaying ? "var(--color-sand)" : "rgba(191, 187, 181, 0.15)",
+                        backgroundColor: isPlaying ? "var(--color-sand)" : "transparent",
+                        color: isPlaying ? "var(--color-washed-black)" : "rgba(191, 187, 181, 0.3)",
+                      }}
+                    >
                       {isPlaying ? (
-                        <div className="flex items-end justify-center gap-[2px] h-3">
-                          <span className="w-[2px] bg-sand animate-pulse" style={{ height: "50%" }} />
-                          <span className="w-[2px] bg-sand animate-pulse" style={{ height: "100%", animationDelay: "0.1s" }} />
-                          <span className="w-[2px] bg-sand animate-pulse" style={{ height: "70%", animationDelay: "0.2s" }} />
-                        </div>
+                        <svg className="w-3 h-3" fill="currentColor" viewBox="0 0 24 24">
+                          <rect x="6" y="4" width="4" height="16" rx="1" />
+                          <rect x="14" y="4" width="4" height="16" rx="1" />
+                        </svg>
                       ) : (
-                        <span className="label-text text-ivory/20 text-[10px]">{String(i + 1).padStart(2, "0")}</span>
+                        <svg className="w-3 h-3 ml-0.5" fill="currentColor" viewBox="0 0 24 24">
+                          <path d="M8 5v14l11-7z" />
+                        </svg>
                       )}
                     </div>
                     <div className="flex-1 min-w-0 text-left">
