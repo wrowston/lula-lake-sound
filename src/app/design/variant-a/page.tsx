@@ -355,29 +355,94 @@ function RecordingsSection() {
           </p>
         </Reveal>
 
-        {/* Track list — editorial horizontal cards */}
-        <div className="space-y-1">
-          {RECORDINGS.map((track, i) => (
-            <Reveal key={track.title} delay={i * 0.06}>
-              <button
-                onClick={() => setPlaying(playing === i ? null : i)}
-                className="w-full group"
-              >
-                <div className={`
-                  flex flex-col md:flex-row md:items-center gap-4 md:gap-0
-                  py-6 md:py-7 px-4 md:px-8
-                  border-b border-sand/8
-                  transition-all duration-400
-                  ${playing === i ? "bg-charcoal/60" : "hover:bg-charcoal/30"}
-                `}>
-                  {/* Play button */}
-                  <div className="w-10 flex-shrink-0 flex items-center justify-center">
-                    <div className={`w-9 h-9 rounded-full border flex items-center justify-center transition-all duration-300 ${
-                      playing === i
+        {/* Track list — grid-aligned rows */}
+        <div>
+          {RECORDINGS.map((track, i) => {
+            const isActive = playing === i;
+            return (
+              <Reveal key={track.title} delay={i * 0.06}>
+                <button
+                  onClick={() => setPlaying(isActive ? null : i)}
+                  className="w-full group"
+                >
+                  {/* Desktop */}
+                  <div
+                    className={`
+                      hidden md:grid items-center py-5 px-6
+                      border-b border-sand/8
+                      transition-all duration-300
+                      ${isActive ? "bg-charcoal/60" : "hover:bg-charcoal/30"}
+                    `}
+                    style={{ gridTemplateColumns: "48px 1fr 200px 140px 100px 52px" }}
+                  >
+                    {/* Play */}
+                    <div className="flex items-center justify-center">
+                      <div className={`w-9 h-9 rounded-full border flex items-center justify-center transition-all duration-300 ${
+                        isActive
+                          ? "bg-gold border-gold text-washed-black"
+                          : "border-sand/25 text-sand/50 group-hover:border-sand/50 group-hover:text-sand"
+                      }`}>
+                        {isActive ? (
+                          <svg className="w-3.5 h-3.5" fill="currentColor" viewBox="0 0 24 24">
+                            <rect x="6" y="4" width="4" height="16" rx="1" />
+                            <rect x="14" y="4" width="4" height="16" rx="1" />
+                          </svg>
+                        ) : (
+                          <svg className="w-3.5 h-3.5 ml-0.5" fill="currentColor" viewBox="0 0 24 24">
+                            <path d="M8 5v14l11-7z" />
+                          </svg>
+                        )}
+                      </div>
+                    </div>
+
+                    {/* Title + Artist */}
+                    <div className="text-left pl-3 min-w-0">
+                      <h3 className={`headline-secondary text-lg leading-tight transition-colors truncate ${isActive ? "text-gold" : "text-warm-white group-hover:text-sand"}`}>
+                        {track.title}
+                      </h3>
+                      <p className="body-text-small text-ivory/45 mt-0.5 truncate">{track.artist}</p>
+                    </div>
+
+                    {/* Waveform — deterministic */}
+                    <div className="hidden lg:flex items-center justify-center gap-[2px] h-8">
+                      {Array.from({ length: 48 }).map((_, j) => {
+                        const seed = (i + 1) * 7;
+                        const h = 15 + Math.abs(Math.sin(j * 0.45 + seed) * 55) + Math.abs(Math.cos(j * 0.8 + seed * 0.3) * 25);
+                        return (
+                          <span
+                            key={j}
+                            className={`w-[2px] rounded-full transition-colors duration-300 ${isActive ? "bg-gold/60" : "bg-sand/15 group-hover:bg-sand/25"}`}
+                            style={{ height: `${Math.min(h, 95)}%` }}
+                          />
+                        );
+                      })}
+                    </div>
+
+                    {/* Role */}
+                    <span className="label-text text-ivory/30 text-[10px] text-right">{track.role}</span>
+
+                    {/* Genre */}
+                    <span className="label-text text-ivory/30 text-[10px] text-right">{track.genre}</span>
+
+                    {/* Duration */}
+                    <span className="body-text-small text-ivory/40 tabular-nums text-right">{track.duration}</span>
+                  </div>
+
+                  {/* Mobile */}
+                  <div
+                    className={`
+                      md:hidden flex items-center gap-3 py-4 px-3
+                      border-b border-sand/8
+                      transition-all duration-300
+                      ${isActive ? "bg-charcoal/60" : "hover:bg-charcoal/30"}
+                    `}
+                  >
+                    <div className={`w-9 h-9 flex-shrink-0 rounded-full border flex items-center justify-center transition-all duration-300 ${
+                      isActive
                         ? "bg-gold border-gold text-washed-black"
-                        : "border-sand/25 text-sand/60 group-hover:border-sand/50 group-hover:text-sand"
+                        : "border-sand/25 text-sand/50"
                     }`}>
-                      {playing === i ? (
+                      {isActive ? (
                         <svg className="w-3.5 h-3.5" fill="currentColor" viewBox="0 0 24 24">
                           <rect x="6" y="4" width="4" height="16" rx="1" />
                           <rect x="14" y="4" width="4" height="16" rx="1" />
@@ -388,40 +453,18 @@ function RecordingsSection() {
                         </svg>
                       )}
                     </div>
+                    <div className="flex-1 min-w-0 text-left">
+                      <h3 className={`headline-secondary text-base transition-colors truncate ${isActive ? "text-gold" : "text-warm-white"}`}>
+                        {track.title}
+                      </h3>
+                      <p className="body-text-small text-ivory/45 text-xs mt-0.5 truncate">{track.artist} — {track.genre}</p>
+                    </div>
+                    <span className="body-text-small text-ivory/35 tabular-nums text-sm flex-shrink-0">{track.duration}</span>
                   </div>
-
-                  {/* Track info */}
-                  <div className="flex-1 text-left">
-                    <h3 className={`headline-secondary text-lg md:text-xl transition-colors ${playing === i ? "text-gold" : "text-warm-white group-hover:text-sand"}`}>
-                      {track.title}
-                    </h3>
-                    <p className="body-text-small text-ivory/50 mt-0.5">{track.artist}</p>
-                  </div>
-
-                  {/* Waveform placeholder */}
-                  <div className="hidden lg:flex items-center gap-[2px] h-8 flex-shrink-0 mx-8 w-48">
-                    {Array.from({ length: 40 }).map((_, j) => {
-                      const h = 20 + Math.sin(j * 0.7 + i * 2) * 40 + Math.random() * 20;
-                      return (
-                        <span
-                          key={j}
-                          className={`w-[2px] rounded-full transition-colors duration-300 ${playing === i ? "bg-gold/70" : "bg-sand/20 group-hover:bg-sand/30"}`}
-                          style={{ height: `${h}%` }}
-                        />
-                      );
-                    })}
-                  </div>
-
-                  {/* Meta */}
-                  <div className="flex items-center gap-6 text-right flex-shrink-0">
-                    <span className="label-text text-ivory/30 text-[10px] hidden md:block">{track.role}</span>
-                    <span className="label-text text-ivory/30 text-[10px] hidden sm:block">{track.genre}</span>
-                    <span className="body-text-small text-ivory/40 tabular-nums w-10">{track.duration}</span>
-                  </div>
-                </div>
-              </button>
-            </Reveal>
-          ))}
+                </button>
+              </Reveal>
+            );
+          })}
         </div>
 
         {/* CTA */}
