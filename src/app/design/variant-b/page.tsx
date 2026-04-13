@@ -101,25 +101,33 @@ function AboutSection() {
           </div>
         </Reveal>
 
-        {/* Two-panel — portrait + story */}
+        {/* Two-panel — owner & designer placeholders + story */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-8 md:gap-4 items-start">
-          {/* Polaroid-style image */}
           <Reveal delay={0.1}>
-            <div className="bg-warm-white/[0.04] p-3 md:p-4 max-w-md md:-rotate-1 hover:rotate-0 transition-transform duration-700">
-              <div className="relative aspect-[4/5] overflow-hidden">
-                <Image
-                  src={STUDIO_IMAGES[0]}
-                  alt="Studio founder portrait"
-                  fill
-                  className="object-cover"
-                  quality={80}
-                  priority
-                />
+            <div className="flex flex-col sm:flex-row gap-6 md:gap-4 max-w-full">
+              <div className="bg-warm-white/[0.04] p-3 md:p-4 max-w-[200px] md:max-w-[220px] md:-rotate-1 hover:rotate-0 transition-transform duration-700">
+                <div className="relative aspect-square w-full max-w-[180px] mx-auto overflow-hidden rounded-full bg-charcoal/50 border border-gold/10">
+                  <div className="absolute inset-0 flex flex-col items-center justify-center gap-1.5 p-3 text-center">
+                    <span className="label-text text-gold/25 text-[9px] tracking-[0.2em]">Photo</span>
+                    <span className="body-text-small text-ivory/35 text-[10px]">Owner</span>
+                  </div>
+                </div>
+                <div className="pt-3 pb-1 px-1 text-center">
+                  <p className="body-text-small text-ivory/50 text-sm">Owner</p>
+                  <p className="body-text-small text-ivory/35 text-xs mt-1 italic">Portrait placeholder</p>
+                </div>
               </div>
-              <div className="pt-4 pb-2 px-1">
-                <p className="body-text-small text-ivory/40 italic text-sm">
-                  The control room, late afternoon light
-                </p>
+              <div className="bg-warm-white/[0.04] p-3 md:p-4 max-w-[200px] md:max-w-[220px] md:rotate-1 hover:rotate-0 transition-transform duration-700">
+                <div className="relative aspect-square w-full max-w-[180px] mx-auto overflow-hidden rounded-full bg-charcoal/50 border border-gold/10">
+                  <div className="absolute inset-0 flex flex-col items-center justify-center gap-1.5 p-3 text-center">
+                    <span className="label-text text-gold/25 text-[9px] tracking-[0.2em]">Photo</span>
+                    <span className="body-text-small text-ivory/35 text-[10px]">Designer</span>
+                  </div>
+                </div>
+                <div className="pt-3 pb-1 px-1 text-center">
+                  <p className="body-text-small text-ivory/50 text-sm">Studio designer</p>
+                  <p className="body-text-small text-ivory/35 text-xs mt-1 italic">Portrait placeholder</p>
+                </div>
               </div>
             </div>
           </Reveal>

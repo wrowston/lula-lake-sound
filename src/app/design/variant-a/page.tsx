@@ -155,15 +155,37 @@ function AboutSection() {
               </blockquote>
             </Reveal>
             <Reveal delay={0.25}>
-              <div className="relative aspect-[3/4] overflow-hidden">
-                <Image
-                  src={STUDIO_IMAGES[3]}
-                  alt="Studio detail"
-                  fill
-                  className="object-cover"
-                  quality={80}
-                />
-                <div className="absolute inset-0 bg-gradient-to-t from-deep-forest/50 to-transparent" />
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-8 sm:gap-10">
+                <div className="flex flex-col items-center">
+                  <div className="relative aspect-square w-full max-w-[200px] overflow-hidden rounded-full border border-sand/10 bg-charcoal/40">
+                    <div className="absolute inset-0 flex flex-col items-center justify-center gap-1.5 px-4 text-center">
+                      <span className="label-text text-ivory/25 text-[9px] tracking-[0.15em] leading-snug">
+                        Photo placeholder
+                      </span>
+                      <span className="body-text-small text-ivory/30 text-[10px] leading-snug">
+                        Replace with portrait
+                      </span>
+                    </div>
+                  </div>
+                  <p className="label-text text-sand/50 text-[10px] mt-4 tracking-[0.15em] text-center w-full max-w-[200px]">
+                    Owner
+                  </p>
+                </div>
+                <div className="flex flex-col items-center">
+                  <div className="relative aspect-square w-full max-w-[200px] overflow-hidden rounded-full border border-sand/10 bg-charcoal/40">
+                    <div className="absolute inset-0 flex flex-col items-center justify-center gap-1.5 px-4 text-center">
+                      <span className="label-text text-ivory/25 text-[9px] tracking-[0.15em] leading-snug">
+                        Photo placeholder
+                      </span>
+                      <span className="body-text-small text-ivory/30 text-[10px] leading-snug">
+                        Replace with portrait
+                      </span>
+                    </div>
+                  </div>
+                  <p className="label-text text-sand/50 text-[10px] mt-4 tracking-[0.15em] text-center w-full max-w-[200px]">
+                    Studio designer
+                  </p>
+                </div>
               </div>
             </Reveal>
           </div>

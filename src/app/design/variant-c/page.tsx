@@ -142,7 +142,7 @@ function AboutSection() {
 
         {/* Hero image — full width, constrained aspect */}
         <Reveal delay={0.1}>
-          <div className="relative aspect-[21/9] overflow-hidden mb-24 md:mb-32">
+          <div className="relative aspect-[21/9] overflow-hidden mb-16 md:mb-20">
             <Image
               src={STUDIO_IMAGES[0]}
               alt="Studio panoramic"
@@ -153,6 +153,30 @@ function AboutSection() {
               sizes="100vw"
             />
             <div className="absolute inset-0 bg-gradient-to-r from-washed-black/30 to-transparent" />
+          </div>
+        </Reveal>
+
+        {/* Owner & designer — portrait placeholders */}
+        <Reveal delay={0.12}>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-px bg-sand/10 mb-24 md:mb-32">
+            <div className="bg-washed-black p-8 md:p-10 flex flex-col items-center text-center">
+              <p className="label-text text-sage text-[10px] tracking-[0.2em] mb-6">Owner</p>
+              <div className="relative aspect-square w-full max-w-[220px] overflow-hidden rounded-full border border-sand/12 bg-charcoal/30 mx-auto">
+                <div className="absolute inset-0 flex flex-col items-center justify-center gap-1.5 px-4">
+                  <span className="label-text text-ivory/20 text-[9px] leading-snug">Photo placeholder</span>
+                  <span className="body-text-small text-ivory/35 text-[10px] leading-snug">Owner portrait</span>
+                </div>
+              </div>
+            </div>
+            <div className="bg-washed-black p-8 md:p-10 flex flex-col items-center text-center">
+              <p className="label-text text-sage text-[10px] tracking-[0.2em] mb-6">Studio designer</p>
+              <div className="relative aspect-square w-full max-w-[220px] overflow-hidden rounded-full border border-sand/12 bg-charcoal/30 mx-auto">
+                <div className="absolute inset-0 flex flex-col items-center justify-center gap-1.5 px-4">
+                  <span className="label-text text-ivory/20 text-[9px] leading-snug">Photo placeholder</span>
+                  <span className="body-text-small text-ivory/35 text-[10px] leading-snug">Designer portrait</span>
+                </div>
+              </div>
+            </div>
           </div>
         </Reveal>
 
