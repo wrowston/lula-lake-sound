@@ -200,27 +200,25 @@ export default function DesignIndexPage() {
         <div className="border border-gold/15 bg-gold/[0.03] p-8 md:p-12">
           <p className="label-text text-gold/60 tracking-[0.2em] mb-4 text-[10px]">Recommendation</p>
           <h3 className="headline-secondary text-warm-white text-xl md:text-2xl mb-4">
-            Build Variant B first — Analog Warmth
+            Build Variant A first — Cinematic Editorial
           </h3>
           <div className="space-y-4 body-text text-ivory/50 leading-[1.8]">
             <p>
-              Variant B strikes the best balance between brand authenticity and implementation
-              speed. The organic, textured aesthetic aligns naturally with Lula Lake Sound&rsquo;s
-              positioning as a destination studio rooted in craft and place. The contact-sheet
-              gallery and vinyl-LP recording format are distinctive without requiring complex
-              layout engineering (masonry grids, waveform components).
+              Variant A best matches how we want Lula Lake Sound to feel on first visit: aspirational,
+              cinematic, and unmistakably tied to place. Full-bleed imagery, editorial typography,
+              and long-scroll storytelling signal a destination studio rather than a generic room
+              rental — the kind of site press, artists, and fans remember after they leave.
             </p>
             <p>
-              From a content perspective, Variant B is the most forgiving — it works well
-              with candid, imperfect photography and doesn&rsquo;t demand the same level of
-              visual curation as Variant A&rsquo;s cinematic approach. The Side A / Side B
-              recording format gives the portfolio personality and is trivial to extend
-              as new projects are added.
+              The masonry gallery, timeline-rich About section, and waveform-accented tracklist
+              give each surface a clear role: atmosphere, narrative, and proof of work. Yes, it asks
+              for stronger photography and a bit more layout craft than the other directions — but
+              that investment pays off in differentiation at a glance.
             </p>
             <p>
-              That said, if the client prioritizes a more professional, &ldquo;studio-as-institution&rdquo;
-              positioning, Variant C is the safer pick. And if the goal is maximum visual impact
-              for portfolio/press purposes, Variant A will deliver the most dramatic first impression.
+              If the priority shifts toward fastest build time and forgiving photography, Variant B
+              remains a strong fallback. For maximum clarity and a Swiss, engineering-forward read,
+              Variant C is the right alternative.
             </p>
           </div>
         </div>
