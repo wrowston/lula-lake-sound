@@ -136,8 +136,9 @@ export default function DesignIndexPage() {
         </h1>
         <p className="body-text text-ivory/50 max-w-2xl text-lg leading-[1.8]">
           Three distinct design directions for the new marketing pages.
-          Click into each variant to see full-page comps with mobile and desktop layouts.
-          Select one direction to proceed to implementation (INF-46, INF-47, INF-48).
+          Each variant splits About, Gallery, and Recordings into separate routes so comps read like
+          real pages (mobile and desktop). Pick a variant hub below, then jump between sections with
+          the in-page nav. Select one direction to proceed to implementation (INF-46, INF-47, INF-48).
         </p>
       </div>
 
@@ -164,6 +165,23 @@ export default function DesignIndexPage() {
             </div>
             <p className="body-text text-ivory/55 leading-[1.8] mb-6">{v.summary}</p>
             <p className="body-text-small text-ivory/40 leading-[1.8] border-t border-sand/8 pt-6">{v.rationale}</p>
+            <div className="flex flex-wrap gap-x-4 gap-y-2 mt-6 label-text text-[10px] tracking-[0.12em]">
+              <Link href={`${v.href}/about`} className="text-sand/45 hover:text-sand transition-colors">
+                About
+              </Link>
+              <span className="text-ivory/15" aria-hidden>
+                ·
+              </span>
+              <Link href={`${v.href}/gallery`} className="text-sand/45 hover:text-sand transition-colors">
+                Gallery
+              </Link>
+              <span className="text-ivory/15" aria-hidden>
+                ·
+              </span>
+              <Link href={`${v.href}/recordings`} className="text-sand/45 hover:text-sand transition-colors">
+                Recordings
+              </Link>
+            </div>
           </div>
         ))}
       </div>
