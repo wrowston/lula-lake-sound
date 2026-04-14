@@ -26,19 +26,6 @@ export default defineSchema({
     createdAt: v.number(),
   }),
   /**
-   * @deprecated Pre–INF-70 singleton. Run `internal.migrations.migrateSiteSettingsToCmsSections`
-   * once, then remove this table from the schema in a follow-up deploy after the row is gone.
-   */
-  siteSettings: defineTable({
-    key: v.string(),
-    updatedAt: v.number(),
-    updatedBy: v.optional(v.string()),
-    published: settingsContentValidator,
-    draft: v.optional(settingsContentValidator),
-    /** Added for migration bookkeeping; absent on older rows. */
-    publishedAt: v.optional(v.union(v.number(), v.null())),
-  }).index("by_key", ["key"]),
-  /**
    * Per-section CMS documents. `section` is the primary key for the singleton pattern
    * (e.g. one row with section === "settings").
    */

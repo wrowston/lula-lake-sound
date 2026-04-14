@@ -7,7 +7,7 @@
 
 | Audience | Data |
 |----------|------|
-| Anonymous / marketing site | `publishedSnapshot` only (e.g. `siteSettings.getPublished`) |
+| Anonymous / marketing site | `publishedSnapshot` only (e.g. `api.siteSettings.getPublished`) |
 | Studio / preview (later) | `draftSnapshot` when present, else `publishedSnapshot` |
 
 ## Mutations (shared pattern)
@@ -44,14 +44,6 @@
 4. **Register mutations** that call the same three operations (`saveDraft` / `publishSection` / `discardDraft`) with `section: "pricing"` (or split validators per module if shapes differ).
 
 5. **Expose queries:** a public `getPublished`-style query reading only `publishedSnapshot` for that section; a preview query later checks `ctx.auth`.
-
-## Migration from legacy `siteSettings`
-
-If the project still has rows in `siteSettings`, run once:
-
-`internal.migrations.migrateSiteSettingsToCmsSections`
-
-Then remove the deprecated `siteSettings` table from `convex/schema.ts` after deploy when the table is empty.
 
 ## App-layer types
 

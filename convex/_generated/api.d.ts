@@ -13,7 +13,6 @@ import type * as cms from "../cms.js";
 import type * as cmsShared from "../cmsShared.js";
 import type * as cmsTypes from "../cmsTypes.js";
 import type * as inquiries from "../inquiries.js";
-import type * as migrations from "../migrations.js";
 import type * as seed from "../seed.js";
 import type * as siteSettings from "../siteSettings.js";
 
@@ -29,7 +28,6 @@ declare const fullApi: ApiFromModules<{
   cmsShared: typeof cmsShared;
   cmsTypes: typeof cmsTypes;
   inquiries: typeof inquiries;
-  migrations: typeof migrations;
   seed: typeof seed;
   siteSettings: typeof siteSettings;
 }>;
