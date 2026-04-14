@@ -7,43 +7,35 @@ import {
   useQuery,
   useMutation,
 } from "convex/react";
-import { UserButton } from "@clerk/nextjs";
-import { api } from "../../../convex/_generated/api";
+import { api } from "../../../../convex/_generated/api";
 import { useCallback, useState } from "react";
-
-export function AdminCmsPage() {
-  return (
-    <div className="mx-auto max-w-3xl px-4 py-10">
-      <header className="mb-8 flex flex-wrap items-center justify-between gap-4 border-b border-neutral-200 pb-6">
-        <h1 className="text-2xl font-semibold tracking-tight">Studio CMS</h1>
-        <Authenticated>
-          <UserButton />
-        </Authenticated>
-      </header>
-
-      <AuthLoading>
-        <p className="text-neutral-500">Authenticating…</p>
-      </AuthLoading>
-
-      <Unauthenticated>
-        <p className="text-neutral-600">
-          Convex is not authenticated. Sign in to manage site settings.
-        </p>
-      </Unauthenticated>
-
-      <Authenticated>
-        <SettingsEditor />
-      </Authenticated>
-    </div>
-  );
-}
 
 type SettingsContent = {
   flags: { priceTabEnabled: boolean };
   metadata?: { title?: string; description?: string };
 };
 
-function SettingsEditor() {
+export function SettingsEditor() {
+  return (
+    <>
+      <AuthLoading>
+        <p className="body-text text-ivory/40">Authenticating…</p>
+      </AuthLoading>
+
+      <Unauthenticated>
+        <p className="body-text text-ivory/40">
+          Sign in to manage site settings.
+        </p>
+      </Unauthenticated>
+
+      <Authenticated>
+        <SettingsForm />
+      </Authenticated>
+    </>
+  );
+}
+
+function SettingsForm() {
   const section = useQuery(api.cms.getSection, { section: "settings" });
   const saveDraft = useMutation(api.cms.saveDraft);
   const publish = useMutation(api.cms.publishSection);
@@ -60,10 +52,7 @@ function SettingsEditor() {
       : undefined);
 
   const updateField = useCallback(
-    <K extends keyof SettingsContent>(
-      key: K,
-      value: SettingsContent[K],
-    ) => {
+    <K extends keyof SettingsContent>(key: K, value: SettingsContent[K]) => {
       if (!source) return;
       setLocalDraft({ ...source, [key]: value });
     },
@@ -87,11 +76,11 @@ function SettingsEditor() {
   );
 
   if (section === undefined) {
-    return <p className="text-neutral-500">Loading settings…</p>;
+    return <p className="body-text text-ivory/40">Loading settings…</p>;
   }
 
   if (!source) {
-    return <p className="text-neutral-500">No settings data available.</p>;
+    return <p className="body-text text-ivory/40">No settings data available.</p>;
   }
 
   const hasLocalEdits = localDraft !== null;
@@ -99,12 +88,8 @@ function SettingsEditor() {
 
   return (
     <div className="space-y-8">
-      {/* ---------- flags ---------- */}
       <fieldset className="space-y-3">
-        <legend className="text-sm font-medium uppercase tracking-wider text-neutral-500">
-          Feature Flags
-        </legend>
-
+        <legend className="label-text text-ivory/40">Feature Flags</legend>
         <label className="flex items-center gap-3">
           <input
             type="checkbox"
@@ -115,20 +100,18 @@ function SettingsEditor() {
                 priceTabEnabled: e.target.checked,
               })
             }
-            className="h-4 w-4 rounded border-neutral-300"
+            className="h-4 w-4 rounded border-sand/20 bg-charcoal accent-gold"
           />
-          <span className="text-sm">Show pricing tab</span>
+          <span className="body-text-small text-ivory/70">
+            Show pricing tab
+          </span>
         </label>
       </fieldset>
 
-      {/* ---------- metadata ---------- */}
       <fieldset className="space-y-3">
-        <legend className="text-sm font-medium uppercase tracking-wider text-neutral-500">
-          Site Metadata
-        </legend>
-
+        <legend className="label-text text-ivory/40">Site Metadata</legend>
         <label className="block space-y-1">
-          <span className="text-sm text-neutral-700">Title</span>
+          <span className="body-text-small text-ivory/50">Title</span>
           <input
             type="text"
             value={source.metadata?.title ?? ""}
@@ -138,12 +121,11 @@ function SettingsEditor() {
                 title: e.target.value,
               })
             }
-            className="block w-full rounded border border-neutral-300 px-3 py-2 text-sm focus:border-neutral-500 focus:outline-none"
+            className="block w-full rounded-md border border-sand/12 bg-charcoal/60 px-3 py-2 text-sm text-ivory/80 placeholder:text-ivory/30 focus:border-gold/40 focus:outline-none focus:ring-1 focus:ring-gold/30"
           />
         </label>
-
         <label className="block space-y-1">
-          <span className="text-sm text-neutral-700">Description</span>
+          <span className="body-text-small text-ivory/50">Description</span>
           <textarea
             rows={3}
             value={source.metadata?.description ?? ""}
@@ -153,20 +135,19 @@ function SettingsEditor() {
                 description: e.target.value,
               })
             }
-            className="block w-full rounded border border-neutral-300 px-3 py-2 text-sm focus:border-neutral-500 focus:outline-none"
+            className="block w-full rounded-md border border-sand/12 bg-charcoal/60 px-3 py-2 text-sm text-ivory/80 placeholder:text-ivory/30 focus:border-gold/40 focus:outline-none focus:ring-1 focus:ring-gold/30"
           />
         </label>
       </fieldset>
 
-      {/* ---------- status ---------- */}
-      <div className="flex flex-wrap items-center gap-3 text-xs text-neutral-500">
+      <div className="flex flex-wrap items-center gap-3 text-xs text-ivory/40">
         {hasDraftOnServer && (
-          <span className="rounded bg-amber-100 px-2 py-0.5 text-amber-800">
+          <span className="rounded bg-gold/15 px-2 py-0.5 text-gold">
             Unpublished draft on server
           </span>
         )}
         {hasLocalEdits && (
-          <span className="rounded bg-blue-100 px-2 py-0.5 text-blue-800">
+          <span className="rounded bg-sage/20 px-2 py-0.5 text-sage">
             Unsaved local edits
           </span>
         )}
@@ -179,12 +160,11 @@ function SettingsEditor() {
       </div>
 
       {lastError && (
-        <p className="rounded border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
+        <p className="rounded-md border border-fire/30 bg-fire/10 px-3 py-2 text-sm text-fire">
           {lastError}
         </p>
       )}
 
-      {/* ---------- actions ---------- */}
       <div className="flex flex-wrap gap-3">
         <button
           disabled={!hasLocalEdits || busy !== null}
@@ -199,7 +179,7 @@ function SettingsEditor() {
               }),
             )
           }
-          className="rounded bg-neutral-900 px-4 py-2 text-sm font-medium text-white transition hover:bg-neutral-700 disabled:cursor-not-allowed disabled:opacity-40"
+          className="rounded-md bg-sand px-4 py-2 text-sm font-medium text-washed-black transition hover:bg-warm-white disabled:cursor-not-allowed disabled:opacity-40"
         >
           {busy === "Saving…" ? "Saving…" : "Save Draft"}
         </button>
@@ -220,7 +200,7 @@ function SettingsEditor() {
               await publish({ section: "settings" });
             })
           }
-          className="rounded bg-green-700 px-4 py-2 text-sm font-medium text-white transition hover:bg-green-600 disabled:cursor-not-allowed disabled:opacity-40"
+          className="rounded-md bg-forest px-4 py-2 text-sm font-medium text-sand border border-sand/20 transition hover:border-sand/40 disabled:cursor-not-allowed disabled:opacity-40"
         >
           {busy === "Publishing…" ? "Publishing…" : "Publish"}
         </button>
@@ -232,7 +212,7 @@ function SettingsEditor() {
               await discard({ section: "settings" });
             })
           }
-          className="rounded border border-neutral-300 px-4 py-2 text-sm font-medium text-neutral-700 transition hover:bg-neutral-100 disabled:cursor-not-allowed disabled:opacity-40"
+          className="rounded-md border border-sand/20 px-4 py-2 text-sm font-medium text-ivory/60 transition hover:bg-sand/5 hover:text-ivory/80 disabled:cursor-not-allowed disabled:opacity-40"
         >
           {busy === "Discarding…" ? "Discarding…" : "Discard Draft"}
         </button>

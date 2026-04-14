@@ -1,4 +1,4 @@
-import { Button } from "@/components/ui/button";
+import { BrandButton as Button } from "@/components/ui/brand-button";
 
 // Service packages data
 const SERVICE_PACKAGES = [

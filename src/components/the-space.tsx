@@ -1,4 +1,4 @@
-import { Button } from "@/components/ui/button";
+import { BrandButton as Button } from "@/components/ui/brand-button";
 import Image from "next/image";
 import { useEffect, useState } from "react";
 import { getStudioImages, type StudioImage } from "@/lib/storage";
