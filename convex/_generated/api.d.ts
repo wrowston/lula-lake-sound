@@ -8,7 +8,10 @@
  * @module
  */
 
+import type * as admin_siteSettings from "../admin/siteSettings.js";
 import type * as inquiries from "../inquiries.js";
+import type * as seed from "../seed.js";
+import type * as siteSettings from "../siteSettings.js";
 
 import type {
   ApiFromModules,
@@ -18,6 +21,9 @@ import type {
 
 declare const fullApi: ApiFromModules<{
   inquiries: typeof inquiries;
+  seed: typeof seed;
+  siteSettings: typeof siteSettings;
+  "admin/siteSettings": typeof admin_siteSettings;
 }>;
 
 /**
