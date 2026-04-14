@@ -99,7 +99,8 @@ export const saveDraft = mutation({
 });
 
 /**
- * Atomically replaces the published snapshot from the current draft in one transaction.
+ * Atomically promotes the current draft to published in one transaction, then clears
+ * `draftSnapshot` so a second publish without `saveDraft` fails fast.
  * Public readers always see the previous published snapshot until this commit completes.
  */
 export const publishSection = mutation({
@@ -126,7 +127,7 @@ export const publishSection = mutation({
     await ctx.db.patch(id, {
       publishedSnapshot: draft,
       publishedAt: now,
-      draftSnapshot: draft,
+      draftSnapshot: undefined,
       hasDraftChanges: false,
       updatedAt: now,
       updatedBy,
