@@ -5,6 +5,8 @@ import {
   settingsContentValidator,
 } from "./schema.shared";
 
+// Draft/publish model: see docs/cms-publish.md (INF-70).
+
 /**
  * CMS sections use **one row per section** (approach B):
  * - `publishedSnapshot` + `publishedAt` — what public readers see (atomic updates on publish).
