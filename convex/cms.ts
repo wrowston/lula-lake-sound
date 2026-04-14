@@ -7,6 +7,7 @@ import {
 import type { Doc, Id } from "./_generated/dataModel";
 import { SETTINGS_DEFAULTS, settingsSnapshotsEqual } from "./cmsShared";
 import { requireAuthenticatedIdentity } from "./lib/auth";
+import { cmsNotFound, cmsPublishValidationFailed } from "./errors";
 
 /**
  * Full section document for the admin UI (published + optional draft).
@@ -68,7 +69,7 @@ async function ensureSectionRow(
   }
 
   if (section !== "settings") {
-    throw new Error(`Unknown CMS section: ${section}`);
+    cmsNotFound("cmsSection", section, `Unknown CMS section: ${section}`);
   }
 
   const id = await ctx.db.insert("cmsSections", {
@@ -138,8 +139,9 @@ export const publishSection = mutation({
     );
     const draft = row.draftSnapshot;
     if (!draft) {
-      throw new Error(
-        "No draft to publish: call saveDraft first or discardDraft is not needed.",
+      cmsPublishValidationFailed(
+        args.section,
+        "No draft to publish: save a draft first, or there is nothing to discard.",
       );
     }
 

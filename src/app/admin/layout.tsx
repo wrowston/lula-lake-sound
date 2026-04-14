@@ -7,6 +7,7 @@ import {
   getDefaultSidebarOpenFromCookie,
   SIDEBAR_COOKIE_NAME,
 } from "@/lib/sidebar-cookie";
+import { Toaster } from "sonner";
 
 export const metadata: Metadata = {
   title: {
@@ -28,6 +29,7 @@ export default async function AdminLayout({
 
   return (
     <TooltipProvider>
+      <Toaster richColors closeButton />
       <SidebarProvider defaultOpen={defaultOpen}>
         <AdminSidebar />
         <SidebarInset>{children}</SidebarInset>

@@ -9,7 +9,10 @@ import {
 } from "convex/react";
 import { api } from "../../../../convex/_generated/api";
 import { useCallback, useState } from "react";
+import { Effect, pipe } from "effect";
 import { Switch } from "@/components/ui/switch";
+import { convexMutationEffect, type CmsAppError } from "@/lib/effect-errors";
+import { runAdminEffect } from "@/lib/admin-run-effect";
 
 type SettingsContent = {
   flags: { priceTabEnabled: boolean };
@@ -47,7 +50,6 @@ function SettingsForm() {
 
   const [localDraft, setLocalDraft] = useState<SettingsContent | null>(null);
   const [busy, setBusy] = useState<string | null>(null);
-  const [lastError, setLastError] = useState<string | null>(null);
 
   const source: SettingsContent | undefined =
     localDraft ??
@@ -64,17 +66,13 @@ function SettingsForm() {
   );
 
   const runAction = useCallback(
-    async (label: string, fn: () => Promise<unknown>) => {
+    async (label: string, program: Effect.Effect<unknown, CmsAppError>) => {
       setBusy(label);
-      setLastError(null);
-      try {
-        await fn();
+      const outcome = await runAdminEffect(program);
+      if (outcome !== undefined) {
         setLocalDraft(null);
-      } catch (err) {
-        setLastError(err instanceof Error ? err.message : String(err));
-      } finally {
-        setBusy(null);
       }
+      setBusy(null);
     },
     [],
   );
@@ -167,24 +165,21 @@ function SettingsForm() {
         )}
       </div>
 
-      {lastError && (
-        <p className="rounded-md border border-destructive/30 bg-destructive/10 px-3 py-2 text-sm text-destructive">
-          {lastError}
-        </p>
-      )}
-
       <div className="flex flex-wrap gap-3">
         <button
           disabled={!hasLocalEdits || busy !== null}
           onClick={() =>
-            runAction("Saving…", () =>
-              saveDraft({
-                section: "settings",
-                content: {
-                  flags: source.flags,
-                  metadata: source.metadata,
-                },
-              }),
+            runAction(
+              "Saving…",
+              convexMutationEffect(() =>
+                saveDraft({
+                  section: "settings",
+                  content: {
+                    flags: source.flags,
+                    metadata: source.metadata,
+                  },
+                }),
+              ),
             )
           }
           className="rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground transition hover:bg-primary/90 disabled:cursor-not-allowed disabled:opacity-40"
@@ -194,20 +189,26 @@ function SettingsForm() {
 
         <button
           disabled={(!hasDraftOnServer && !hasLocalEdits) || busy !== null}
-          onClick={() =>
-            runAction("Publishing…", async () => {
-              if (hasLocalEdits) {
-                await saveDraft({
-                  section: "settings",
-                  content: {
-                    flags: source.flags,
-                    metadata: source.metadata,
-                  },
-                });
-              }
-              await publish({ section: "settings" });
-            })
-          }
+          onClick={() => {
+            const publishOnce = convexMutationEffect(() =>
+              publish({ section: "settings" }),
+            );
+            const program = hasLocalEdits
+              ? pipe(
+                  convexMutationEffect(() =>
+                    saveDraft({
+                      section: "settings",
+                      content: {
+                        flags: source.flags,
+                        metadata: source.metadata,
+                      },
+                    }),
+                  ),
+                  Effect.flatMap(() => publishOnce),
+                )
+              : publishOnce;
+            return runAction("Publishing…", program);
+          }}
           className="rounded-md border border-border bg-secondary px-4 py-2 text-sm font-medium text-secondary-foreground transition hover:bg-secondary/80 disabled:cursor-not-allowed disabled:opacity-40"
         >
           {busy === "Publishing…" ? "Publishing…" : "Publish"}
@@ -216,9 +217,10 @@ function SettingsForm() {
         <button
           disabled={(!hasDraftOnServer && !hasLocalEdits) || busy !== null}
           onClick={() =>
-            runAction("Discarding…", async () => {
-              await discard({ section: "settings" });
-            })
+            runAction(
+              "Discarding…",
+              convexMutationEffect(() => discard({ section: "settings" })),
+            )
           }
           className="rounded-md border border-border px-4 py-2 text-sm font-medium text-muted-foreground transition hover:bg-muted hover:text-foreground disabled:cursor-not-allowed disabled:opacity-40"
         >
