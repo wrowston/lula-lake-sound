@@ -60,8 +60,16 @@ body {
 }
 
 html {
-  color-scheme: dark;
+  color-scheme: light dark;
   scroll-behavior: smooth;
+}
+
+html.dark {
+  color-scheme: dark;
+}
+
+html.light {
+  color-scheme: light;
 }
 
 /* ——— Typography utility classes ——— */
@@ -196,6 +204,11 @@ html {
   color: #e8e4dc;
 }
 
+html.light ::selection {
+  background-color: rgba(163, 130, 46, 0.35);
+  color: #2a2725;
+}
+
 @theme inline {
   --font-heading: "Acumin Variable", system-ui, -apple-system, sans-serif;
   --font-sans: "Titillium Web", system-ui, -apple-system, sans-serif;
@@ -240,6 +253,41 @@ html {
 }
 
 :root {
+  --background: #faf9f7;
+  --foreground: #2a2725;
+  --card: #ffffff;
+  --card-foreground: #2a2725;
+  --popover: #ffffff;
+  --popover-foreground: #2a2725;
+  --primary: #54340d;
+  --primary-foreground: #faf9f7;
+  --secondary: #f0ede8;
+  --secondary-foreground: #54340d;
+  --muted: #f0ede8;
+  --muted-foreground: #78746d;
+  --accent: #f0ede8;
+  --accent-foreground: #54340d;
+  --destructive: #ef3c23;
+  --border: rgba(42, 39, 37, 0.12);
+  --input: rgba(42, 39, 37, 0.15);
+  --ring: #a3822e;
+  --chart-1: #c6bda0;
+  --chart-2: #a3822e;
+  --chart-3: #55656a;
+  --chart-4: #54340d;
+  --chart-5: #3d1516;
+  --radius: 0.5rem;
+  --sidebar: #f5f3ef;
+  --sidebar-foreground: #2a2725;
+  --sidebar-primary: #54340d;
+  --sidebar-primary-foreground: #faf9f7;
+  --sidebar-accent: rgba(42, 39, 37, 0.06);
+  --sidebar-accent-foreground: #2a2725;
+  --sidebar-border: rgba(42, 39, 37, 0.1);
+  --sidebar-ring: #a3822e;
+}
+
+.dark {
   --background: #1f1e1c;
   --foreground: #bfbbb5;
   --card: #2a2725;
@@ -263,7 +311,6 @@ html {
   --chart-3: #55656a;
   --chart-4: #54340d;
   --chart-5: #3d1516;
-  --radius: 0.5rem;
   --sidebar: #1c1e15;
   --sidebar-foreground: #bfbbb5;
   --sidebar-primary: #c6bda0;

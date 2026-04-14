@@ -58,10 +58,10 @@ export function AdminSidebar() {
             alt="Lula Lake Sound"
             width={32}
             height={32}
-            className="shrink-0 brightness-0 invert"
+            className="shrink-0 dark:brightness-0 dark:invert"
             style={{ width: "auto", height: "auto" }}
           />
-          <span className="headline-secondary text-sand text-sm tracking-wider group-data-[collapsible=icon]:hidden">
+          <span className="headline-secondary text-sidebar-foreground text-sm tracking-wider group-data-[collapsible=icon]:hidden">
             Studio CMS
           </span>
         </Link>
@@ -69,7 +69,7 @@ export function AdminSidebar() {
 
       <SidebarContent>
         <SidebarGroup>
-          <SidebarGroupLabel className="label-text text-ivory/40 text-[10px]">
+          <SidebarGroupLabel className="label-text text-muted-foreground text-[10px]">
             Manage
           </SidebarGroupLabel>
           <SidebarGroupContent>
@@ -99,7 +99,9 @@ export function AdminSidebar() {
               render={<Link href="/" />}
             >
               <ArrowLeft className="size-4" />
-              <span className="body-text-small">Back to site</span>
+              <span className="body-text-small text-sidebar-foreground">
+                Back to site
+              </span>
             </SidebarMenuButton>
           </SidebarMenuItem>
         </SidebarMenu>

@@ -62,10 +62,10 @@ export default function DashboardPage() {
       <div className="flex-1 p-6">
         <div className="mx-auto max-w-4xl space-y-8">
           <div>
-            <h2 className="headline-secondary text-sand text-lg mb-1">
+            <h2 className="headline-secondary text-foreground text-lg mb-1">
               Welcome back
             </h2>
-            <p className="body-text-small text-ivory/40">
+            <p className="body-text-small text-muted-foreground">
               Manage your studio site content from here.
             </p>
           </div>
@@ -75,15 +75,15 @@ export default function DashboardPage() {
               <Link
                 key={section.href}
                 href={section.href}
-                className="group rounded-lg border border-sand/8 bg-charcoal/40 p-5 transition-all hover:border-sand/20 hover:bg-charcoal/60"
+                className="group rounded-lg border border-border bg-card p-5 transition-all hover:border-border hover:bg-muted/60"
               >
-                <div className="mb-3 flex size-9 items-center justify-center rounded-md bg-sand/8 text-sand/60 transition-colors group-hover:bg-sand/12 group-hover:text-sand">
+                <div className="mb-3 flex size-9 items-center justify-center rounded-md bg-muted text-muted-foreground transition-colors group-hover:bg-accent group-hover:text-foreground">
                   <section.icon className="size-4" />
                 </div>
-                <h3 className="headline-secondary text-sand text-sm mb-1">
+                <h3 className="headline-secondary text-foreground text-sm mb-1">
                   {section.label}
                 </h3>
-                <p className="body-text-small text-ivory/40">
+                <p className="body-text-small text-muted-foreground">
                   {section.desc}
                 </p>
               </Link>

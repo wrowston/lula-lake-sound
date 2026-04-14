@@ -15,15 +15,18 @@ type SettingsContent = {
   metadata?: { title?: string; description?: string };
 };
 
+const fieldClass =
+  "block w-full rounded-md border border-input bg-background px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground focus:border-ring focus:outline-none focus:ring-1 focus:ring-ring/50";
+
 export function SettingsEditor() {
   return (
     <>
       <AuthLoading>
-        <p className="body-text text-ivory/40">Authenticating…</p>
+        <p className="body-text text-muted-foreground">Authenticating…</p>
       </AuthLoading>
 
       <Unauthenticated>
-        <p className="body-text text-ivory/40">
+        <p className="body-text text-muted-foreground">
           Sign in to manage site settings.
         </p>
       </Unauthenticated>
@@ -76,11 +79,13 @@ function SettingsForm() {
   );
 
   if (section === undefined) {
-    return <p className="body-text text-ivory/40">Loading settings…</p>;
+    return <p className="body-text text-muted-foreground">Loading settings…</p>;
   }
 
   if (!source) {
-    return <p className="body-text text-ivory/40">No settings data available.</p>;
+    return (
+      <p className="body-text text-muted-foreground">No settings data available.</p>
+    );
   }
 
   const hasLocalEdits = localDraft !== null;
@@ -89,7 +94,7 @@ function SettingsForm() {
   return (
     <div className="space-y-8">
       <fieldset className="space-y-3">
-        <legend className="label-text text-ivory/40">Feature Flags</legend>
+        <legend className="label-text text-muted-foreground">Feature Flags</legend>
         <label className="flex items-center gap-3">
           <input
             type="checkbox"
@@ -100,18 +105,18 @@ function SettingsForm() {
                 priceTabEnabled: e.target.checked,
               })
             }
-            className="h-4 w-4 rounded border-sand/20 bg-charcoal accent-gold"
+            className="h-4 w-4 rounded border-border bg-background accent-primary"
           />
-          <span className="body-text-small text-ivory/70">
+          <span className="body-text-small text-foreground">
             Show pricing tab
           </span>
         </label>
       </fieldset>
 
       <fieldset className="space-y-3">
-        <legend className="label-text text-ivory/40">Site Metadata</legend>
+        <legend className="label-text text-muted-foreground">Site Metadata</legend>
         <label className="block space-y-1">
-          <span className="body-text-small text-ivory/50">Title</span>
+          <span className="body-text-small text-muted-foreground">Title</span>
           <input
             type="text"
             value={source.metadata?.title ?? ""}
@@ -121,11 +126,11 @@ function SettingsForm() {
                 title: e.target.value,
               })
             }
-            className="block w-full rounded-md border border-sand/12 bg-charcoal/60 px-3 py-2 text-sm text-ivory/80 placeholder:text-ivory/30 focus:border-gold/40 focus:outline-none focus:ring-1 focus:ring-gold/30"
+            className={fieldClass}
           />
         </label>
         <label className="block space-y-1">
-          <span className="body-text-small text-ivory/50">Description</span>
+          <span className="body-text-small text-muted-foreground">Description</span>
           <textarea
             rows={3}
             value={source.metadata?.description ?? ""}
@@ -135,19 +140,19 @@ function SettingsForm() {
                 description: e.target.value,
               })
             }
-            className="block w-full rounded-md border border-sand/12 bg-charcoal/60 px-3 py-2 text-sm text-ivory/80 placeholder:text-ivory/30 focus:border-gold/40 focus:outline-none focus:ring-1 focus:ring-gold/30"
+            className={fieldClass}
           />
         </label>
       </fieldset>
 
-      <div className="flex flex-wrap items-center gap-3 text-xs text-ivory/40">
+      <div className="flex flex-wrap items-center gap-3 text-xs text-muted-foreground">
         {hasDraftOnServer && (
-          <span className="rounded bg-gold/15 px-2 py-0.5 text-gold">
+          <span className="rounded bg-primary/15 px-2 py-0.5 text-primary">
             Unpublished draft on server
           </span>
         )}
         {hasLocalEdits && (
-          <span className="rounded bg-sage/20 px-2 py-0.5 text-sage">
+          <span className="rounded bg-muted px-2 py-0.5 text-muted-foreground">
             Unsaved local edits
           </span>
         )}
@@ -160,7 +165,7 @@ function SettingsForm() {
       </div>
 
       {lastError && (
-        <p className="rounded-md border border-fire/30 bg-fire/10 px-3 py-2 text-sm text-fire">
+        <p className="rounded-md border border-destructive/30 bg-destructive/10 px-3 py-2 text-sm text-destructive">
           {lastError}
         </p>
       )}
@@ -179,7 +184,7 @@ function SettingsForm() {
               }),
             )
           }
-          className="rounded-md bg-sand px-4 py-2 text-sm font-medium text-washed-black transition hover:bg-warm-white disabled:cursor-not-allowed disabled:opacity-40"
+          className="rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground transition hover:bg-primary/90 disabled:cursor-not-allowed disabled:opacity-40"
         >
           {busy === "Saving…" ? "Saving…" : "Save Draft"}
         </button>
@@ -200,7 +205,7 @@ function SettingsForm() {
               await publish({ section: "settings" });
             })
           }
-          className="rounded-md bg-forest px-4 py-2 text-sm font-medium text-sand border border-sand/20 transition hover:border-sand/40 disabled:cursor-not-allowed disabled:opacity-40"
+          className="rounded-md border border-border bg-secondary px-4 py-2 text-sm font-medium text-secondary-foreground transition hover:bg-secondary/80 disabled:cursor-not-allowed disabled:opacity-40"
         >
           {busy === "Publishing…" ? "Publishing…" : "Publish"}
         </button>
@@ -212,7 +217,7 @@ function SettingsForm() {
               await discard({ section: "settings" });
             })
           }
-          className="rounded-md border border-sand/20 px-4 py-2 text-sm font-medium text-ivory/60 transition hover:bg-sand/5 hover:text-ivory/80 disabled:cursor-not-allowed disabled:opacity-40"
+          className="rounded-md border border-border px-4 py-2 text-sm font-medium text-muted-foreground transition hover:bg-muted hover:text-foreground disabled:cursor-not-allowed disabled:opacity-40"
         >
           {busy === "Discarding…" ? "Discarding…" : "Discard Draft"}
         </button>
