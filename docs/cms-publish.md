@@ -1,0 +1,63 @@
+# CMS draft / publish model (Convex)
+
+**Ticket:** INF-70  
+**Choice:** **Approach B** — one document per CMS **section** with `publishedSnapshot`, optional `draftSnapshot`, `publishedAt`, and `hasDraftChanges`. Publish is a **single `db.patch` / `db.replace`** so public readers never see a half-written structure.
+
+## Public vs admin reads
+
+| Audience | Data |
+|----------|------|
+| Anonymous / marketing site | `publishedSnapshot` only (e.g. `siteSettings.getPublished`) |
+| Studio / preview (later) | `draftSnapshot` when present, else `publishedSnapshot` |
+
+## Mutations (shared pattern)
+
+| Function | Role |
+|----------|------|
+| `api.cms.saveDraft` | Writes `draftSnapshot`, updates `hasDraftChanges` vs `publishedSnapshot`. |
+| `api.cms.publishSection` | Copies `draftSnapshot` → `publishedSnapshot`, sets `publishedAt`, clears `hasDraftChanges` in **one** mutation. |
+| `api.cms.discardDraft` | Clears `draftSnapshot` and `hasDraftChanges` via `replace` (optional fields removed). No-op if there was nothing to discard. |
+
+## First-time publish
+
+1. **Empty environment:** run `internal.seed.seedSiteSettingsDefaults` or call `saveDraft` once (both create a row with defaults in `publishedSnapshot` and `publishedAt` set).
+2. **Editor saves:** `saveDraft` fills `draftSnapshot`; `hasDraftChanges` is true when draft ≠ published.
+3. **Publish:** `publishSection` requires an existing `draftSnapshot` (save first). It atomically promotes that snapshot to `publishedSnapshot`.
+
+## Adding a new content type (new section)
+
+1. **Extend the section union** in `convex/schema.shared.ts`:
+
+   ```ts
+   export const cmsSectionValidator = v.union(
+     v.literal("settings"),
+     v.literal("pricing"), // example
+   );
+   ```
+
+2. **Define a validator** for that section’s snapshot shape (or reuse an existing one if the payload matches).
+
+3. **Add a table or branch in `cmsSections`:** today one row holds one `settingsContentValidator` snapshot. If the new section has a different shape, either:
+   - add optional fields to a shared snapshot object (simple, one row), or
+   - add a **separate** `cmsSections`-style table keyed by section name (still one row per section), reusing the same mutation naming pattern in a new module.
+
+4. **Register mutations** that call the same three operations (`saveDraft` / `publishSection` / `discardDraft`) with `section: "pricing"` (or split validators per module if shapes differ).
+
+5. **Expose queries:** a public `getPublished`-style query reading only `publishedSnapshot` for that section; a preview query later checks `ctx.auth`.
+
+## Migration from legacy `siteSettings`
+
+If the project still has rows in `siteSettings`, run once:
+
+`internal.migrations.migrateSiteSettingsToCmsSections`
+
+Then remove the deprecated `siteSettings` table from `convex/schema.ts` after deploy when the table is empty.
+
+## App-layer types
+
+Import from `convex/cmsTypes.ts` (path alias `@convex/cmsTypes` if configured):
+
+- `CmsSection`
+- `SettingsContent`
+
+`Doc<"cmsSections">` from `convex/_generated/dataModel` is the full persisted row type.

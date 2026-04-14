@@ -1,16 +1,16 @@
 import { query } from "./_generated/server";
-import { SITE_SETTINGS_KEY } from "./siteSettingsConstants";
 
 /**
  * Published site settings only (flags + shared metadata). Safe for anonymous clients.
- * Returns `null` until the singleton row is seeded.
+ * Returns `null` until the singleton CMS row is seeded (run `internal.seed.seedSiteSettingsDefaults`
+ * or save a draft once auth is wired).
  */
 export const getPublished = query({
   args: {},
   handler: async (ctx) => {
     const row = await ctx.db
-      .query("siteSettings")
-      .withIndex("by_key", (q) => q.eq("key", SITE_SETTINGS_KEY))
+      .query("cmsSections")
+      .withIndex("by_section", (q) => q.eq("section", "settings"))
       .unique();
 
     if (!row) {
@@ -18,9 +18,10 @@ export const getPublished = query({
     }
 
     return {
-      flags: row.published.flags,
-      metadata: row.published.metadata ?? null,
+      flags: row.publishedSnapshot.flags,
+      metadata: row.publishedSnapshot.metadata ?? null,
       updatedAt: row.updatedAt,
+      publishedAt: row.publishedAt,
     };
   },
 });
