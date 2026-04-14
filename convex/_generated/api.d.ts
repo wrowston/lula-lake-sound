@@ -8,7 +8,11 @@
  * @module
  */
 
+import type * as admin_siteSettings from "../admin/siteSettings.js";
 import type * as inquiries from "../inquiries.js";
+import type * as seed from "../seed.js";
+import type * as siteSettings from "../siteSettings.js";
+import type * as siteSettingsConstants from "../siteSettingsConstants.js";
 
 import type {
   ApiFromModules,
@@ -17,7 +21,11 @@ import type {
 } from "convex/server";
 
 declare const fullApi: ApiFromModules<{
+  "admin/siteSettings": typeof admin_siteSettings;
   inquiries: typeof inquiries;
+  seed: typeof seed;
+  siteSettings: typeof siteSettings;
+  siteSettingsConstants: typeof siteSettingsConstants;
 }>;
 
 /**
