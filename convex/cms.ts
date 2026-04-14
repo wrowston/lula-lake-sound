@@ -1,4 +1,4 @@
-import { mutation, type MutationCtx } from "./_generated/server";
+import { query, mutation, type MutationCtx } from "./_generated/server";
 import { v } from "convex/values";
 import {
   cmsSectionValidator,
@@ -6,21 +6,44 @@ import {
 } from "./schema.shared";
 import type { Doc, Id } from "./_generated/dataModel";
 import { SETTINGS_DEFAULTS, settingsSnapshotsEqual } from "./cmsShared";
+import { requireAuthenticatedIdentity } from "./lib/auth";
 
-async function requireCmsWriter(
-  ctx: MutationCtx,
-  adminSecret: string | undefined,
-): Promise<{ updatedBy: string | undefined }> {
-  const identity = await ctx.auth.getUserIdentity();
-  if (identity) {
-    return { updatedBy: identity.tokenIdentifier };
-  }
-  const expected = process.env.CMS_ADMIN_SECRET;
-  if (!expected || adminSecret !== expected) {
-    throw new Error("Unauthorized");
-  }
-  return { updatedBy: "cms-admin-secret" };
-}
+/**
+ * Full section document for the admin UI (published + optional draft).
+ * Requires a valid Convex identity; returns SETTINGS_DEFAULTS when no row exists yet.
+ */
+export const getSection = query({
+  args: { section: cmsSectionValidator },
+  handler: async (ctx, args) => {
+    await requireAuthenticatedIdentity(ctx);
+    const row = await ctx.db
+      .query("cmsSections")
+      .withIndex("by_section", (q) => q.eq("section", args.section))
+      .unique();
+
+    if (!row) {
+      return {
+        section: args.section,
+        publishedSnapshot: SETTINGS_DEFAULTS,
+        publishedAt: null,
+        draftSnapshot: null,
+        hasDraftChanges: false,
+        updatedAt: null,
+        updatedBy: null,
+      };
+    }
+
+    return {
+      section: row.section,
+      publishedSnapshot: row.publishedSnapshot,
+      publishedAt: row.publishedAt,
+      draftSnapshot: row.draftSnapshot ?? null,
+      hasDraftChanges: row.hasDraftChanges,
+      updatedAt: row.updatedAt,
+      updatedBy: row.updatedBy ?? null,
+    };
+  },
+});
 
 async function getSectionRow(
   ctx: MutationCtx,
@@ -71,10 +94,9 @@ export const saveDraft = mutation({
   args: {
     section: cmsSectionValidator,
     content: settingsContentValidator,
-    adminSecret: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
-    const { updatedBy } = await requireCmsWriter(ctx, args.adminSecret);
+    const { updatedBy } = await requireAuthenticatedIdentity(ctx);
     const { id, row } = await ensureSectionRow(
       ctx,
       args.section,
@@ -106,10 +128,9 @@ export const saveDraft = mutation({
 export const publishSection = mutation({
   args: {
     section: cmsSectionValidator,
-    adminSecret: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
-    const { updatedBy } = await requireCmsWriter(ctx, args.adminSecret);
+    const { updatedBy } = await requireAuthenticatedIdentity(ctx);
     const { id, row } = await ensureSectionRow(
       ctx,
       args.section,
@@ -144,10 +165,9 @@ export const publishSection = mutation({
 export const discardDraft = mutation({
   args: {
     section: cmsSectionValidator,
-    adminSecret: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
-    const { updatedBy } = await requireCmsWriter(ctx, args.adminSecret);
+    const { updatedBy } = await requireAuthenticatedIdentity(ctx);
     const row = await getSectionRow(ctx, args.section);
     if (!row) {
       return { ok: true as const, section: args.section, discarded: false };
