@@ -4,17 +4,8 @@ import Link from "next/link";
 import Image from "next/image";
 import { usePathname } from "next/navigation";
 import { useConvex } from "convex/react";
-import {
-  LayoutDashboard,
-  DollarSign,
-  Wrench,
-  ImageIcon,
-  Video,
-  Music,
-  User,
-  Settings,
-  ArrowLeft,
-} from "lucide-react";
+import { LayoutDashboard, ArrowLeft } from "lucide-react";
+import { ADMIN_MANAGE_NAV_ITEMS } from "@/lib/admin-nav";
 import {
   Sidebar,
   SidebarContent,
@@ -34,13 +25,7 @@ import {
 
 const navItems = [
   { title: "Dashboard", href: "/admin", icon: LayoutDashboard },
-  { title: "Pricing", href: "/admin/pricing", icon: DollarSign },
-  { title: "Gear", href: "/admin/gear", icon: Wrench },
-  { title: "Photos", href: "/admin/photos", icon: ImageIcon },
-  { title: "Videos", href: "/admin/videos", icon: Video },
-  { title: "Audio", href: "/admin/audio", icon: Music },
-  { title: "About", href: "/admin/about", icon: User },
-  { title: "Settings", href: "/admin/settings", icon: Settings },
+  ...ADMIN_MANAGE_NAV_ITEMS,
 ];
 
 function AdminNavLinkItem({
