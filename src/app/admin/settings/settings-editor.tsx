@@ -9,6 +9,7 @@ import {
 } from "convex/react";
 import { api } from "../../../../convex/_generated/api";
 import { useCallback, useState } from "react";
+import { Switch } from "@/components/ui/switch";
 
 type SettingsContent = {
   flags: { priceTabEnabled: boolean };
@@ -95,22 +96,24 @@ function SettingsForm() {
     <div className="space-y-8">
       <fieldset className="space-y-3">
         <legend className="label-text text-muted-foreground">Feature Flags</legend>
-        <label className="flex items-center gap-3">
-          <input
-            type="checkbox"
+        <div className="flex items-center gap-3">
+          <Switch
+            id="settings-price-tab-enabled"
             checked={source.flags.priceTabEnabled}
-            onChange={(e) =>
+            onCheckedChange={(checked) =>
               updateField("flags", {
                 ...source.flags,
-                priceTabEnabled: e.target.checked,
+                priceTabEnabled: checked,
               })
             }
-            className="h-4 w-4 rounded border-border bg-background accent-primary"
           />
-          <span className="body-text-small text-foreground">
+          <label
+            htmlFor="settings-price-tab-enabled"
+            className="body-text-small cursor-pointer text-foreground"
+          >
             Show pricing tab
-          </span>
-        </label>
+          </label>
+        </div>
       </fieldset>
 
       <fieldset className="space-y-3">

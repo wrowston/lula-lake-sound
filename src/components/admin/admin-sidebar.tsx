@@ -3,6 +3,7 @@
 import Link from "next/link";
 import Image from "next/image";
 import { usePathname } from "next/navigation";
+import { useConvex } from "convex/react";
 import {
   LayoutDashboard,
   DollarSign,
@@ -26,6 +27,10 @@ import {
   SidebarMenuButton,
   SidebarMenuItem,
 } from "@/components/ui/sidebar";
+import {
+  prewarmAdminNavigation,
+  useRoutePrewarmIntent,
+} from "@/lib/route-prewarm";
 
 const navItems = [
   { title: "Dashboard", href: "/admin", icon: LayoutDashboard },
@@ -38,13 +43,39 @@ const navItems = [
   { title: "Settings", href: "/admin/settings", icon: Settings },
 ];
 
-export function AdminSidebar() {
-  const pathname = usePathname();
+function AdminNavLinkItem({
+  item,
+  pathname,
+}: {
+  item: (typeof navItems)[number];
+  pathname: string;
+}) {
+  const convex = useConvex();
+  const prewarmHandlers = useRoutePrewarmIntent(() =>
+    prewarmAdminNavigation(convex, item.href),
+  );
 
   function isActive(href: string) {
     if (href === "/admin") return pathname === "/admin";
     return pathname.startsWith(href);
   }
+
+  return (
+    <SidebarMenuItem>
+      <SidebarMenuButton
+        isActive={isActive(item.href)}
+        tooltip={item.title}
+        render={<Link href={item.href} {...prewarmHandlers} />}
+      >
+        <item.icon className="size-4" />
+        <span>{item.title}</span>
+      </SidebarMenuButton>
+    </SidebarMenuItem>
+  );
+}
+
+export function AdminSidebar() {
+  const pathname = usePathname();
 
   return (
     <Sidebar collapsible="icon" className="group-data-[side=left]:border-r-0">
@@ -75,16 +106,11 @@ export function AdminSidebar() {
           <SidebarGroupContent>
             <SidebarMenu>
               {navItems.map((item) => (
-                <SidebarMenuItem key={item.href}>
-                  <SidebarMenuButton
-                    isActive={isActive(item.href)}
-                    tooltip={item.title}
-                    render={<Link href={item.href} />}
-                  >
-                    <item.icon className="size-4" />
-                    <span>{item.title}</span>
-                  </SidebarMenuButton>
-                </SidebarMenuItem>
+                <AdminNavLinkItem
+                  key={item.href}
+                  item={item}
+                  pathname={pathname}
+                />
               ))}
             </SidebarMenu>
           </SidebarGroupContent>
