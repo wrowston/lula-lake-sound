@@ -1,10 +1,8 @@
 import { internalMutation } from "./_generated/server";
-import { SITE_SETTINGS_KEY } from "./siteSettingsConstants";
-
-const defaultFlags = { priceTabEnabled: true };
+import { SETTINGS_DEFAULTS } from "./cmsShared";
 
 /**
- * Idempotent seed for local dev: creates the singleton site settings row if missing.
+ * Idempotent seed for local dev: creates the singleton `cmsSections` settings row if missing.
  *
  * Run once after deploying schema:
  * `bunx convex run internal.seed.seedSiteSettingsDefaults` (or from dashboard → Functions → internal).
@@ -13,8 +11,8 @@ export const seedSiteSettingsDefaults = internalMutation({
   args: {},
   handler: async (ctx) => {
     const existing = await ctx.db
-      .query("siteSettings")
-      .withIndex("by_key", (q) => q.eq("key", SITE_SETTINGS_KEY))
+      .query("cmsSections")
+      .withIndex("by_section", (q) => q.eq("section", "settings"))
       .unique();
 
     const now = Date.now();
@@ -23,16 +21,12 @@ export const seedSiteSettingsDefaults = internalMutation({
       return { status: "already_seeded" as const, id: existing._id };
     }
 
-    const id = await ctx.db.insert("siteSettings", {
-      key: SITE_SETTINGS_KEY,
+    const id = await ctx.db.insert("cmsSections", {
+      section: "settings",
       updatedAt: now,
-      published: {
-        flags: defaultFlags,
-        metadata: {
-          title: "Lula Lake Sound",
-          description: "Studio and lake-house sessions.",
-        },
-      },
+      publishedSnapshot: SETTINGS_DEFAULTS,
+      publishedAt: now,
+      hasDraftChanges: false,
     });
 
     return { status: "inserted" as const, id };
