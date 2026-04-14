@@ -1,12 +1,5 @@
 import { internalMutation } from "./_generated/server";
-
-const defaultPublished = {
-  flags: { priceTabEnabled: true },
-  metadata: {
-    title: "Lula Lake Sound",
-    description: "Studio and lake-house sessions.",
-  },
-} as const;
+import { SETTINGS_DEFAULTS } from "./cmsShared";
 
 /**
  * Idempotent seed for local dev: creates the singleton `cmsSections` settings row if missing.
@@ -31,7 +24,7 @@ export const seedSiteSettingsDefaults = internalMutation({
     const id = await ctx.db.insert("cmsSections", {
       section: "settings",
       updatedAt: now,
-      publishedSnapshot: defaultPublished,
+      publishedSnapshot: SETTINGS_DEFAULTS,
       publishedAt: now,
       hasDraftChanges: false,
     });

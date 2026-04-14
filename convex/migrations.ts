@@ -1,4 +1,5 @@
 import { internalMutation } from "./_generated/server";
+import { settingsSnapshotsEqual } from "./cmsShared";
 
 /**
  * One-time migration from legacy `siteSettings` table to `cmsSections` (INF-70).
@@ -26,8 +27,10 @@ export const migrateSiteSettingsToCmsSections = internalMutation({
 
     const now = Date.now();
     const draftSource = legacy.draft ?? legacy.published;
-    const hasDraftChanges =
-      JSON.stringify(draftSource) !== JSON.stringify(legacy.published);
+    const hasDraftChanges = !settingsSnapshotsEqual(
+      draftSource,
+      legacy.published,
+    );
 
     const id = await ctx.db.insert("cmsSections", {
       section: "settings",

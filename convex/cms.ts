@@ -5,20 +5,21 @@ import {
   settingsContentValidator,
 } from "./schema.shared";
 import type { Doc, Id } from "./_generated/dataModel";
+import { SETTINGS_DEFAULTS, settingsSnapshotsEqual } from "./cmsShared";
 
-const SETTINGS_DEFAULTS: Doc<"cmsSections">["publishedSnapshot"] = {
-  flags: { priceTabEnabled: true },
-  metadata: {
-    title: "Lula Lake Sound",
-    description: "Studio and lake-house sessions.",
-  },
-};
-
-function snapshotsEqual(
-  a: Doc<"cmsSections">["publishedSnapshot"],
-  b: Doc<"cmsSections">["publishedSnapshot"],
-): boolean {
-  return JSON.stringify(a) === JSON.stringify(b);
+async function requireCmsWriter(
+  ctx: MutationCtx,
+  adminSecret: string | undefined,
+): Promise<{ updatedBy: string | undefined }> {
+  const identity = await ctx.auth.getUserIdentity();
+  if (identity) {
+    return { updatedBy: identity.tokenIdentifier };
+  }
+  const expected = process.env.CMS_ADMIN_SECRET;
+  if (!expected || adminSecret !== expected) {
+    throw new Error("Unauthorized");
+  }
+  return { updatedBy: "cms-admin-secret" };
 }
 
 async function getSectionRow(
@@ -34,11 +35,10 @@ async function getSectionRow(
 async function ensureSectionRow(
   ctx: MutationCtx,
   section: Doc<"cmsSections">["section"],
+  updatedBy: string | undefined,
 ): Promise<{ row: Doc<"cmsSections">; id: Id<"cmsSections"> }> {
   const existing = await getSectionRow(ctx, section);
   const now = Date.now();
-  const identity = await ctx.auth.getUserIdentity();
-  const updatedBy = identity?.tokenIdentifier;
 
   if (existing) {
     return { row: existing, id: existing._id };
@@ -71,14 +71,18 @@ export const saveDraft = mutation({
   args: {
     section: cmsSectionValidator,
     content: settingsContentValidator,
+    adminSecret: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
-    const { id, row } = await ensureSectionRow(ctx, args.section);
+    const { updatedBy } = await requireCmsWriter(ctx, args.adminSecret);
+    const { id, row } = await ensureSectionRow(
+      ctx,
+      args.section,
+      updatedBy,
+    );
     const now = Date.now();
-    const identity = await ctx.auth.getUserIdentity();
-    const updatedBy = identity?.tokenIdentifier;
 
-    const hasDraftChanges = !snapshotsEqual(
+    const hasDraftChanges = !settingsSnapshotsEqual(
       args.content,
       row.publishedSnapshot,
     );
@@ -99,9 +103,17 @@ export const saveDraft = mutation({
  * Public readers always see the previous published snapshot until this commit completes.
  */
 export const publishSection = mutation({
-  args: { section: cmsSectionValidator },
+  args: {
+    section: cmsSectionValidator,
+    adminSecret: v.optional(v.string()),
+  },
   handler: async (ctx, args) => {
-    const { id, row } = await ensureSectionRow(ctx, args.section);
+    const { updatedBy } = await requireCmsWriter(ctx, args.adminSecret);
+    const { id, row } = await ensureSectionRow(
+      ctx,
+      args.section,
+      updatedBy,
+    );
     const draft = row.draftSnapshot;
     if (!draft) {
       throw new Error(
@@ -110,8 +122,6 @@ export const publishSection = mutation({
     }
 
     const now = Date.now();
-    const identity = await ctx.auth.getUserIdentity();
-    const updatedBy = identity?.tokenIdentifier;
 
     await ctx.db.patch(id, {
       publishedSnapshot: draft,
@@ -131,8 +141,12 @@ export const publishSection = mutation({
  * Stub behavior: clears optional draft fields; no-op if there was no draft.
  */
 export const discardDraft = mutation({
-  args: { section: cmsSectionValidator },
+  args: {
+    section: cmsSectionValidator,
+    adminSecret: v.optional(v.string()),
+  },
   handler: async (ctx, args) => {
+    const { updatedBy } = await requireCmsWriter(ctx, args.adminSecret);
     const row = await getSectionRow(ctx, args.section);
     if (!row) {
       return { ok: true as const, section: args.section, discarded: false };
@@ -143,8 +157,6 @@ export const discardDraft = mutation({
     }
 
     const now = Date.now();
-    const identity = await ctx.auth.getUserIdentity();
-    const updatedBy = identity?.tokenIdentifier;
 
     await ctx.db.replace("cmsSections", row._id, {
       section: row.section,
