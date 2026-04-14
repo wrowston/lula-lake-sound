@@ -47,9 +47,4 @@
 
 ## App-layer types
 
-Import from `convex/cmsTypes.ts` (path alias `@convex/cmsTypes` if configured):
-
-- `CmsSection`
-- `SettingsContent`
-
-`Doc<"cmsSections">` from `convex/_generated/dataModel` is the full persisted row type.
+Use `Doc<"cmsSections">` from `convex/_generated/dataModel` for the full persisted row type. Narrow with `Doc<"cmsSections">["section"]` or `Doc<"cmsSections">["publishedSnapshot"]` when you need just the section key or snapshot payload.

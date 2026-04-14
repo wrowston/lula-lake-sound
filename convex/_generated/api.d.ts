@@ -11,7 +11,6 @@
 import type * as admin_siteSettings from "../admin/siteSettings.js";
 import type * as cms from "../cms.js";
 import type * as cmsShared from "../cmsShared.js";
-import type * as cmsTypes from "../cmsTypes.js";
 import type * as inquiries from "../inquiries.js";
 import type * as seed from "../seed.js";
 import type * as siteSettings from "../siteSettings.js";
@@ -26,7 +25,6 @@ declare const fullApi: ApiFromModules<{
   "admin/siteSettings": typeof admin_siteSettings;
   cms: typeof cms;
   cmsShared: typeof cmsShared;
-  cmsTypes: typeof cmsTypes;
   inquiries: typeof inquiries;
   seed: typeof seed;
   siteSettings: typeof siteSettings;

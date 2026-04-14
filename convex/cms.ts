@@ -126,7 +126,7 @@ export const publishSection = mutation({
     await ctx.db.patch(id, {
       publishedSnapshot: draft,
       publishedAt: now,
-      draftSnapshot: draft,
+      draftSnapshot: undefined,
       hasDraftChanges: false,
       updatedAt: now,
       updatedBy,
