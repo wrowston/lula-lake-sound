@@ -7,7 +7,7 @@ const defaultFlags = { priceTabEnabled: true };
  * Idempotent seed for local dev: creates the singleton site settings row if missing.
  *
  * Run once after deploying schema:
- * `bunx convex run seed:seedSiteSettingsDefaults` (or from dashboard → Functions → internal).
+ * `bunx convex run internal.seed.seedSiteSettingsDefaults` (or from dashboard → Functions → internal).
  */
 export const seedSiteSettingsDefaults = internalMutation({
   args: {},

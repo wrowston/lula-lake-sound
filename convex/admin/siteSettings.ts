@@ -3,7 +3,7 @@ import { SITE_SETTINGS_KEY } from "../siteSettingsConstants";
 
 /**
  * Full site settings document for admins / debugging (includes optional draft).
- * Run from the Convex dashboard (Functions) or `bunx convex run internal/admin/siteSettings:debugSnapshot`.
+ * Run from the Convex dashboard (Functions) or `bunx convex run internal.admin.siteSettings.debugSnapshot`.
  */
 export const debugSnapshot = internalQuery({
   args: {},
