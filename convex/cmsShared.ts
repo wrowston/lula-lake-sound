@@ -5,7 +5,7 @@ export const SETTINGS_DEFAULTS: Doc<"cmsSections">["publishedSnapshot"] = {
   flags: { priceTabEnabled: true },
   metadata: {
     title: "Lula Lake Sound",
-    description: "Studio and lake-house sessions.",
+    description: "Music Production and Recording Services",
   },
 };
 
