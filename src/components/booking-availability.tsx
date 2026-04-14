@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { Button } from "@/components/ui/button";
+import { BrandButton as Button } from "@/components/ui/brand-button";
 
 // Mock availability data - in real implementation, this would come from a booking system
 const AVAILABILITY_MONTHS = [

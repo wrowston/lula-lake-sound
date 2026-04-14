@@ -3,6 +3,10 @@ import { NextResponse } from "next/server";
 
 const isAdminRoute = createRouteMatcher(["/admin(.*)"]);
 
+// Next.js Link prefetch (RSC) uses the app path (e.g. /admin/pricing), not _next/static,
+// so it matches this middleware. Authenticated users pass auth.protect(); unauthenticated
+// prefetch gets redirected like a full navigation.
+
 export default clerkMiddleware(async (auth, req) => {
   if (isAdminRoute(req)) {
     if (process.env.ADMIN_ENABLED !== "true") {

@@ -1,5 +1,5 @@
 import Image from "next/image";
-import { Button } from "@/components/ui/button";
+import { BrandButton as Button } from "@/components/ui/brand-button";
 
 interface HeroProps {
   readonly logoScale: number;

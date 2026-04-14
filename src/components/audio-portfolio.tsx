@@ -1,4 +1,4 @@
-import { Button } from "@/components/ui/button";
+import { BrandButton as Button } from "@/components/ui/brand-button";
 
 // Audio portfolio data - in a real implementation, this would come from a CMS or database
 const AUDIO_SAMPLES = [
