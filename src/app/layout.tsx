@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import "./globals.css";
 import { Analytics } from "@vercel/analytics/next"
 import { SpeedInsights } from "@vercel/speed-insights/next"
+import { AppProviders } from "@/components/app-providers";
 
 export const metadata: Metadata = {
   title: "Lula Lake Sound | Recording Studio | Chattanooga, TN",
@@ -20,7 +21,9 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body className="antialiased">
-        {children}
+        <AppProviders>
+          {children}
+        </AppProviders>
         <Analytics />
         <SpeedInsights />
       </body>

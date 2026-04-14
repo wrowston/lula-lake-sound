@@ -8,6 +8,7 @@
  * @module
  */
 
+import type * as admin_cms from "../admin/cms.js";
 import type * as admin_siteSettings from "../admin/siteSettings.js";
 import type * as inquiries from "../inquiries.js";
 import type * as seed from "../seed.js";
@@ -21,6 +22,7 @@ import type {
 } from "convex/server";
 
 declare const fullApi: ApiFromModules<{
+  "admin/cms": typeof admin_cms;
   "admin/siteSettings": typeof admin_siteSettings;
   inquiries: typeof inquiries;
   seed: typeof seed;
