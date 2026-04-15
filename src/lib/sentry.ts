@@ -61,8 +61,8 @@ function scrubRequest(request: JsonRecord): void {
 
 export function getSentryEnvironment(): string {
   return (
-    readNonEmptyEnv(process.env.NEXT_PUBLIC_SENTRY_ENVIRONMENT) ??
     readNonEmptyEnv(process.env.SENTRY_ENVIRONMENT) ??
+    readNonEmptyEnv(process.env.NEXT_PUBLIC_SENTRY_ENVIRONMENT) ??
     readNonEmptyEnv(process.env.VERCEL_ENV) ??
     readNonEmptyEnv(process.env.NODE_ENV) ??
     "development"
