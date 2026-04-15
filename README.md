@@ -5,13 +5,7 @@ This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-
 First, run the development server:
 
 ```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+bun run dev
 ```
 
 Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
@@ -23,9 +17,24 @@ You can start editing the page by modifying `app/page.tsx`. The page auto-update
 The contact form (`POST /api/contact`) saves inquiries to **Convex** and sends email with **Resend**.
 
 1. Copy [`.env.example`](./.env.example) to `.env.local` and fill in values.
-2. Create a Convex project and deploy functions: run `npm run convex:dev` (or `npx convex dev`) once, then use `npm run convex:deploy` for production.
+2. Create a Convex project and deploy functions: run `bun run convex:dev` once, then use `bun run convex:deploy` for production.
 3. Set `NEXT_PUBLIC_CONVEX_URL` from the [Convex dashboard](https://dashboard.convex.dev).
 4. Add a [Resend](https://resend.com) API key and a verified `RESEND_FROM_EMAIL` address.
+
+## Sentry
+
+This app uses `@sentry/nextjs` for App Router error monitoring and tracing across the browser, Node.js routes, and Edge runtime.
+
+- Set `SENTRY_DSN` for server and edge events. If `NEXT_PUBLIC_SENTRY_DSN` is unset, the same DSN is exposed to the browser build automatically.
+- Local development stays quiet by default. Set `SENTRY_ENABLED=true` if you want to test Sentry locally.
+- Sentry environment defaults to `VERCEL_ENV`, then `NODE_ENV`. Override with `SENTRY_ENVIRONMENT` if needed.
+- Release defaults to `VERCEL_GIT_COMMIT_SHA`, then `VERCEL_DEPLOYMENT_ID`. Override with `SENTRY_RELEASE` if your CI uses a different build identifier.
+- For CI source map uploads, set `SENTRY_AUTH_TOKEN`, plus `SENTRY_ORG` and `SENTRY_PROJECT`.
+
+For a quick non-production verification, hit these routes and confirm the returned `eventId` shows up in Sentry with the expected environment and release:
+
+- `/api/dev/sentry/node`
+- `/api/dev/sentry/edge`
 
 This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
 
