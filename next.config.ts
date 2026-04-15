@@ -13,7 +13,7 @@ if (process.env.NODE_ENV === "development") {
 }
 
 const sentryPublicDsn =
-  process.env.NEXT_PUBLIC_SENTRY_DSN ?? process.env.SENTRY_DSN ?? "";
+  process.env.NEXT_PUBLIC_SENTRY_DSN || process.env.SENTRY_DSN || "";
 const sentryEnvironment =
   process.env.SENTRY_ENVIRONMENT ??
   process.env.VERCEL_ENV ??
