@@ -6,7 +6,3 @@ export type SiteSettings = {
   publishedAt: number | null;
   publishedBy: string | null;
 };
-
-export type PreviewSiteSettings = SiteSettings & {
-  hasDraftChanges: boolean;
-};
