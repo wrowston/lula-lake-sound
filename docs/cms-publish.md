@@ -16,7 +16,11 @@
 |----------|------|
 | `api.cms.saveDraft` | Writes `draftSnapshot`, updates `hasDraftChanges` vs `publishedSnapshot`. |
 | `api.cms.publishSection` | Copies `draftSnapshot` → `publishedSnapshot`, sets `publishedAt`, clears `hasDraftChanges` in **one** mutation. |
-| `api.cms.discardDraft` | Clears `draftSnapshot` and `hasDraftChanges` via `replace` (optional fields removed). No-op if there was nothing to discard. |
+| `api.cms.discardDraft` | Clears `draftSnapshot` and `hasDraftChanges` with `patch` (optional field removed). No-op if there was nothing to discard. `publishedSnapshot` and `publishedAt` are unchanged. |
+
+## Discard when nothing is published yet
+
+If `publishedAt` is `null`, discarding still only clears the draft; **live site content** remains whatever is already in `publishedSnapshot` (defaults until first publish). The editor preview again matches that stored baseline.
 
 ## First-time publish
 
