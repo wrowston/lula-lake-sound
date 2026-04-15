@@ -1,3 +1,4 @@
+import { withSentryConfig } from "@sentry/nextjs";
 import type { NextConfig } from "next";
 
 // Node can install a broken `globalThis.localStorage` when `--localstorage-file` is set
@@ -11,7 +12,30 @@ if (process.env.NODE_ENV === "development") {
   }
 }
 
+const sentryPublicDsn =
+  process.env.NEXT_PUBLIC_SENTRY_DSN ?? process.env.SENTRY_DSN ?? "";
+const sentryEnvironment =
+  process.env.SENTRY_ENVIRONMENT ??
+  process.env.VERCEL_ENV ??
+  process.env.NODE_ENV ??
+  "development";
+const sentryRelease =
+  process.env.SENTRY_RELEASE ??
+  process.env.VERCEL_GIT_COMMIT_SHA ??
+  process.env.VERCEL_DEPLOYMENT_ID ??
+  "";
+const hasSentryBuildUploadConfig = Boolean(
+  process.env.SENTRY_AUTH_TOKEN &&
+    process.env.SENTRY_ORG &&
+    process.env.SENTRY_PROJECT
+);
+
 const nextConfig: NextConfig = {
+  env: {
+    NEXT_PUBLIC_SENTRY_DSN: sentryPublicDsn,
+    NEXT_PUBLIC_SENTRY_ENVIRONMENT: sentryEnvironment,
+    NEXT_PUBLIC_SENTRY_RELEASE: sentryRelease,
+  },
   images: {
     remotePatterns: [
       {
@@ -35,4 +59,20 @@ const nextConfig: NextConfig = {
   },
 };
 
-export default nextConfig;
+export default withSentryConfig(nextConfig, {
+  silent: !process.env.CI,
+  telemetry: false,
+  ...(hasSentryBuildUploadConfig
+    ? {
+        authToken: process.env.SENTRY_AUTH_TOKEN,
+        org: process.env.SENTRY_ORG as string,
+        project: process.env.SENTRY_PROJECT as string,
+        release: sentryRelease ? { name: sentryRelease } : undefined,
+        widenClientFileUpload: true,
+      }
+    : {
+        sourcemaps: {
+          disable: true,
+        },
+      }),
+});
