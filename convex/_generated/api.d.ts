@@ -8,6 +8,7 @@
  * @module
  */
 
+import type * as admin_publish from "../admin/publish.js";
 import type * as admin_siteSettings from "../admin/siteSettings.js";
 import type * as cms from "../cms.js";
 import type * as cmsShared from "../cmsShared.js";
@@ -24,6 +25,7 @@ import type {
 } from "convex/server";
 
 declare const fullApi: ApiFromModules<{
+  "admin/publish": typeof admin_publish;
   "admin/siteSettings": typeof admin_siteSettings;
   cms: typeof cms;
   cmsShared: typeof cmsShared;

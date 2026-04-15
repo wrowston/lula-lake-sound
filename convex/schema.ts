@@ -9,7 +9,7 @@ import {
 
 /**
  * CMS sections use **one row per section** (approach B):
- * - `publishedSnapshot` + `publishedAt` — what public readers see (atomic updates on publish).
+ * - `publishedSnapshot` + `publishedAt` + optional `publishedBy` (Clerk user id) — what public readers see (atomic updates on publish).
  * - `draftSnapshot` — working copy for admins; optional until first edit.
  * - `hasDraftChanges` — true when draft differs from published (cleared on publish / discard).
  *
@@ -36,6 +36,8 @@ export default defineSchema({
     updatedBy: v.optional(v.string()),
     publishedSnapshot: settingsContentValidator,
     publishedAt: v.union(v.number(), v.null()),
+    /** Clerk user id (`subject`) who last published this section. */
+    publishedBy: v.optional(v.string()),
     draftSnapshot: v.optional(settingsContentValidator),
     hasDraftChanges: v.boolean(),
   }).index("by_section", ["section"]),

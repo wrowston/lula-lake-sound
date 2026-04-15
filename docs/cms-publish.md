@@ -15,14 +15,17 @@
 | Function | Role |
 |----------|------|
 | `api.cms.saveDraft` | Writes `draftSnapshot`, updates `hasDraftChanges` vs `publishedSnapshot`. |
-| `api.cms.publishSection` | Copies `draftSnapshot` → `publishedSnapshot`, sets `publishedAt`, clears `hasDraftChanges` in **one** mutation. |
+| `api.cms.publishSection` | Validates, then copies `draftSnapshot` → `publishedSnapshot`, sets `publishedAt` + `publishedBy` (Clerk user id), clears draft in **one** transaction. Idempotent when there is nothing to publish. |
+| `api.admin.publish.publish` | Same as `publishSection` (owner-gated; see `convex/admin/publish.ts`). |
+| `api.admin.publish.publishSite` | Validates **all** sections with pending drafts first; if any fail, **no** section is published. Otherwise publishes each in the same transaction. |
+| `api.cms.validatePublishSection` | Read-only preflight validation for the effective draft snapshot. |
 | `api.cms.discardDraft` | Clears `draftSnapshot` and `hasDraftChanges` via `replace` (optional fields removed). No-op if there was nothing to discard. |
 
 ## First-time publish
 
 1. **Empty environment:** run `internal.seed.seedSiteSettingsDefaults` or call `saveDraft` once (both create a row with defaults in `publishedSnapshot` and `publishedAt` set).
 2. **Editor saves:** `saveDraft` fills `draftSnapshot`; `hasDraftChanges` is true when draft ≠ published.
-3. **Publish:** `publishSection` requires an existing `draftSnapshot` (save first). It atomically promotes that snapshot to `publishedSnapshot`.
+3. **Publish:** Save a draft first. `publishSection` validates required fields, then promotes `draftSnapshot` → `publishedSnapshot`. If there is no draft and `hasDraftChanges` is false, publish is a **no-op** (safe double-click). Set **`CMS_OWNER_TOKEN_IDENTIFIERS`** on the Convex deployment (comma-separated `tokenIdentifier` values) to restrict publish to the studio owner.
 
 ## Adding a new content type (new section)
 

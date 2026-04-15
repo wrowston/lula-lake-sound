@@ -29,6 +29,14 @@ export const cmsConvexErrorValidator = v.union(
     code: v.literal("PUBLISH_VALIDATION_FAILED"),
     message: v.string(),
     section: v.string(),
+    issues: v.optional(
+      v.array(
+        v.object({
+          path: v.string(),
+          message: v.string(),
+        }),
+      ),
+    ),
   }),
   v.object({
     code: v.literal("UNKNOWN"),
@@ -80,10 +88,12 @@ export function cmsConflict(message: string, reason?: string): never {
 export function cmsPublishValidationFailed(
   section: string,
   message: string,
+  issues?: Array<{ path: string; message: string }>,
 ): never {
   throw new ConvexError<CmsConvexError>({
     code: "PUBLISH_VALIDATION_FAILED",
     message,
     section,
+    ...(issues !== undefined && issues.length > 0 ? { issues } : {}),
   });
 }
