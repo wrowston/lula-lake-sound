@@ -23,6 +23,7 @@ import {
 } from "@/components/ui/alert-dialog";
 import { convexMutationEffect, type CmsAppError } from "@/lib/effect-errors";
 import { runAdminEffect } from "@/lib/admin-run-effect";
+import Link from "next/link";
 
 type SettingsContent = {
   flags: { priceTabEnabled: boolean };
@@ -255,6 +256,14 @@ function SettingsForm() {
         >
           Discard draft
         </button>
+
+        <Link
+          href="/preview"
+          target="_blank"
+          className="rounded-md border border-amber-500/30 bg-amber-500/10 px-4 py-2 text-sm font-medium text-amber-600 transition hover:bg-amber-500/20 dark:text-amber-400"
+        >
+          Preview Site ↗
+        </Link>
       </div>
 
       <AlertDialog
