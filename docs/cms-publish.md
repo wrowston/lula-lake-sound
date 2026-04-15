@@ -19,7 +19,11 @@
 | `api.admin.publish.publish` | Same as `publishSection` (owner-gated; see `convex/admin/publish.ts`). |
 | `api.admin.publish.publishSite` | Validates **all** sections with pending drafts first; if any fail, **no** section is published. Otherwise publishes each in the same transaction. |
 | `api.cms.validatePublishSection` | Read-only preflight validation for the effective draft snapshot. |
-| `api.cms.discardDraft` | Clears `draftSnapshot` and `hasDraftChanges` via `replace` (optional fields removed). No-op if there was nothing to discard. |
+| `api.cms.discardDraft` | Clears `draftSnapshot` and `hasDraftChanges` with `patch` (optional field removed). No-op if there was nothing to discard. `publishedSnapshot`, `publishedAt`, and `publishedBy` are unchanged. |
+
+## Discard when nothing is published yet
+
+If `publishedAt` is `null`, discarding still only clears the draft; **live site content** remains whatever is already in `publishedSnapshot` (defaults until first publish). The editor preview again matches that stored baseline.
 
 ## First-time publish
 

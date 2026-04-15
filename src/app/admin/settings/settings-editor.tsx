@@ -10,7 +10,17 @@ import {
 import { api } from "../../../../convex/_generated/api";
 import { useCallback, useState } from "react";
 import { Effect, pipe } from "effect";
+import { toast } from "sonner";
 import { Switch } from "@/components/ui/switch";
+import {
+  AlertDialog,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { convexMutationEffect, type CmsAppError } from "@/lib/effect-errors";
 import { runAdminEffect } from "@/lib/admin-run-effect";
 
@@ -50,6 +60,7 @@ function SettingsForm() {
 
   const [localDraft, setLocalDraft] = useState<SettingsContent | null>(null);
   const [busy, setBusy] = useState<string | null>(null);
+  const [discardDialogOpen, setDiscardDialogOpen] = useState(false);
 
   const source: SettingsContent | undefined =
     localDraft ??
@@ -66,16 +77,39 @@ function SettingsForm() {
   );
 
   const runAction = useCallback(
-    async (label: string, program: Effect.Effect<unknown, CmsAppError>) => {
+    async <A,>(label: string, program: Effect.Effect<A, CmsAppError>) => {
       setBusy(label);
       const outcome = await runAdminEffect(program);
       if (outcome !== undefined) {
         setLocalDraft(null);
       }
       setBusy(null);
+      return outcome;
     },
     [],
   );
+
+  const hasDraftOnServer = section?.hasDraftChanges ?? false;
+
+  const confirmDiscard = useCallback(async () => {
+    if (hasDraftOnServer) {
+      setBusy("Discarding…");
+      const outcome = await runAdminEffect(
+        convexMutationEffect(() => discard({ section: "settings" })),
+      );
+      setBusy(null);
+      if (outcome === undefined) {
+        return;
+      }
+    }
+    setLocalDraft(null);
+    setDiscardDialogOpen(false);
+    toast.success(
+      hasDraftOnServer
+        ? "Draft discarded. The editor now matches the published site."
+        : "Unsaved changes discarded.",
+    );
+  }, [discard, hasDraftOnServer]);
 
   if (section === undefined) {
     return <p className="body-text text-muted-foreground">Loading settings…</p>;
@@ -88,7 +122,6 @@ function SettingsForm() {
   }
 
   const hasLocalEdits = localDraft !== null;
-  const hasDraftOnServer = section.hasDraftChanges;
 
   return (
     <div className="space-y-8">
@@ -215,18 +248,56 @@ function SettingsForm() {
         </button>
 
         <button
+          type="button"
           disabled={(!hasDraftOnServer && !hasLocalEdits) || busy !== null}
-          onClick={() =>
-            runAction(
-              "Discarding…",
-              convexMutationEffect(() => discard({ section: "settings" })),
-            )
-          }
+          onClick={() => setDiscardDialogOpen(true)}
           className="rounded-md border border-border px-4 py-2 text-sm font-medium text-muted-foreground transition hover:bg-muted hover:text-foreground disabled:cursor-not-allowed disabled:opacity-40"
         >
-          {busy === "Discarding…" ? "Discarding…" : "Discard Draft"}
+          Discard draft
         </button>
       </div>
+
+      <AlertDialog
+        open={discardDialogOpen}
+        onOpenChange={(open, eventDetails) => {
+          if (!open && busy === "Discarding…") {
+            eventDetails.cancel();
+            return;
+          }
+          setDiscardDialogOpen(open);
+        }}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Discard draft changes?</AlertDialogTitle>
+            <AlertDialogDescription>
+              {hasDraftOnServer
+                ? "This removes unpublished edits from the server and resets the editor to the last published settings. The live site is not changed."
+                : "This clears unsaved edits in your browser and shows the last published settings again."}
+              {!section.publishedAt && hasDraftOnServer ? (
+                <>
+                  {" "}
+                  Nothing has been published yet, so you will see the same default
+                  baseline stored for the site until you publish.
+                </>
+              ) : null}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={busy === "Discarding…"}>
+              Cancel
+            </AlertDialogCancel>
+            <button
+              type="button"
+              disabled={busy === "Discarding…"}
+              onClick={() => void confirmDiscard()}
+              className="inline-flex h-8 shrink-0 items-center justify-center rounded-lg border border-transparent bg-destructive/10 px-2.5 text-sm font-medium text-destructive outline-none transition hover:bg-destructive/20 focus-visible:border-destructive/40 focus-visible:ring-3 focus-visible:ring-destructive/20 disabled:pointer-events-none disabled:opacity-50 dark:bg-destructive/20 dark:hover:bg-destructive/30 dark:focus-visible:ring-destructive/40"
+            >
+              {busy === "Discarding…" ? "Discarding…" : "Discard"}
+            </button>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

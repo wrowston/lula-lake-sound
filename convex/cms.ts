@@ -138,8 +138,13 @@ export const validatePublishSection = query({
 });
 
 /**
- * Drops unpublished edits and aligns the working copy with what is live.
- * Clears optional draft fields; no-op if there was no draft.
+ * Drops unpublished edits: removes `draftSnapshot` and clears `hasDraftChanges`.
+ * Preview/admin reads then fall back to `publishedSnapshot` (see `getSection`).
+ * `publishedSnapshot`, `publishedAt`, and `publishedBy` are unchanged.
+ * When nothing has ever been published (`publishedAt === null`), published content
+ * stays as stored (typically defaults from seed / first row insert); the draft is
+ * cleared so the editor shows that same baseline. No separate storage refs today;
+ * if snapshots gain `_storage` ids, add explicit cleanup here (see INF-76).
  */
 export const discardDraft = mutation({
   args: {
@@ -158,16 +163,11 @@ export const discardDraft = mutation({
 
     const now = Date.now();
 
-    await ctx.db.replace("cmsSections", row._id, {
-      section: row.section,
-      publishedSnapshot: row.publishedSnapshot,
-      publishedAt: row.publishedAt,
-      ...(row.publishedBy !== undefined
-        ? { publishedBy: row.publishedBy }
-        : {}),
+    await ctx.db.patch(row._id, {
+      draftSnapshot: undefined,
+      hasDraftChanges: false,
       updatedAt: now,
       updatedBy,
-      hasDraftChanges: false,
     });
 
     return { ok: true as const, section: args.section, discarded: true };
