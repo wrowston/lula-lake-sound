@@ -24,6 +24,8 @@ const sentryRelease =
   process.env.VERCEL_GIT_COMMIT_SHA ??
   process.env.VERCEL_DEPLOYMENT_ID ??
   "";
+/** Mirrors SENTRY_ENABLED so client bundles (instrumentation-client) can read the override. */
+const sentryEnabledPublic = process.env.SENTRY_ENABLED ?? "";
 const hasSentryBuildUploadConfig = Boolean(
   process.env.SENTRY_AUTH_TOKEN &&
     process.env.SENTRY_ORG &&
@@ -35,6 +37,7 @@ const nextConfig: NextConfig = {
     NEXT_PUBLIC_SENTRY_DSN: sentryPublicDsn,
     NEXT_PUBLIC_SENTRY_ENVIRONMENT: sentryEnvironment,
     NEXT_PUBLIC_SENTRY_RELEASE: sentryRelease,
+    NEXT_PUBLIC_SENTRY_ENABLED: sentryEnabledPublic,
   },
   images: {
     remotePatterns: [

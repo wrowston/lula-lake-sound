@@ -93,7 +93,9 @@ export function getServerSentryDsn(): string | undefined {
 }
 
 export function isSentryEnabled(): boolean {
-  const explicitSetting = readNonEmptyEnv(process.env.SENTRY_ENABLED);
+  const explicitSetting = readNonEmptyEnv(
+    process.env.SENTRY_ENABLED ?? process.env.NEXT_PUBLIC_SENTRY_ENABLED,
+  );
   if (explicitSetting === "true") {
     return true;
   }
