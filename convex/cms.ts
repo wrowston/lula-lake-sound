@@ -162,7 +162,9 @@ export const discardDraft = mutation({
       section: row.section,
       publishedSnapshot: row.publishedSnapshot,
       publishedAt: row.publishedAt,
-      publishedBy: row.publishedBy,
+      ...(row.publishedBy !== undefined
+        ? { publishedBy: row.publishedBy }
+        : {}),
       updatedAt: now,
       updatedBy,
       hasDraftChanges: false,
