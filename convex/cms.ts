@@ -1,13 +1,20 @@
-import { query, mutation, type MutationCtx } from "./_generated/server";
+import { query, mutation } from "./_generated/server";
 import { v } from "convex/values";
 import {
   cmsSectionValidator,
   settingsContentValidator,
 } from "./schema.shared";
-import type { Doc, Id } from "./_generated/dataModel";
 import { SETTINGS_DEFAULTS, settingsSnapshotsEqual } from "./cmsShared";
-import { requireAuthenticatedIdentity } from "./lib/auth";
-import { cmsNotFound, cmsPublishValidationFailed } from "./errors";
+import {
+  requireAuthenticatedIdentity,
+  requireCmsOwner,
+} from "./lib/auth";
+import {
+  collectSettingsPublishIssues,
+  ensureSectionRow,
+  getSectionRow,
+  publishSettingsSectionCore,
+} from "./cmsPublishHelpers";
 
 /**
  * Full section document for the admin UI (published + optional draft).
@@ -27,6 +34,7 @@ export const getSection = query({
         section: args.section,
         publishedSnapshot: SETTINGS_DEFAULTS,
         publishedAt: null,
+        publishedBy: null,
         draftSnapshot: null,
         hasDraftChanges: false,
         updatedAt: null,
@@ -38,6 +46,7 @@ export const getSection = query({
       section: row.section,
       publishedSnapshot: row.publishedSnapshot,
       publishedAt: row.publishedAt,
+      publishedBy: row.publishedBy ?? null,
       draftSnapshot: row.draftSnapshot ?? null,
       hasDraftChanges: row.hasDraftChanges,
       updatedAt: row.updatedAt,
@@ -45,47 +54,6 @@ export const getSection = query({
     };
   },
 });
-
-async function getSectionRow(
-  ctx: MutationCtx,
-  section: Doc<"cmsSections">["section"],
-): Promise<Doc<"cmsSections"> | null> {
-  return await ctx.db
-    .query("cmsSections")
-    .withIndex("by_section", (q) => q.eq("section", section))
-    .unique();
-}
-
-async function ensureSectionRow(
-  ctx: MutationCtx,
-  section: Doc<"cmsSections">["section"],
-  updatedBy: string | undefined,
-): Promise<{ row: Doc<"cmsSections">; id: Id<"cmsSections"> }> {
-  const existing = await getSectionRow(ctx, section);
-  const now = Date.now();
-
-  if (existing) {
-    return { row: existing, id: existing._id };
-  }
-
-  if (section !== "settings") {
-    cmsNotFound("cmsSection", section, `Unknown CMS section: ${section}`);
-  }
-
-  const id = await ctx.db.insert("cmsSections", {
-    section: "settings",
-    updatedAt: now,
-    updatedBy,
-    publishedSnapshot: SETTINGS_DEFAULTS,
-    publishedAt: now,
-    hasDraftChanges: false,
-  });
-  const row = await ctx.db.get("cmsSections", id);
-  if (!row) {
-    throw new Error("Failed to load cmsSections row after insert");
-  }
-  return { row, id };
-}
 
 /**
  * Persist a working copy for a section. Does not change what public readers see.
@@ -97,7 +65,7 @@ export const saveDraft = mutation({
     content: settingsContentValidator,
   },
   handler: async (ctx, args) => {
-    const { updatedBy } = await requireAuthenticatedIdentity(ctx);
+    const { updatedBy } = await requireCmsOwner(ctx);
     const { id, row } = await ensureSectionRow(
       ctx,
       args.section,
@@ -122,47 +90,57 @@ export const saveDraft = mutation({
 });
 
 /**
- * Atomically promotes the current draft to published in one transaction, then clears
- * `draftSnapshot` so a second publish without `saveDraft` fails fast.
- * Public readers always see the previous published snapshot until this commit completes.
+ * Validates then atomically promotes draft → published in one transaction.
+ * Idempotent: if there is no draft and nothing pending, returns `already_current` without writes.
+ * Sets `publishedAt` and `publishedBy` (Clerk user id). On validation failure, throws
+ * `PUBLISH_VALIDATION_FAILED` with optional field-level `issues` (Effect-friendly via client mapping).
  */
 export const publishSection = mutation({
   args: {
     section: cmsSectionValidator,
   },
   handler: async (ctx, args) => {
-    const { updatedBy } = await requireAuthenticatedIdentity(ctx);
-    const { id, row } = await ensureSectionRow(
-      ctx,
-      args.section,
-      updatedBy,
-    );
-    const draft = row.draftSnapshot;
-    if (!draft) {
-      cmsPublishValidationFailed(
-        args.section,
-        "No draft to publish: save a draft first, or there is nothing to discard.",
-      );
-    }
-
-    const now = Date.now();
-
-    await ctx.db.patch(id, {
-      publishedSnapshot: draft,
-      publishedAt: now,
-      draftSnapshot: undefined,
-      hasDraftChanges: false,
-      updatedAt: now,
-      updatedBy,
+    const { identity, userId, updatedBy } = await requireCmsOwner(ctx);
+    void identity;
+    const { id, row } = await ensureSectionRow(ctx, args.section, updatedBy);
+    return await publishSettingsSectionCore(ctx, {
+      section: args.section,
+      id,
+      row,
+      publishedByUserId: userId,
+      updatedByTokenId: updatedBy,
     });
+  },
+});
 
-    return { ok: true as const, section: args.section, publishedAt: now };
+/**
+ * Read-only validation for the current draft (or published snapshot if no draft).
+ * Does not write. Owner-only when `CMS_OWNER_TOKEN_IDENTIFIERS` is configured.
+ */
+export const validatePublishSection = query({
+  args: { section: cmsSectionValidator },
+  handler: async (ctx, args) => {
+    await requireCmsOwner(ctx);
+    const row = await ctx.db
+      .query("cmsSections")
+      .withIndex("by_section", (q) => q.eq("section", args.section))
+      .unique();
+
+    const snapshot =
+      row?.draftSnapshot ?? row?.publishedSnapshot ?? SETTINGS_DEFAULTS;
+    const issues = collectSettingsPublishIssues(snapshot);
+    return {
+      ok: issues.length === 0,
+      section: args.section,
+      issues,
+    };
   },
 });
 
 /**
  * Drops unpublished edits: removes `draftSnapshot` and clears `hasDraftChanges`.
  * Preview/admin reads then fall back to `publishedSnapshot` (see `getSection`).
+ * `publishedSnapshot`, `publishedAt`, and `publishedBy` are unchanged.
  * When nothing has ever been published (`publishedAt === null`), published content
  * stays as stored (typically defaults from seed / first row insert); the draft is
  * cleared so the editor shows that same baseline. No separate storage refs today;
@@ -173,7 +151,7 @@ export const discardDraft = mutation({
     section: cmsSectionValidator,
   },
   handler: async (ctx, args) => {
-    const { updatedBy } = await requireAuthenticatedIdentity(ctx);
+    const { updatedBy } = await requireCmsOwner(ctx);
     const row = await getSectionRow(ctx, args.section);
     if (!row) {
       return { ok: true as const, section: args.section, discarded: false };

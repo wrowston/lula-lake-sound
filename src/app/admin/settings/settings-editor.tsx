@@ -257,7 +257,16 @@ function SettingsForm() {
         </button>
       </div>
 
-      <AlertDialog open={discardDialogOpen} onOpenChange={setDiscardDialogOpen}>
+      <AlertDialog
+        open={discardDialogOpen}
+        onOpenChange={(open, eventDetails) => {
+          if (!open && busy === "Discarding…") {
+            eventDetails.cancel()
+            return
+          }
+          setDiscardDialogOpen(open)
+        }}
+      >
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle>Discard draft changes?</AlertDialogTitle>

@@ -1,7 +1,7 @@
 "use client"
 
 import * as React from "react"
-import { Dialog as AlertDialogPrimitive } from "@base-ui/react/dialog"
+import { AlertDialog as AlertDialogPrimitive } from "@base-ui/react/alert-dialog"
 
 import { cn } from "@/lib/utils"
 import { Button } from "@/components/ui/button"
@@ -24,7 +24,9 @@ function AlertDialogTrigger({
 }
 
 function AlertDialogPortal({ ...props }: AlertDialogPrimitive.Portal.Props) {
-  return <AlertDialogPrimitive.Portal data-slot="alert-dialog-portal" {...props} />
+  return (
+    <AlertDialogPrimitive.Portal data-slot="alert-dialog-portal" {...props} />
+  )
 }
 
 function AlertDialogOverlay({
@@ -142,7 +144,9 @@ function AlertDialogAction({
     <AlertDialogPrimitive.Close
       data-slot="alert-dialog-action"
       className={className}
-      render={<Button type="button" variant="destructive" />}
+      render={
+        <Button type="button" variant="destructive" />
+      }
       {...props}
     />
   )

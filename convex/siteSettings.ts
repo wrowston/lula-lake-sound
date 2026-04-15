@@ -22,6 +22,7 @@ export const getPublished = query({
       metadata: row.publishedSnapshot.metadata ?? null,
       updatedAt: row.updatedAt,
       publishedAt: row.publishedAt,
+      publishedBy: row.publishedBy ?? null,
     };
   },
 });
