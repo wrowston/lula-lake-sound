@@ -259,11 +259,7 @@ function SettingsForm() {
 
       <AlertDialog
         open={discardDialogOpen}
-        onOpenChange={(open, eventDetails) => {
-          if (!open && busy === "Discarding…") {
-            eventDetails.cancel();
-            return;
-          }
+        onOpenChange={(open) => {
           setDiscardDialogOpen(open);
         }}
       >
