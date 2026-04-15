@@ -28,6 +28,10 @@ export type CmsConvexErrorPayload =
       readonly code: "PUBLISH_VALIDATION_FAILED";
       readonly message: string;
       readonly section: string;
+      readonly issues?: ReadonlyArray<{
+        readonly path: string;
+        readonly message: string;
+      }>;
     }
   | { readonly code: "UNKNOWN"; readonly message: string };
 
@@ -56,6 +60,7 @@ export class PublishValidationFailed extends Data.TaggedError(
 )<{
   readonly message: string;
   readonly section: string;
+  readonly issues?: ReadonlyArray<{ readonly path: string; readonly message: string }>;
 }> {}
 
 export type CmsAppError =
@@ -91,8 +96,18 @@ function isCmsConvexErrorPayload(
       return (
         value["reason"] === undefined || typeof value["reason"] === "string"
       );
-    case "PUBLISH_VALIDATION_FAILED":
-      return typeof value["section"] === "string";
+    case "PUBLISH_VALIDATION_FAILED": {
+      if (typeof value["section"] !== "string") return false;
+      const issues = value["issues"];
+      if (issues === undefined) return true;
+      if (!Array.isArray(issues)) return false;
+      return issues.every(
+        (item) =>
+          isRecord(item) &&
+          typeof item["path"] === "string" &&
+          typeof item["message"] === "string",
+      );
+    }
     case "UNKNOWN":
       return true;
     default:
@@ -128,6 +143,7 @@ export function fromConvexCmsError(cause: unknown): CmsAppError {
           return new PublishValidationFailed({
             message: data.message,
             section: data.section,
+            ...(data.issues !== undefined ? { issues: data.issues } : {}),
           });
         case "UNKNOWN":
           return new ValidationError({ message: data.message });
@@ -164,8 +180,13 @@ export function cmsErrorToastMessage(err: CmsAppError): string {
       return err.reason !== undefined
         ? `${err.message} — ${err.reason}`
         : err.message;
-    case "PublishValidationFailed":
-      return `[${err.section}] ${err.message}`;
+    case "PublishValidationFailed": {
+      const detail =
+        err.issues !== undefined && err.issues.length > 0
+          ? ` — ${err.issues.map((i) => `${i.path}: ${i.message}`).join("; ")}`
+          : "";
+      return `[${err.section}] ${err.message}${detail}`;
+    }
     default: {
       const _exhaustive: never = err;
       return String(_exhaustive);
