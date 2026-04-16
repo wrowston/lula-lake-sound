@@ -1,13 +1,30 @@
+import type { Infer } from "convex/values";
 import type { Doc } from "./_generated/dataModel";
+import type {
+  settingsContentValidator,
+  pricingContentValidator,
+} from "./schema.shared";
 
-/** Single source of truth for initial `publishedSnapshot` on new settings rows. */
-export const SETTINGS_DEFAULTS: Doc<"cmsSections">["publishedSnapshot"] = {
-  flags: { priceTabEnabled: true },
+export type CmsSection = Doc<"cmsSections">["section"];
+export type CmsSnapshot = Doc<"cmsSections">["publishedSnapshot"];
+export type SettingsSnapshot = Infer<typeof settingsContentValidator>;
+export type PricingSnapshot = Infer<typeof pricingContentValidator>;
+
+/** Per-section default snapshots used for seeding and new-row inserts. */
+export const SETTINGS_DEFAULTS: SettingsSnapshot = {
   metadata: {
     title: "Lula Lake Sound",
     description: "Music Production and Recording Services",
   },
 };
+
+export const PRICING_DEFAULTS: PricingSnapshot = {
+  flags: { priceTabEnabled: true },
+};
+
+export function defaultSnapshotForSection(section: CmsSection): CmsSnapshot {
+  return section === "settings" ? SETTINGS_DEFAULTS : PRICING_DEFAULTS;
+}
 
 function deepEqual(a: unknown, b: unknown): boolean {
   if (Object.is(a, b)) {
@@ -47,10 +64,13 @@ function deepEqual(a: unknown, b: unknown): boolean {
   return true;
 }
 
-/** Deep equality for settings snapshots without relying on `JSON.stringify` key order. */
-export function settingsSnapshotsEqual(
-  a: Doc<"cmsSections">["publishedSnapshot"],
-  b: Doc<"cmsSections">["publishedSnapshot"],
-): boolean {
+/** Deep equality for section snapshots without relying on `JSON.stringify` key order. */
+export function cmsSnapshotsEqual(a: CmsSnapshot, b: CmsSnapshot): boolean {
   return deepEqual(a, b);
 }
+
+/**
+ * Legacy alias kept so existing imports keep working.
+ * @deprecated Use {@link cmsSnapshotsEqual}.
+ */
+export const settingsSnapshotsEqual = cmsSnapshotsEqual;

@@ -9,18 +9,18 @@ import { AmenitiesNearby } from "@/components/amenities-nearby";
 import { FAQ } from "@/components/faq";
 import { ArtistInquiries } from "@/components/artist-inquiries";
 import { ServicesAndPricing } from "@/components/services-pricing";
-import type { SiteSettings } from "@/lib/site-settings";
+import type { PricingFlags } from "@/lib/site-settings";
 
 function calculateLogoScale(scrollY: number): number {
   return Math.max(0.7, 1 - scrollY * 0.0008);
 }
 
 interface HomepageShellProps {
-  readonly settings: SiteSettings | null;
+  readonly pricingFlags: PricingFlags | null;
   readonly banner?: React.ReactNode;
 }
 
-export function HomepageShell({ settings, banner }: HomepageShellProps) {
+export function HomepageShell({ pricingFlags, banner }: HomepageShellProps) {
   const [scrollY, setScrollY] = useState(0);
 
   const containerRef = useCallback((node: HTMLDivElement | null) => {
@@ -58,7 +58,7 @@ export function HomepageShell({ settings, banner }: HomepageShellProps) {
     };
   }, []);
 
-  const showPricing = settings?.flags.priceTabEnabled ?? false;
+  const showPricing = pricingFlags?.flags.priceTabEnabled ?? false;
   const logoScale = calculateLogoScale(scrollY);
 
   return (

@@ -1,4 +1,4 @@
-/** Shape returned by `api.public.getPublishedSiteSettings` (landing: flags only). */
-export type SiteSettings = {
+/** Shape returned by `api.public.getPublishedPricingFlags` (marketing pricing gate). */
+export type PricingFlags = {
   flags: { priceTabEnabled: boolean };
 };

@@ -18,6 +18,7 @@ import type * as inquiries from "../inquiries.js";
 import type * as lib_auth from "../lib/auth.js";
 import type * as lib_sentryConvex from "../lib/sentryConvex.js";
 import type * as observability from "../observability.js";
+import type * as pricingPreviewDraft from "../pricingPreviewDraft.js";
 import type * as public_ from "../public.js";
 import type * as publicSettingsSnapshot from "../publicSettingsSnapshot.js";
 import type * as seed from "../seed.js";
@@ -41,6 +42,7 @@ declare const fullApi: ApiFromModules<{
   "lib/auth": typeof lib_auth;
   "lib/sentryConvex": typeof lib_sentryConvex;
   observability: typeof observability;
+  pricingPreviewDraft: typeof pricingPreviewDraft;
   public: typeof public_;
   publicSettingsSnapshot: typeof publicSettingsSnapshot;
   seed: typeof seed;

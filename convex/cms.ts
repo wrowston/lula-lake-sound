@@ -2,23 +2,28 @@ import { query, mutation } from "./_generated/server";
 import { v } from "convex/values";
 import {
   cmsSectionValidator,
+  pricingContentValidator,
   settingsContentValidator,
 } from "./schema.shared";
-import { SETTINGS_DEFAULTS, settingsSnapshotsEqual } from "./cmsShared";
+import {
+  cmsSnapshotsEqual,
+  defaultSnapshotForSection,
+} from "./cmsShared";
 import {
   requireAuthenticatedIdentity,
   requireCmsOwner,
 } from "./lib/auth";
 import {
-  collectSettingsPublishIssues,
+  collectPublishIssues,
   ensureSectionRow,
   getSectionRow,
-  publishSettingsSectionCore,
+  publishSectionCore,
 } from "./cmsPublishHelpers";
+import { cmsValidationError } from "./errors";
 
 /**
  * Full section document for the admin UI (published + optional draft).
- * Requires a valid Convex identity; returns SETTINGS_DEFAULTS when no row exists yet.
+ * Requires a valid Convex identity; returns per-section defaults when no row exists yet.
  */
 export const getSection = query({
   args: { section: cmsSectionValidator },
@@ -32,7 +37,7 @@ export const getSection = query({
     if (!row) {
       return {
         section: args.section,
-        publishedSnapshot: SETTINGS_DEFAULTS,
+        publishedSnapshot: defaultSnapshotForSection(args.section),
         publishedAt: null,
         publishedBy: null,
         draftSnapshot: null,
@@ -58,22 +63,53 @@ export const getSection = query({
 /**
  * Persist a working copy for a section. Does not change what public readers see.
  * First save on a new environment creates the singleton row (same defaults as seed).
+ *
+ * `content` is a discriminated union keyed by `section` so the validator only
+ * accepts the shape that belongs to the target section.
  */
 export const saveDraft = mutation({
   args: {
     section: cmsSectionValidator,
-    content: settingsContentValidator,
+    content: v.union(settingsContentValidator, pricingContentValidator),
   },
   handler: async (ctx, args) => {
     const { updatedBy } = await requireCmsOwner(ctx);
-    const { id, row } = await ensureSectionRow(
-      ctx,
-      args.section,
-      updatedBy,
-    );
+
+    // Runtime guard: the `content` union lets either shape through, but we
+    // enforce that the payload matches the target section so a settings row
+    // can never end up with a pricing payload (or vice versa).
+    if (args.section === "settings") {
+      if (!("metadata" in args.content) && !("flags" in args.content)) {
+        cmsValidationError(
+          "Settings content must include metadata.",
+          "content",
+        );
+      }
+      if ("flags" in args.content && !("metadata" in args.content)) {
+        cmsValidationError(
+          "Settings content cannot be a pricing payload.",
+          "content",
+        );
+      }
+    } else {
+      if (!("flags" in args.content)) {
+        cmsValidationError(
+          "Pricing content must include flags.priceTabEnabled.",
+          "content",
+        );
+      }
+      if ("metadata" in args.content) {
+        cmsValidationError(
+          "Pricing content cannot include metadata.",
+          "content",
+        );
+      }
+    }
+
+    const { id, row } = await ensureSectionRow(ctx, args.section, updatedBy);
     const now = Date.now();
 
-    const hasDraftChanges = !settingsSnapshotsEqual(
+    const hasDraftChanges = !cmsSnapshotsEqual(
       args.content,
       row.publishedSnapshot,
     );
@@ -103,7 +139,7 @@ export const publishSection = mutation({
     const { identity, userId, updatedBy } = await requireCmsOwner(ctx);
     void identity;
     const { id, row } = await ensureSectionRow(ctx, args.section, updatedBy);
-    return await publishSettingsSectionCore(ctx, {
+    return await publishSectionCore(ctx, {
       section: args.section,
       id,
       row,
@@ -127,8 +163,10 @@ export const validatePublishSection = query({
       .unique();
 
     const snapshot =
-      row?.draftSnapshot ?? row?.publishedSnapshot ?? SETTINGS_DEFAULTS;
-    const issues = collectSettingsPublishIssues(snapshot);
+      row?.draftSnapshot ??
+      row?.publishedSnapshot ??
+      defaultSnapshotForSection(args.section);
+    const issues = collectPublishIssues(args.section, snapshot);
     return {
       ok: issues.length === 0,
       section: args.section,

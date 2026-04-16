@@ -1,13 +1,22 @@
 import type { MutationCtx } from "./_generated/server";
 import type { Doc, Id } from "./_generated/dataModel";
-import { SETTINGS_DEFAULTS, settingsSnapshotsEqual } from "./cmsShared";
-import { cmsNotFound, cmsPublishValidationFailed } from "./errors";
+import {
+  PRICING_DEFAULTS,
+  SETTINGS_DEFAULTS,
+  cmsSnapshotsEqual,
+  defaultSnapshotForSection,
+  type CmsSection,
+  type CmsSnapshot,
+  type PricingSnapshot,
+  type SettingsSnapshot,
+} from "./cmsShared";
+import { cmsPublishValidationFailed } from "./errors";
 
 export type PublishIssue = { path: string; message: string };
 
 export async function getSectionRow(
   ctx: MutationCtx,
-  section: Doc<"cmsSections">["section"],
+  section: CmsSection,
 ): Promise<Doc<"cmsSections"> | null> {
   return await ctx.db
     .query("cmsSections")
@@ -15,31 +24,52 @@ export async function getSectionRow(
     .unique();
 }
 
+/**
+ * Resolve the initial published snapshot for a brand new row.
+ *
+ * For `pricing`, we opportunistically backfill from any legacy `flags`
+ * stored on the existing `settings` row so the first write doesn’t reset
+ * the user’s previously-published value.
+ */
+async function initialSnapshotForSection(
+  ctx: MutationCtx,
+  section: CmsSection,
+): Promise<CmsSnapshot> {
+  if (section === "pricing") {
+    const legacy = await getSectionRow(ctx, "settings");
+    const legacyFlags = (legacy?.publishedSnapshot as SettingsSnapshot | undefined)
+      ?.flags;
+    if (legacyFlags) {
+      return { flags: legacyFlags } satisfies PricingSnapshot;
+    }
+    return PRICING_DEFAULTS;
+  }
+  return SETTINGS_DEFAULTS;
+}
+
 export async function ensureSectionRow(
   ctx: MutationCtx,
-  section: Doc<"cmsSections">["section"],
+  section: CmsSection,
   updatedBy: string | undefined,
 ): Promise<{ row: Doc<"cmsSections">; id: Id<"cmsSections"> }> {
   const existing = await getSectionRow(ctx, section);
-  const now = Date.now();
 
   if (existing) {
     return { row: existing, id: existing._id };
   }
 
-  if (section !== "settings") {
-    cmsNotFound("cmsSection", section, `Unknown CMS section: ${section}`);
-  }
+  const now = Date.now();
+  const publishedSnapshot = await initialSnapshotForSection(ctx, section);
 
   const id = await ctx.db.insert("cmsSections", {
-    section: "settings",
+    section,
     updatedAt: now,
     updatedBy,
-    publishedSnapshot: SETTINGS_DEFAULTS,
+    publishedSnapshot,
     publishedAt: now,
     hasDraftChanges: false,
   });
-  const row = await ctx.db.get("cmsSections", id);
+  const row = await ctx.db.get(id);
   if (!row) {
     throw new Error("Failed to load cmsSections row after insert");
   }
@@ -49,10 +79,7 @@ export async function ensureSectionRow(
 const trimOrEmpty = (s: string | undefined): string =>
   s === undefined ? "" : s.trim();
 
-/** Best-effort checks before promoting `draft` to published (INF-75). */
-export function collectSettingsPublishIssues(
-  draft: Doc<"cmsSections">["publishedSnapshot"],
-): PublishIssue[] {
+function collectSettingsIssues(draft: SettingsSnapshot): PublishIssue[] {
   const issues: PublishIssue[] = [];
   const title = trimOrEmpty(draft.metadata?.title);
   if (title.length === 0) {
@@ -71,18 +98,50 @@ export function collectSettingsPublishIssues(
   return issues;
 }
 
+function collectPricingIssues(draft: PricingSnapshot): PublishIssue[] {
+  const issues: PublishIssue[] = [];
+  if (typeof draft.flags?.priceTabEnabled !== "boolean") {
+    issues.push({
+      path: "flags.priceTabEnabled",
+      message: "Pricing visibility flag must be a boolean.",
+    });
+  }
+  return issues;
+}
+
+/** Best-effort checks before promoting `draft` to published (INF-75). */
+export function collectPublishIssues(
+  section: CmsSection,
+  draft: CmsSnapshot,
+): PublishIssue[] {
+  if (section === "settings") {
+    return collectSettingsIssues(draft as SettingsSnapshot);
+  }
+  return collectPricingIssues(draft as PricingSnapshot);
+}
+
+/**
+ * @deprecated Kept for back-compat with older callers. Prefer
+ * {@link collectPublishIssues} with an explicit section.
+ */
+export function collectSettingsPublishIssues(
+  draft: SettingsSnapshot,
+): PublishIssue[] {
+  return collectSettingsIssues(draft);
+}
+
 export type PublishSectionResult =
   | {
       ok: true;
       kind: "published";
-      section: Doc<"cmsSections">["section"];
+      section: CmsSection;
       publishedAt: number;
       publishedBy: string;
     }
   | {
       ok: true;
       kind: "already_current";
-      section: Doc<"cmsSections">["section"];
+      section: CmsSection;
       publishedAt: number | null;
       publishedBy: string | undefined;
     };
@@ -90,10 +149,10 @@ export type PublishSectionResult =
 /**
  * Single-transaction promote draft → published, or no-op when there is no draft and nothing pending.
  */
-export async function publishSettingsSectionCore(
+export async function publishSectionCore(
   ctx: MutationCtx,
   args: {
-    section: Doc<"cmsSections">["section"];
+    section: CmsSection;
     id: Id<"cmsSections">;
     row: Doc<"cmsSections">;
     /** Clerk `subject` — stored as `publishedBy` for audit. */
@@ -121,7 +180,7 @@ export async function publishSettingsSectionCore(
     };
   }
 
-  const issues = collectSettingsPublishIssues(draft);
+  const issues = collectPublishIssues(section, draft);
   if (issues.length > 0) {
     cmsPublishValidationFailed(section, "Publish validation failed.", issues);
   }
@@ -147,6 +206,11 @@ export async function publishSettingsSectionCore(
   };
 }
 
+/**
+ * @deprecated Renamed to {@link publishSectionCore}. Kept for existing callers.
+ */
+export const publishSettingsSectionCore = publishSectionCore;
+
 /** Rows that have a draft different from published (site-wide publish targets). */
 export function rowsWithPublishableDraft(
   rows: Doc<"cmsSections">[],
@@ -154,7 +218,7 @@ export function rowsWithPublishableDraft(
   return rows.filter(
     (row) =>
       row.draftSnapshot !== undefined &&
-      !settingsSnapshotsEqual(row.draftSnapshot, row.publishedSnapshot),
+      !cmsSnapshotsEqual(row.draftSnapshot, row.publishedSnapshot),
   );
 }
 
@@ -166,7 +230,7 @@ export function collectAllPublishIssues(
   for (const row of targets) {
     const d = row.draftSnapshot;
     if (!d) continue;
-    for (const issue of collectSettingsPublishIssues(d)) {
+    for (const issue of collectPublishIssues(row.section, d)) {
       issues.push({
         path: `${row.section}.${issue.path}`,
         message: issue.message,
@@ -175,3 +239,6 @@ export function collectAllPublishIssues(
   }
   return issues;
 }
+
+// Preserve legacy default re-exports for callers that imported from this module.
+export { defaultSnapshotForSection };

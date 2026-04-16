@@ -12,18 +12,35 @@ import { api } from "../../../../convex/_generated/api";
 import { useCallback, useState } from "react";
 import { Effect, pipe } from "effect";
 import { toast } from "sonner";
+import { Switch } from "@/components/ui/switch";
 import { convexMutationEffect, type CmsAppError } from "@/lib/effect-errors";
 import { runAdminEffect } from "@/lib/admin-run-effect";
 import { CmsPublishToolbar } from "@/components/admin/cms-publish-toolbar";
 
-type SettingsContent = {
-  metadata?: { title?: string; description?: string };
+type PricingContent = {
+  flags: { priceTabEnabled: boolean };
 };
 
-const fieldClass =
-  "block w-full rounded-md border border-input bg-background px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground focus:border-ring focus:outline-none focus:ring-1 focus:ring-ring/50";
+/** Narrow the unioned snapshot returned by `api.cms.getSection` to the pricing shape. */
+function toPricingContent(raw: unknown): PricingContent {
+  if (
+    raw &&
+    typeof raw === "object" &&
+    "flags" in raw &&
+    typeof (raw as { flags?: { priceTabEnabled?: unknown } }).flags
+      ?.priceTabEnabled === "boolean"
+  ) {
+    return {
+      flags: {
+        priceTabEnabled: (raw as { flags: { priceTabEnabled: boolean } }).flags
+          .priceTabEnabled,
+      },
+    };
+  }
+  return { flags: { priceTabEnabled: true } };
+}
 
-export function SettingsEditor() {
+export function PricingEditor() {
   return (
     <>
       <AuthLoading>
@@ -32,53 +49,42 @@ export function SettingsEditor() {
 
       <Unauthenticated>
         <p className="body-text text-muted-foreground">
-          Sign in to manage site settings.
+          Sign in to manage pricing visibility.
         </p>
       </Unauthenticated>
 
       <Authenticated>
-        <SettingsForm />
+        <PricingForm />
       </Authenticated>
     </>
   );
 }
 
-/**
- * Normalize whatever is stored on the `settings` row (which may still contain
- * legacy `flags`) into the metadata-only shape the editor manages.
- */
-function toSettingsContent(raw: {
-  metadata?: { title?: string; description?: string };
-}): SettingsContent {
-  return { metadata: raw.metadata };
-}
-
-function SettingsForm() {
+function PricingForm() {
   const { user } = useUser();
-  const section = useQuery(api.cms.getSection, { section: "settings" });
+  const section = useQuery(api.cms.getSection, { section: "pricing" });
   const saveDraft = useMutation(api.cms.saveDraft);
   const publish = useMutation(api.cms.publishSection);
   const discard = useMutation(api.cms.discardDraft);
 
-  const [localDraft, setLocalDraft] = useState<SettingsContent | null>(null);
+  const [localDraft, setLocalDraft] = useState<PricingContent | null>(null);
   const [busy, setBusy] = useState<string | null>(null);
   const [inlineError, setInlineError] = useState<string | null>(null);
 
-  const source: SettingsContent | undefined =
+  const source: PricingContent | undefined =
     localDraft ??
     (section
-      ? toSettingsContent(
-          (section.draftSnapshot ?? section.publishedSnapshot) as {
-            metadata?: { title?: string; description?: string };
-          },
-        )
+      ? toPricingContent(section.draftSnapshot ?? section.publishedSnapshot)
       : undefined);
 
-  const updateMetadata = useCallback(
-    (metadata: SettingsContent["metadata"]) => {
+  const setPriceTabEnabled = useCallback(
+    (checked: boolean) => {
       if (!source) return;
       setInlineError(null);
-      setLocalDraft({ ...source, metadata });
+      setLocalDraft({
+        ...source,
+        flags: { ...source.flags, priceTabEnabled: checked },
+      });
     },
     [source],
   );
@@ -106,7 +112,7 @@ function SettingsForm() {
     if (hasDraftOnServer) {
       setBusy("Discarding…");
       const outcome = await runAdminEffect(
-        convexMutationEffect(() => discard({ section: "settings" })),
+        convexMutationEffect(() => discard({ section: "pricing" })),
         { onErrorMessage: setInlineError },
       );
       setBusy(null);
@@ -124,12 +130,14 @@ function SettingsForm() {
   }, [discard, hasDraftOnServer]);
 
   if (section === undefined) {
-    return <p className="body-text text-muted-foreground">Loading settings…</p>;
+    return <p className="body-text text-muted-foreground">Loading pricing…</p>;
   }
 
   if (!source) {
     return (
-      <p className="body-text text-muted-foreground">No settings data available.</p>
+      <p className="body-text text-muted-foreground">
+        No pricing settings available.
+      </p>
     );
   }
 
@@ -141,67 +149,59 @@ function SettingsForm() {
   return (
     <div className="space-y-8">
       <fieldset className="space-y-3">
-        <legend className="label-text text-muted-foreground">Site Metadata</legend>
-        <label className="block space-y-1">
-          <span className="body-text-small text-muted-foreground">Title</span>
-          <input
-            type="text"
-            value={source.metadata?.title ?? ""}
-            onChange={(e) =>
-              updateMetadata({
-                ...source.metadata,
-                title: e.target.value,
-              })
-            }
-            className={fieldClass}
+        <legend className="label-text text-muted-foreground">Visibility</legend>
+        <div className="flex items-start gap-3">
+          <Switch
+            id="pricing-price-tab-enabled"
+            checked={source.flags.priceTabEnabled}
+            onCheckedChange={setPriceTabEnabled}
           />
-        </label>
-        <label className="block space-y-1">
-          <span className="body-text-small text-muted-foreground">Description</span>
-          <textarea
-            rows={3}
-            value={source.metadata?.description ?? ""}
-            onChange={(e) =>
-              updateMetadata({
-                ...source.metadata,
-                description: e.target.value,
-              })
-            }
-            className={fieldClass}
-          />
-        </label>
+          <div className="space-y-1">
+            <label
+              htmlFor="pricing-price-tab-enabled"
+              className="body-text-small cursor-pointer text-foreground"
+            >
+              Show pricing on marketing site
+            </label>
+            <p className="body-text-small text-muted-foreground">
+              Hides pricing on the public site when off. Preview still shows
+              the draft value.
+            </p>
+          </div>
+        </div>
       </fieldset>
 
       <CmsPublishToolbar
-        section="settings"
-        sectionLabel="site settings"
+        section="pricing"
+        sectionLabel="pricing visibility"
         hasDraftOnServer={hasDraftOnServer}
         hasLocalEdits={hasLocalEdits}
         publishedAt={section.publishedAt ?? null}
         publishedByLabel={publishedByLabel}
         busy={busy}
         inlineError={inlineError}
+        previewHref="/preview#services-pricing"
         onSaveDraft={() =>
           void runAction(
             "Saving…",
             convexMutationEffect(() =>
               saveDraft({
-                section: "settings",
-                content: { metadata: source.metadata },
+                section: "pricing",
+                content: { flags: source.flags },
               }),
             ),
           )
         }
         onPublish={() => {
           const publishOnce = convexMutationEffect(() =>
-            publish({ section: "settings" }),
+            publish({ section: "pricing" }),
           );
           const program = hasLocalEdits
             ? pipe(
                 convexMutationEffect(() =>
                   saveDraft({
-                    section: "settings",
-                    content: { metadata: source.metadata },
+                    section: "pricing",
+                    content: { flags: source.flags },
                   }),
                 ),
                 Effect.flatMap(() => publishOnce),
