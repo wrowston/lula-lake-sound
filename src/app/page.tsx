@@ -5,6 +5,6 @@ import { api } from "../../convex/_generated/api";
 import { HomepageShell } from "@/components/homepage-shell";
 
 export default function Home() {
-  const settings = useQuery(api.siteSettings.getPublished);
+  const settings = useQuery(api.public.getPublishedSiteSettings);
   return <HomepageShell settings={settings ?? null} />;
 }

@@ -7,8 +7,8 @@
 
 | Audience | Data |
 |----------|------|
-| Anonymous / marketing site | `publishedSnapshot` only (e.g. `api.siteSettings.getPublished`) |
-| Studio / preview (later) | `draftSnapshot` when present, else `publishedSnapshot` |
+| Anonymous / marketing site | `publishedSnapshot` only (e.g. `api.public.getPublishedSiteSettings`) |
+| Studio / preview | `api.siteSettingsPreviewDraft.getPreviewSiteSettings` (draft when present, else published; owner-gated) |
 
 ## Mutations (shared pattern)
 
@@ -50,7 +50,9 @@ If `publishedAt` is `null`, discarding still only clears the draft; **live site 
 
 4. **Register mutations** that call the same three operations (`saveDraft` / `publishSection` / `discardDraft`) with `section: "pricing"` (or split validators per module if shapes differ).
 
-5. **Expose queries:** a public `getPublished`-style query reading only `publishedSnapshot` for that section; a preview query later checks `ctx.auth`.
+5. **Expose queries:** add a **`convex/public.ts`** query that reads **only** `publishedSnapshot` (or equivalent published columns) for that section — keep anonymous entry points in this module so grep/review stays simple. If owners need to see drafts on the live layout, add a **separate** module named like `…PreviewDraft.ts` with `requireCmsOwner` and **do not** import that module from marketing routes.
+
+6. **Regenerate types** after adding Convex modules: `bunx convex codegen` (or `convex dev`) updates `convex/_generated/api.d.ts` so `api.public.…` resolves in the app.
 
 ## App-layer types
 
