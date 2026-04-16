@@ -16,6 +16,7 @@ import type * as cmsShared from "../cmsShared.js";
 import type * as errors from "../errors.js";
 import type * as inquiries from "../inquiries.js";
 import type * as lib_auth from "../lib/auth.js";
+import type * as lib_sentryConvex from "../lib/sentryConvex.js";
 import type * as observability from "../observability.js";
 import type * as public_ from "../public.js";
 import type * as publicSettingsSnapshot from "../publicSettingsSnapshot.js";
@@ -38,6 +39,7 @@ declare const fullApi: ApiFromModules<{
   errors: typeof errors;
   inquiries: typeof inquiries;
   "lib/auth": typeof lib_auth;
+  "lib/sentryConvex": typeof lib_sentryConvex;
   observability: typeof observability;
   public: typeof public_;
   publicSettingsSnapshot: typeof publicSettingsSnapshot;
