@@ -18,6 +18,8 @@ import { CmsPublishToolbar } from "@/components/admin/cms-publish-toolbar";
 
 type SettingsContent = {
   metadata?: { title?: string; description?: string };
+  /** Carried through from legacy `settings` rows until a `pricing` row exists. */
+  flags?: { priceTabEnabled: boolean };
 };
 
 const fieldClass =
@@ -45,12 +47,21 @@ export function SettingsEditor() {
 
 /**
  * Normalize whatever is stored on the `settings` row (which may still contain
- * legacy `flags`) into the metadata-only shape the editor manages.
+ * legacy `flags`) for the editor. Metadata is editable; legacy `flags` are
+ * preserved on save/publish so public reads do not fall back to defaults.
  */
 function toSettingsContent(raw: {
   metadata?: { title?: string; description?: string };
+  flags?: { priceTabEnabled?: boolean };
 }): SettingsContent {
-  return { metadata: raw.metadata };
+  const out: SettingsContent = { metadata: raw.metadata };
+  if (
+    raw.flags &&
+    typeof raw.flags.priceTabEnabled === "boolean"
+  ) {
+    out.flags = { priceTabEnabled: raw.flags.priceTabEnabled };
+  }
+  return out;
 }
 
 function SettingsForm() {
@@ -70,6 +81,7 @@ function SettingsForm() {
       ? toSettingsContent(
           (section.draftSnapshot ?? section.publishedSnapshot) as {
             metadata?: { title?: string; description?: string };
+            flags?: { priceTabEnabled?: boolean };
           },
         )
       : undefined);
@@ -187,7 +199,7 @@ function SettingsForm() {
             convexMutationEffect(() =>
               saveDraft({
                 section: "settings",
-                content: { metadata: source.metadata },
+                content: source,
               }),
             ),
           )
@@ -201,7 +213,7 @@ function SettingsForm() {
                 convexMutationEffect(() =>
                   saveDraft({
                     section: "settings",
-                    content: { metadata: source.metadata },
+                    content: source,
                   }),
                 ),
                 Effect.flatMap(() => publishOnce),
