@@ -5,15 +5,23 @@ import {
   cmsErrorToastMessage,
 } from "@/lib/effect-errors";
 
+export type RunAdminEffectOptions = {
+  /** Optional inline error (e.g. below a form) in addition to the toast. */
+  readonly onErrorMessage?: (message: string) => void;
+};
+
 /**
  * Run an admin `Effect` to completion: success returns `A`, failure shows sonner toast.
  */
 export async function runAdminEffect<A, E extends CmsAppError>(
   effect: Effect.Effect<A, E, never>,
+  options?: RunAdminEffectOptions,
 ): Promise<A | undefined> {
   const result = await pipe(effect, Effect.either, Effect.runPromise);
   if (Either.isLeft(result)) {
-    toast.error(cmsErrorToastMessage(result.left));
+    const msg = cmsErrorToastMessage(result.left);
+    toast.error(msg);
+    options?.onErrorMessage?.(msg);
     return undefined;
   }
   return result.right;
