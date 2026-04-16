@@ -7,7 +7,9 @@ import { HomepageShell } from "@/components/homepage-shell";
 import { PreviewBanner } from "@/components/preview-banner";
 
 function PreviewContent() {
-  const settings = useQuery(api.siteSettings.getPreview);
+  const settings = useQuery(
+    api.siteSettingsPreviewDraft.getPreviewSiteSettings,
+  );
 
   if (settings === undefined) {
     return (

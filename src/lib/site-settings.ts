@@ -1,8 +1,4 @@
-/** Shape returned by `siteSettings.getPublished` and `siteSettings.getPreview`. */
+/** Shape returned by `api.public.getPublishedSiteSettings` (landing: flags only). */
 export type SiteSettings = {
   flags: { priceTabEnabled: boolean };
-  metadata: { title?: string; description?: string } | null;
-  updatedAt: number | null;
-  publishedAt: number | null;
-  publishedBy: string | null;
 };

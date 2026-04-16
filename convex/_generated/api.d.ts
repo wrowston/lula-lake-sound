@@ -15,8 +15,9 @@ import type * as cmsShared from "../cmsShared.js";
 import type * as errors from "../errors.js";
 import type * as inquiries from "../inquiries.js";
 import type * as lib_auth from "../lib/auth.js";
+import type * as public_ from "../public.js";
 import type * as seed from "../seed.js";
-import type * as siteSettings from "../siteSettings.js";
+import type * as siteSettingsPreviewDraft from "../siteSettingsPreviewDraft.js";
 
 import type {
   ApiFromModules,
@@ -32,8 +33,9 @@ declare const fullApi: ApiFromModules<{
   errors: typeof errors;
   inquiries: typeof inquiries;
   "lib/auth": typeof lib_auth;
+  public: typeof public_;
   seed: typeof seed;
-  siteSettings: typeof siteSettings;
+  siteSettingsPreviewDraft: typeof siteSettingsPreviewDraft;
 }>;
 
 /**
