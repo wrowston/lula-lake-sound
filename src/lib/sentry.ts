@@ -26,7 +26,10 @@ function isRecord(value: unknown): value is JsonRecord {
 
 /** Vercel preview deployments (distinct from production traffic on the prod domain). */
 export function isPreviewDeployment(): boolean {
-  return readNonEmptyEnv(process.env.VERCEL_ENV) === "preview";
+  const env =
+    readNonEmptyEnv(process.env.VERCEL_ENV) ??
+    readNonEmptyEnv(process.env.NEXT_PUBLIC_VERCEL_ENV);
+  return env === "preview";
 }
 
 export function isPreviewPathname(pathname: string | undefined): boolean {
@@ -253,6 +256,8 @@ function enrichSentryEvent<T extends Event>(event: T): void {
   const section = inferSectionFromPathname(pathname);
   if (section) {
     event.tags.section = section;
+  } else {
+    delete event.tags.section;
   }
 
   const deployment = getDeploymentLabel();
@@ -283,10 +288,6 @@ export function scrubSentryEvent<T extends Event>(event: T): T {
 }
 
 export function scrubSentryBreadcrumb<T extends Breadcrumb>(breadcrumb: T): T {
-  if (typeof breadcrumb.message === "string") {
-    breadcrumb.message = scrubUrlString(breadcrumb.message);
-  }
-
   if (isRecord(breadcrumb.data)) {
     scrubRecord(breadcrumb.data);
   }
@@ -308,14 +309,13 @@ export function createSentryInitialScopeUpdater(): (scope: Scope) => Scope {
 }
 
 /** Sets `preview`, optional `section`, and `deployment_info` from a pathname (client). */
-export function applyRouteToSentryScope(
-  scope: Pick<Scope, "setTag" | "setContext">,
-  pathname: string | undefined,
-): void {
+export function applyRouteToSentryScope(scope: Scope, pathname: string | undefined): void {
   scope.setTag("preview", computePreviewTag(pathname));
   const section = inferSectionFromPathname(pathname);
   if (section) {
     scope.setTag("section", section);
+  } else {
+    delete scope.getScopeData().tags.section;
   }
   scope.setContext("deployment_info", {
     route: pathname ?? "",
