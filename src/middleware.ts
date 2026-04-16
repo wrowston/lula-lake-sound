@@ -2,6 +2,7 @@ import { clerkMiddleware, createRouteMatcher } from "@clerk/nextjs/server";
 import { NextResponse } from "next/server";
 
 const isAdminRoute = createRouteMatcher(["/admin(.*)"]);
+const isPreviewRoute = createRouteMatcher(["/preview(.*)"]);
 
 // Next.js Link prefetch (RSC) uses the app path (e.g. /admin/pricing), not _next/static,
 // so it matches this middleware. Authenticated users pass auth.protect(); unauthenticated
@@ -14,6 +15,10 @@ export default clerkMiddleware(async (auth, req) => {
         status: 404,
       });
     }
+    await auth.protect();
+  }
+
+  if (isPreviewRoute(req)) {
     await auth.protect();
   }
 });
