@@ -36,6 +36,14 @@ For a quick non-production verification, hit these routes and confirm the return
 - `/api/dev/sentry/node`
 - `/api/dev/sentry/edge`
 
+### Convex backend
+
+Uncaught and selected handled errors can be forwarded from Convex using an internal Node action (`convex/sentryNodeReport.ts`) that calls `@sentry/node` with tags `convex_function`, `convex_deployment` (derived from `CONVEX_CLOUD_URL`), and a SHA-256 prefix of the Clerk `tokenIdentifier` as the Sentry user id. Set `SENTRY_DSN` on the Convex deployment (dashboard → Deployment Settings → Environment Variables). Optional: `SENTRY_ENVIRONMENT`, `SENTRY_RELEASE`.
+
+To verify from a dev deployment, set `CONVEX_SENTRY_TEST_MUTATION=true` and run the `observability:devForceSentryError` mutation (Convex dashboard or `bunx convex run observability:devForceSentryError`). The event should include tag `convex_function` = `observability:devForceSentryError`.
+
+**Built-in alternative:** Convex Pro can send exceptions to Sentry automatically from the dashboard (see [Exception reporting](https://docs.convex.dev/production/integrations/exception-reporting)); that path does not run the full Sentry SDK in your function bundle. This repository’s Node action is a code-level supplement with explicit context control.
+
 This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
 
 ## Learn More

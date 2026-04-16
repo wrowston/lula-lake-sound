@@ -16,8 +16,10 @@ import type * as cmsShared from "../cmsShared.js";
 import type * as errors from "../errors.js";
 import type * as inquiries from "../inquiries.js";
 import type * as lib_auth from "../lib/auth.js";
+import type * as observability from "../observability.js";
 import type * as public_ from "../public.js";
 import type * as seed from "../seed.js";
+import type * as sentryNodeReport from "../sentryNodeReport.js";
 import type * as siteSettingsPreviewDraft from "../siteSettingsPreviewDraft.js";
 
 import type {
@@ -35,8 +37,10 @@ declare const fullApi: ApiFromModules<{
   errors: typeof errors;
   inquiries: typeof inquiries;
   "lib/auth": typeof lib_auth;
+  observability: typeof observability;
   public: typeof public_;
   seed: typeof seed;
+  sentryNodeReport: typeof sentryNodeReport;
   siteSettingsPreviewDraft: typeof siteSettingsPreviewDraft;
 }>;
 
