@@ -116,6 +116,21 @@ function scrubUrlString(value: string): string {
   return stripUrlQuery(value);
 }
 
+/** Only scrub `?…` from strings that look like URLs; avoids corrupting plain text (e.g. console crumbs). */
+function shouldStripQueryFromMessage(message: string): boolean {
+  const t = message.trim();
+  if (!t.includes("?")) {
+    return false;
+  }
+  if (/^https?:\/\//i.test(t)) {
+    return true;
+  }
+  if (t.startsWith("/") || t.startsWith("//")) {
+    return true;
+  }
+  return false;
+}
+
 function scrubQueryStringValue(): string {
   return REDACTED;
 }
@@ -288,6 +303,13 @@ export function scrubSentryEvent<T extends Event>(event: T): T {
 }
 
 export function scrubSentryBreadcrumb<T extends Breadcrumb>(breadcrumb: T): T {
+  if (
+    typeof breadcrumb.message === "string" &&
+    shouldStripQueryFromMessage(breadcrumb.message)
+  ) {
+    breadcrumb.message = scrubUrlString(breadcrumb.message);
+  }
+
   if (isRecord(breadcrumb.data)) {
     scrubRecord(breadcrumb.data);
   }
