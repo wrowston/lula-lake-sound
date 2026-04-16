@@ -50,5 +50,8 @@
     "@tailwindcss/oxide",
     "@vercel/speed-insights",
     "unrs-resolver"
-  ]
+  ],
+  "overrides": {
+    "import-in-the-middle": "3.0.1"
+  }
 }

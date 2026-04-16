@@ -7,8 +7,21 @@
 
 | Audience | Data |
 |----------|------|
-| Anonymous / marketing site | `publishedSnapshot` only (e.g. `api.public.getPublishedSiteSettings`) |
-| Studio / preview | `api.siteSettingsPreviewDraft.getPreviewSiteSettings` (draft when present, else published; owner-gated) |
+| Anonymous / marketing site — metadata | `publishedSnapshot` only (`api.public.getPublishedSiteSettings`) |
+| Anonymous / marketing site — pricing flags | `publishedSnapshot` only (`api.public.getPublishedPricingFlags`) |
+| Studio / preview — metadata | `api.siteSettingsPreviewDraft.getPreviewSiteSettings` (draft when present, else published; owner-gated) |
+| Studio / preview — pricing flags | `api.pricingPreviewDraft.getPreviewPricingFlags` (draft when present, else published; owner-gated) |
+
+### Sections
+
+| Section | Shape | Admin editor |
+|---------|-------|--------------|
+| `settings` | `{ metadata?: { title, description } }` | `/admin/settings` |
+| `pricing`  | `{ flags: { priceTabEnabled } }`         | `/admin/pricing` |
+
+Each section has its own `cmsSections` row and therefore its own independent draft / publish lifecycle. Publishing one section never publishes another (except via `api.admin.publish.publishSite`, which explicitly iterates all sections with pending drafts).
+
+> Legacy rows whose `settings.publishedSnapshot` still contains `flags` remain schema-valid thanks to an optional `flags` field on `settingsContentValidator`. Public / preview pricing queries fall back to that legacy location when the `pricing` row hasn’t been written yet, so no migration is required before deploy.
 
 ## Mutations (shared pattern)
 

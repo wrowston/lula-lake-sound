@@ -7,11 +7,11 @@ import { HomepageShell } from "@/components/homepage-shell";
 import { PreviewBanner } from "@/components/preview-banner";
 
 function PreviewContent() {
-  const settings = useQuery(
-    api.siteSettingsPreviewDraft.getPreviewSiteSettings,
+  const pricingFlags = useQuery(
+    api.pricingPreviewDraft.getPreviewPricingFlags,
   );
 
-  if (settings === undefined) {
+  if (pricingFlags === undefined) {
     return (
       <div className="flex min-h-screen items-center justify-center bg-washed-black">
         <p className="text-ivory/60">Loading preview…</p>
@@ -19,7 +19,7 @@ function PreviewContent() {
     );
   }
 
-  if (settings === null) {
+  if (pricingFlags === null) {
     return (
       <div className="flex min-h-screen items-center justify-center bg-washed-black">
         <p className="text-ivory/60">
@@ -31,8 +31,10 @@ function PreviewContent() {
 
   return (
     <HomepageShell
-      settings={settings}
-      banner={<PreviewBanner hasDraftChanges={settings.hasDraftChanges} />}
+      pricingFlags={{ flags: pricingFlags.flags }}
+      banner={
+        <PreviewBanner hasDraftChanges={pricingFlags.hasDraftChanges} />
+      }
     />
   );
 }

@@ -88,6 +88,11 @@ export function prewarmAdminNavigation(
       makeRouteQuerySpec(api.cms.getSection, { section: "settings" }),
     ]);
   }
+  if (href === "/admin/pricing") {
+    prewarmSpecs(convex, [
+      makeRouteQuerySpec(api.cms.getSection, { section: "pricing" }),
+    ]);
+  }
 }
 
 type PrewarmFn = () => void | Promise<void>;

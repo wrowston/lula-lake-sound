@@ -16,7 +16,7 @@ import { cmsPublishValidationFailed } from "../errors";
 import {
   collectAllPublishIssues,
   ensureSectionRow,
-  publishSettingsSectionCore,
+  publishSectionCore,
   rowsWithPublishableDraft,
 } from "../cmsPublishHelpers";
 
@@ -26,7 +26,7 @@ export const publish = mutation({
     const { identity, userId, updatedBy } = await requireCmsOwner(ctx);
     void identity;
     const { id, row } = await ensureSectionRow(ctx, args.section, updatedBy);
-    return await publishSettingsSectionCore(ctx, {
+    return await publishSectionCore(ctx, {
       section: args.section,
       id,
       row,
@@ -62,11 +62,10 @@ export const publishSite = mutation({
       );
     }
 
-    const results: Awaited<ReturnType<typeof publishSettingsSectionCore>>[] =
-      [];
+    const results: Awaited<ReturnType<typeof publishSectionCore>>[] = [];
 
     for (const row of targets) {
-      const r = await publishSettingsSectionCore(ctx, {
+      const r = await publishSectionCore(ctx, {
         section: row.section,
         id: row._id,
         row,
