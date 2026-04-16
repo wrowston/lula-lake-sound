@@ -3,7 +3,8 @@ import { v } from "convex/values";
 import { scheduleConvexSentryException } from "./lib/sentryConvex";
 
 /**
- * Throws after enqueueing a Sentry report. Enable only on trusted dev deployments:
+ * Enqueues a Sentry report for a synthetic error, then returns (mutation commits so
+ * the scheduled action runs). Enable only on trusted dev deployments:
  * Convex dashboard → Deployment Settings → Environment Variables →
  * `CONVEX_SENTRY_TEST_MUTATION` = `true`
  *
@@ -27,8 +28,6 @@ export const devForceSentryError = mutation({
       error: testError,
       kind: "unhandled",
     });
-
-    throw testError;
   },
 });
 

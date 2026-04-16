@@ -44,7 +44,11 @@ function normalizeUnknownError(error: unknown): { message: string; stack?: strin
     return { message: error };
   }
   try {
-    return { message: JSON.stringify(error) };
+    const serialized = JSON.stringify(error);
+    if (typeof serialized === "string") {
+      return { message: serialized };
+    }
+    return { message: String(error) };
   } catch {
     return { message: String(error) };
   }
