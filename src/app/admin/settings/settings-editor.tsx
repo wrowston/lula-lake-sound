@@ -7,23 +7,15 @@ import {
   useQuery,
   useMutation,
 } from "convex/react";
+import { useUser } from "@clerk/nextjs";
 import { api } from "../../../../convex/_generated/api";
 import { useCallback, useState } from "react";
 import { Effect, pipe } from "effect";
 import { toast } from "sonner";
 import { Switch } from "@/components/ui/switch";
-import {
-  AlertDialog,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from "@/components/ui/alert-dialog";
 import { convexMutationEffect, type CmsAppError } from "@/lib/effect-errors";
 import { runAdminEffect } from "@/lib/admin-run-effect";
-import Link from "next/link";
+import { CmsPublishToolbar } from "@/components/admin/cms-publish-toolbar";
 
 type SettingsContent = {
   flags: { priceTabEnabled: boolean };
@@ -54,6 +46,7 @@ export function SettingsEditor() {
 }
 
 function SettingsForm() {
+  const { user } = useUser();
   const section = useQuery(api.cms.getSection, { section: "settings" });
   const saveDraft = useMutation(api.cms.saveDraft);
   const publish = useMutation(api.cms.publishSection);
@@ -61,7 +54,7 @@ function SettingsForm() {
 
   const [localDraft, setLocalDraft] = useState<SettingsContent | null>(null);
   const [busy, setBusy] = useState<string | null>(null);
-  const [discardDialogOpen, setDiscardDialogOpen] = useState(false);
+  const [inlineError, setInlineError] = useState<string | null>(null);
 
   const source: SettingsContent | undefined =
     localDraft ??
@@ -72,6 +65,7 @@ function SettingsForm() {
   const updateField = useCallback(
     <K extends keyof SettingsContent>(key: K, value: SettingsContent[K]) => {
       if (!source) return;
+      setInlineError(null);
       setLocalDraft({ ...source, [key]: value });
     },
     [source],
@@ -79,8 +73,11 @@ function SettingsForm() {
 
   const runAction = useCallback(
     async <A,>(label: string, program: Effect.Effect<A, CmsAppError>) => {
+      setInlineError(null);
       setBusy(label);
-      const outcome = await runAdminEffect(program);
+      const outcome = await runAdminEffect(program, {
+        onErrorMessage: setInlineError,
+      });
       if (outcome !== undefined) {
         setLocalDraft(null);
       }
@@ -92,24 +89,26 @@ function SettingsForm() {
 
   const hasDraftOnServer = section?.hasDraftChanges ?? false;
 
-  const confirmDiscard = useCallback(async () => {
+  const handleDiscardConfirm = useCallback(async (): Promise<boolean> => {
+    setInlineError(null);
     if (hasDraftOnServer) {
       setBusy("Discarding…");
       const outcome = await runAdminEffect(
         convexMutationEffect(() => discard({ section: "settings" })),
+        { onErrorMessage: setInlineError },
       );
       setBusy(null);
       if (outcome === undefined) {
-        return;
+        return false;
       }
     }
     setLocalDraft(null);
-    setDiscardDialogOpen(false);
     toast.success(
       hasDraftOnServer
         ? "Draft discarded. The editor now matches the published site."
         : "Unsaved changes discarded.",
     );
+    return true;
   }, [discard, hasDraftOnServer]);
 
   if (section === undefined) {
@@ -123,6 +122,9 @@ function SettingsForm() {
   }
 
   const hasLocalEdits = localDraft !== null;
+
+  const publishedByLabel =
+    section.publishedBy && user?.id === section.publishedBy ? "You" : undefined;
 
   return (
     <div className="space-y-8">
@@ -180,133 +182,51 @@ function SettingsForm() {
         </label>
       </fieldset>
 
-      <div className="flex flex-wrap items-center gap-3 text-xs text-muted-foreground">
-        {hasDraftOnServer && (
-          <span className="rounded bg-primary/15 px-2 py-0.5 text-primary">
-            Unpublished draft on server
-          </span>
-        )}
-        {hasLocalEdits && (
-          <span className="rounded bg-muted px-2 py-0.5 text-muted-foreground">
-            Unsaved local edits
-          </span>
-        )}
-        {section.publishedAt && (
-          <span>
-            Last published{" "}
-            {new Date(section.publishedAt).toLocaleString()}
-          </span>
-        )}
-      </div>
-
-      <div className="flex flex-wrap gap-3">
-        <button
-          disabled={!hasLocalEdits || busy !== null}
-          onClick={() =>
-            runAction(
-              "Saving…",
-              convexMutationEffect(() =>
-                saveDraft({
-                  section: "settings",
-                  content: {
-                    flags: source.flags,
-                    metadata: source.metadata,
-                  },
-                }),
-              ),
-            )
-          }
-          className="rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground transition hover:bg-primary/90 disabled:cursor-not-allowed disabled:opacity-40"
-        >
-          {busy === "Saving…" ? "Saving…" : "Save Draft"}
-        </button>
-
-        <button
-          disabled={(!hasDraftOnServer && !hasLocalEdits) || busy !== null}
-          onClick={() => {
-            const publishOnce = convexMutationEffect(() =>
-              publish({ section: "settings" }),
-            );
-            const program = hasLocalEdits
-              ? pipe(
-                  convexMutationEffect(() =>
-                    saveDraft({
-                      section: "settings",
-                      content: {
-                        flags: source.flags,
-                        metadata: source.metadata,
-                      },
-                    }),
-                  ),
-                  Effect.flatMap(() => publishOnce),
-                )
-              : publishOnce;
-            return runAction("Publishing…", program);
-          }}
-          className="rounded-md border border-border bg-secondary px-4 py-2 text-sm font-medium text-secondary-foreground transition hover:bg-secondary/80 disabled:cursor-not-allowed disabled:opacity-40"
-        >
-          {busy === "Publishing…" ? "Publishing…" : "Publish"}
-        </button>
-
-        <button
-          type="button"
-          disabled={(!hasDraftOnServer && !hasLocalEdits) || busy !== null}
-          onClick={() => setDiscardDialogOpen(true)}
-          className="rounded-md border border-border px-4 py-2 text-sm font-medium text-muted-foreground transition hover:bg-muted hover:text-foreground disabled:cursor-not-allowed disabled:opacity-40"
-        >
-          Discard draft
-        </button>
-
-        <Link
-          href="/preview"
-          target="_blank"
-          className="rounded-md border border-amber-500/30 bg-amber-500/10 px-4 py-2 text-sm font-medium text-amber-600 transition hover:bg-amber-500/20 dark:text-amber-400"
-        >
-          Preview Site ↗
-        </Link>
-      </div>
-
-      <AlertDialog
-        open={discardDialogOpen}
-        onOpenChange={(open, eventDetails) => {
-          if (!open && busy === "Discarding…") {
-            eventDetails.cancel();
-            return;
-          }
-          setDiscardDialogOpen(open);
+      <CmsPublishToolbar
+        section="settings"
+        sectionLabel="site settings"
+        hasDraftOnServer={hasDraftOnServer}
+        hasLocalEdits={hasLocalEdits}
+        publishedAt={section.publishedAt ?? null}
+        publishedByLabel={publishedByLabel}
+        busy={busy}
+        inlineError={inlineError}
+        onSaveDraft={() =>
+          void runAction(
+            "Saving…",
+            convexMutationEffect(() =>
+              saveDraft({
+                section: "settings",
+                content: {
+                  flags: source.flags,
+                  metadata: source.metadata,
+                },
+              }),
+            ),
+          )
+        }
+        onPublish={() => {
+          const publishOnce = convexMutationEffect(() =>
+            publish({ section: "settings" }),
+          );
+          const program = hasLocalEdits
+            ? pipe(
+                convexMutationEffect(() =>
+                  saveDraft({
+                    section: "settings",
+                    content: {
+                      flags: source.flags,
+                      metadata: source.metadata,
+                    },
+                  }),
+                ),
+                Effect.flatMap(() => publishOnce),
+              )
+            : publishOnce;
+          return void runAction("Publishing…", program);
         }}
-      >
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Discard draft changes?</AlertDialogTitle>
-            <AlertDialogDescription>
-              {hasDraftOnServer
-                ? "This removes unpublished edits from the server and resets the editor to the last published settings. The live site is not changed."
-                : "This clears unsaved edits in your browser and shows the last published settings again."}
-              {!section.publishedAt && hasDraftOnServer ? (
-                <>
-                  {" "}
-                  Nothing has been published yet, so you will see the same default
-                  baseline stored for the site until you publish.
-                </>
-              ) : null}
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel disabled={busy === "Discarding…"}>
-              Cancel
-            </AlertDialogCancel>
-            <button
-              type="button"
-              disabled={busy === "Discarding…"}
-              onClick={() => void confirmDiscard()}
-              className="inline-flex h-8 shrink-0 items-center justify-center rounded-lg border border-transparent bg-destructive/10 px-2.5 text-sm font-medium text-destructive outline-none transition hover:bg-destructive/20 focus-visible:border-destructive/40 focus-visible:ring-3 focus-visible:ring-destructive/20 disabled:pointer-events-none disabled:opacity-50 dark:bg-destructive/20 dark:hover:bg-destructive/30 dark:focus-visible:ring-destructive/40"
-            >
-              {busy === "Discarding…" ? "Discarding…" : "Discard"}
-            </button>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+        onDiscardConfirm={handleDiscardConfirm}
+      />
     </div>
   );
 }

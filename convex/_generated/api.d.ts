@@ -11,6 +11,7 @@
 import type * as admin_publish from "../admin/publish.js";
 import type * as admin_siteSettings from "../admin/siteSettings.js";
 import type * as cms from "../cms.js";
+import type * as cmsPublishHelpers from "../cmsPublishHelpers.js";
 import type * as cmsShared from "../cmsShared.js";
 import type * as errors from "../errors.js";
 import type * as inquiries from "../inquiries.js";
@@ -28,6 +29,7 @@ declare const fullApi: ApiFromModules<{
   "admin/publish": typeof admin_publish;
   "admin/siteSettings": typeof admin_siteSettings;
   cms: typeof cms;
+  cmsPublishHelpers: typeof cmsPublishHelpers;
   cmsShared: typeof cmsShared;
   errors: typeof errors;
   inquiries: typeof inquiries;
