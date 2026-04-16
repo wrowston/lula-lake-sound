@@ -1,5 +1,6 @@
 import * as Sentry from "@sentry/nextjs";
 import {
+  createSentryInitialScopeUpdater,
   getSentryEnvironment,
   getSentryRelease,
   getServerSentryDsn,
@@ -18,6 +19,7 @@ if (dsn && isSentryEnabled()) {
     release: getSentryRelease(),
     sendDefaultPii: false,
     tracesSampleRate: getTracesSampleRate(),
+    initialScope: createSentryInitialScopeUpdater(),
     beforeSend: scrubSentryEvent,
     beforeSendTransaction: scrubSentryEvent,
     beforeBreadcrumb: scrubSentryBreadcrumb,

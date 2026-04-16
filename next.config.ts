@@ -38,6 +38,9 @@ const nextConfig: NextConfig = {
     NEXT_PUBLIC_SENTRY_ENVIRONMENT: sentryEnvironment,
     NEXT_PUBLIC_SENTRY_RELEASE: sentryRelease,
     NEXT_PUBLIC_SENTRY_ENABLED: sentryEnabledPublic,
+    NEXT_PUBLIC_VERCEL_ENV: process.env.VERCEL_ENV ?? "",
+    NEXT_PUBLIC_VERCEL_URL: process.env.VERCEL_URL ?? "",
+    NEXT_PUBLIC_VERCEL_GIT_COMMIT_SHA: process.env.VERCEL_GIT_COMMIT_SHA ?? "",
   },
   images: {
     remotePatterns: [

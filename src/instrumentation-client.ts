@@ -1,5 +1,7 @@
 import * as Sentry from "@sentry/nextjs";
 import {
+  applyRouteToSentryScope,
+  createSentryInitialScopeUpdater,
   getClientSentryDsn,
   getSentryEnvironment,
   getSentryRelease,
@@ -18,10 +20,28 @@ if (dsn && isSentryEnabled()) {
     release: getSentryRelease(),
     sendDefaultPii: false,
     tracesSampleRate: getTracesSampleRate(),
+    initialScope: createSentryInitialScopeUpdater(),
     beforeSend: scrubSentryEvent,
     beforeSendTransaction: scrubSentryEvent,
     beforeBreadcrumb: scrubSentryBreadcrumb,
   });
 }
 
-export const onRouterTransitionStart = Sentry.captureRouterTransitionStart;
+export function onRouterTransitionStart(
+  href: string,
+  navigationType: string,
+) {
+  try {
+    const path =
+      typeof window !== "undefined"
+        ? new URL(href, window.location.origin).pathname
+        : undefined;
+    applyRouteToSentryScope(Sentry.getCurrentScope(), path);
+  } catch {
+    applyRouteToSentryScope(
+      Sentry.getCurrentScope(),
+      typeof window !== "undefined" ? window.location.pathname : undefined,
+    );
+  }
+  Sentry.captureRouterTransitionStart(href, navigationType);
+}
