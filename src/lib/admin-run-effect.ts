@@ -25,7 +25,9 @@ export async function runAdminEffect<A, E extends CmsAppError>(
       err.kind === "sign_in_required" &&
       typeof window !== "undefined"
     ) {
-      window.location.assign("/sign-in");
+      window.location.assign(
+        `/sign-in?redirect_url=${encodeURIComponent(window.location.href)}`,
+      );
       return undefined;
     }
     const msg = cmsErrorToastMessage(err);
