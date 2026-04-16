@@ -8,6 +8,9 @@ export const cmsConvexErrorValidator = v.union(
   v.object({
     code: v.literal("UNAUTHORIZED"),
     message: v.string(),
+    kind: v.optional(
+      v.union(v.literal("sign_in_required"), v.literal("forbidden")),
+    ),
   }),
   v.object({
     code: v.literal("VALIDATION_ERROR"),
@@ -46,10 +49,14 @@ export const cmsConvexErrorValidator = v.union(
 
 export type CmsConvexError = Infer<typeof cmsConvexErrorValidator>;
 
-export function cmsUnauthorized(message: string): never {
+export function cmsUnauthorized(
+  message: string,
+  kind?: "sign_in_required" | "forbidden",
+): never {
   throw new ConvexError<CmsConvexError>({
     code: "UNAUTHORIZED",
     message,
+    ...(kind !== undefined ? { kind } : {}),
   });
 }
 

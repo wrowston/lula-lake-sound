@@ -7,7 +7,11 @@ import { ConvexError } from "convex/values";
 
 /** Convex `ConvexError` payload shape (mirrors `convex/errors.ts`). */
 export type CmsConvexErrorPayload =
-  | { readonly code: "UNAUTHORIZED"; readonly message: string }
+  | {
+      readonly code: "UNAUTHORIZED";
+      readonly message: string;
+      readonly kind?: "sign_in_required" | "forbidden";
+    }
   | {
       readonly code: "VALIDATION_ERROR";
       readonly message: string;
@@ -37,6 +41,7 @@ export type CmsConvexErrorPayload =
 
 export class Unauthorized extends Data.TaggedError("Unauthorized")<{
   readonly message: string;
+  readonly kind?: "sign_in_required" | "forbidden";
 }> {}
 
 export class ValidationError extends Data.TaggedError("ValidationError")<{
@@ -83,7 +88,11 @@ function isCmsConvexErrorPayload(
   if (typeof value["message"] !== "string") return false;
   switch (code) {
     case "UNAUTHORIZED":
-      return true;
+      return (
+        value["kind"] === undefined ||
+        value["kind"] === "sign_in_required" ||
+        value["kind"] === "forbidden"
+      );
     case "VALIDATION_ERROR":
       return (
         value["field"] === undefined || typeof value["field"] === "string"
@@ -121,8 +130,14 @@ export function fromConvexCmsError(cause: unknown): CmsAppError {
     const data: unknown = cause.data;
     if (isCmsConvexErrorPayload(data)) {
       switch (data.code) {
-        case "UNAUTHORIZED":
-          return new Unauthorized({ message: data.message });
+        case "UNAUTHORIZED": {
+          const kind: "sign_in_required" | "forbidden" =
+            data.kind ??
+            (/permission|not allowed/i.test(data.message)
+              ? "forbidden"
+              : "sign_in_required");
+          return new Unauthorized({ message: data.message, kind });
+        }
         case "VALIDATION_ERROR":
           return new ValidationError({
             message: data.message,
@@ -169,7 +184,9 @@ export function convexMutationEffect<A>(
 export function cmsErrorToastMessage(err: CmsAppError): string {
   switch (err._tag) {
     case "Unauthorized":
-      return err.message;
+      return err.kind === "forbidden"
+        ? "You are not allowed to do this."
+        : "Please sign in to continue.";
     case "ValidationError":
       return err.field !== undefined
         ? `${err.message} (${err.field})`
