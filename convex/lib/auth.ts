@@ -19,7 +19,7 @@ function parseCmsOwnerTokenIdentifiers(): string[] | null {
 export async function requireAuthenticatedIdentity(ctx: QueryCtx | MutationCtx) {
   const identity = await ctx.auth.getUserIdentity();
   if (identity === null) {
-    cmsUnauthorized("Sign in required to access the CMS.");
+    cmsUnauthorized("Sign in required to access the CMS.", "sign_in_required");
   }
   return {
     identity,
@@ -40,7 +40,10 @@ export async function requireCmsOwner(ctx: QueryCtx | MutationCtx) {
     return base;
   }
   if (!allowlist.includes(base.identity.tokenIdentifier)) {
-    cmsUnauthorized("You do not have permission to perform this action.");
+    cmsUnauthorized(
+      "You do not have permission to perform this action.",
+      "forbidden",
+    );
   }
   return base;
 }

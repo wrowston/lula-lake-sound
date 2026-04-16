@@ -19,7 +19,16 @@ export async function runAdminEffect<A, E extends CmsAppError>(
 ): Promise<A | undefined> {
   const result = await pipe(effect, Effect.either, Effect.runPromise);
   if (Either.isLeft(result)) {
-    const msg = cmsErrorToastMessage(result.left);
+    const err = result.left;
+    if (
+      err._tag === "Unauthorized" &&
+      err.kind === "sign_in_required" &&
+      typeof window !== "undefined"
+    ) {
+      window.location.assign("/sign-in");
+      return undefined;
+    }
+    const msg = cmsErrorToastMessage(err);
     toast.error(msg);
     options?.onErrorMessage?.(msg);
     return undefined;
