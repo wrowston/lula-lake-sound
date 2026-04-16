@@ -59,6 +59,7 @@ export function HomepageShell({ pricingFlags, banner }: HomepageShellProps) {
   }, []);
 
   const showPricing = pricingFlags?.flags.priceTabEnabled ?? false;
+  const pricingPackages = pricingFlags?.packages ?? [];
   const logoScale = calculateLogoScale(scrollY);
 
   return (
@@ -70,7 +71,7 @@ export function HomepageShell({ pricingFlags, banner }: HomepageShellProps) {
       <div className="relative z-10">
         <TheSpace />
         <EquipmentSpecs />
-        {showPricing && <ServicesAndPricing />}
+        {showPricing && <ServicesAndPricing packages={pricingPackages} />}
         <AmenitiesNearby />
         <FAQ />
         <ArtistInquiries />

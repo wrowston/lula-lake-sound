@@ -6,7 +6,7 @@ import { v } from "convex/values";
  *
  * Sections today:
  * - `settings`  — site metadata (title, description; extend as CMS grows).
- * - `pricing`   — feature flags that govern pricing surfaces on the marketing site.
+ * - `pricing`   — feature flags and package/rate catalog that govern pricing surfaces.
  */
 export const siteFlagsValidator = v.object({
   priceTabEnabled: v.boolean(),
@@ -15,6 +15,52 @@ export const siteFlagsValidator = v.object({
 export const siteMetadataValidator = v.object({
   title: v.optional(v.string()),
   description: v.optional(v.string()),
+});
+
+/**
+ * Allowed billing cadences for a pricing package. `hourly` and `six_hour_block`
+ * cover the studio's most common rate shapes; additional cadences are included
+ * so mixing / mastering / production rows can describe their pricing naturally.
+ *
+ * Consumers should render a human label via `billingCadenceLabel` in
+ * `cmsShared.ts` (or customize via the optional `unitLabel` override on the
+ * package itself).
+ */
+export const pricingBillingCadenceValidator = v.union(
+  v.literal("hourly"),
+  v.literal("six_hour_block"),
+  v.literal("daily"),
+  v.literal("per_song"),
+  v.literal("per_album"),
+  v.literal("per_project"),
+  v.literal("flat"),
+);
+
+/**
+ * Pricing package / rate row authored in the CMS. Stored inline on the
+ * `pricing` section snapshot so publish remains a single atomic patch.
+ *
+ * - `id` is a stable client-generated identifier (e.g. `crypto.randomUUID()`)
+ *   used so the editor can track rows across edits and reorders without
+ *   depending on array position. It is NOT a Convex document id.
+ * - `priceCents` is an integer so we never have to deal with floating-point
+ *   rounding on the display side. Currency format is left to the client.
+ * - `unitLabel` optionally overrides the cadence's default display label
+ *   (e.g. "per mixed song").
+ * - `features` is an ordered bullet list rendered in the public card UI.
+ */
+export const pricingPackageValidator = v.object({
+  id: v.string(),
+  name: v.string(),
+  description: v.optional(v.string()),
+  priceCents: v.number(),
+  currency: v.string(),
+  billingCadence: pricingBillingCadenceValidator,
+  unitLabel: v.optional(v.string()),
+  highlight: v.boolean(),
+  sortOrder: v.number(),
+  isActive: v.boolean(),
+  features: v.optional(v.array(v.string())),
 });
 
 /**
@@ -31,9 +77,15 @@ export const settingsContentValidator = v.object({
   flags: v.optional(siteFlagsValidator),
 });
 
-/** "pricing" section snapshot — flags only. */
+/**
+ * "pricing" section snapshot.
+ *
+ * `packages` is optional for back-compat with legacy rows that only stored the
+ * feature `flags`; consumers should treat `undefined` as an empty array.
+ */
 export const pricingContentValidator = v.object({
   flags: siteFlagsValidator,
+  packages: v.optional(v.array(pricingPackageValidator)),
 });
 
 /** Any section's snapshot payload — discriminated at runtime by the row's `section`. */

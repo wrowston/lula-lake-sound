@@ -31,7 +31,10 @@ function PreviewContent() {
 
   return (
     <HomepageShell
-      pricingFlags={{ flags: pricingFlags.flags }}
+      pricingFlags={{
+        flags: pricingFlags.flags,
+        packages: pricingFlags.packages,
+      }}
       banner={
         <PreviewBanner hasDraftChanges={pricingFlags.hasDraftChanges} />
       }

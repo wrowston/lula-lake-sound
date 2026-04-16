@@ -9,35 +9,114 @@ import {
 } from "convex/react";
 import { useUser } from "@clerk/nextjs";
 import { api } from "../../../../convex/_generated/api";
-import { useCallback, useState } from "react";
+import { useCallback, useMemo, useState } from "react";
 import { Effect, pipe } from "effect";
 import { toast } from "sonner";
+import { ArrowDown, ArrowUp, Plus, Star, Trash2 } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { Switch } from "@/components/ui/switch";
+import { cn } from "@/lib/utils";
 import { convexMutationEffect, type CmsAppError } from "@/lib/effect-errors";
 import { runAdminEffect } from "@/lib/admin-run-effect";
 import { CmsPublishToolbar } from "@/components/admin/cms-publish-toolbar";
 
-type PricingContent = {
-  flags: { priceTabEnabled: boolean };
+type BillingCadence =
+  | "hourly"
+  | "six_hour_block"
+  | "daily"
+  | "per_song"
+  | "per_album"
+  | "per_project"
+  | "flat";
+
+type PricingPackage = {
+  id: string;
+  name: string;
+  description?: string;
+  priceCents: number;
+  currency: string;
+  billingCadence: BillingCadence;
+  unitLabel?: string;
+  highlight: boolean;
+  sortOrder: number;
+  isActive: boolean;
+  features?: string[];
 };
 
-/** Narrow the unioned snapshot returned by `api.cms.getSection` to the pricing shape. */
-function toPricingContent(raw: unknown): PricingContent {
-  if (
-    raw &&
-    typeof raw === "object" &&
-    "flags" in raw &&
-    typeof (raw as { flags?: { priceTabEnabled?: unknown } }).flags
-      ?.priceTabEnabled === "boolean"
-  ) {
-    return {
-      flags: {
-        priceTabEnabled: (raw as { flags: { priceTabEnabled: boolean } }).flags
-          .priceTabEnabled,
-      },
-    };
+type PricingContent = {
+  flags: { priceTabEnabled: boolean };
+  packages: PricingPackage[];
+};
+
+const VALID_CADENCES: readonly BillingCadence[] = [
+  "hourly",
+  "six_hour_block",
+  "daily",
+  "per_song",
+  "per_album",
+  "per_project",
+  "flat",
+] as const;
+
+const CADENCE_LABELS: Record<BillingCadence, string> = {
+  hourly: "Per hour",
+  six_hour_block: "Per 6-hour block",
+  daily: "Per day",
+  per_song: "Per song",
+  per_album: "Per album",
+  per_project: "Per project",
+  flat: "Flat rate",
+};
+
+function isCadence(value: string): value is BillingCadence {
+  return (VALID_CADENCES as readonly string[]).includes(value);
+}
+
+function generateId(): string {
+  if (typeof crypto !== "undefined" && "randomUUID" in crypto) {
+    return `pkg_${crypto.randomUUID()}`;
   }
-  return { flags: { priceTabEnabled: true } };
+  return `pkg_${Math.random().toString(36).slice(2)}${Date.now().toString(36)}`;
+}
+
+function toPricingContent(raw: {
+  flags: { priceTabEnabled: boolean };
+  packages: PricingPackage[];
+}): PricingContent {
+  return {
+    flags: { priceTabEnabled: raw.flags.priceTabEnabled },
+    packages: raw.packages.map((p) => ({
+      id: p.id,
+      name: p.name,
+      description: p.description,
+      priceCents: p.priceCents,
+      currency: p.currency,
+      billingCadence: p.billingCadence,
+      unitLabel: p.unitLabel,
+      highlight: p.highlight,
+      sortOrder: p.sortOrder,
+      isActive: p.isActive,
+      features: p.features ? [...p.features] : undefined,
+    })),
+  };
+}
+
+function renumberSortOrder(packages: PricingPackage[]): PricingPackage[] {
+  return packages.map((p, idx) => ({ ...p, sortOrder: idx }));
+}
+
+function priceCentsToDisplay(cents: number): string {
+  if (!Number.isFinite(cents)) return "";
+  return (cents / 100).toFixed(2);
+}
+
+function parsePriceInput(value: string): number | null {
+  const trimmed = value.trim();
+  if (trimmed.length === 0) return null;
+  const num = Number(trimmed);
+  if (!Number.isFinite(num) || num < 0) return null;
+  return Math.round(num * 100);
 }
 
 export function PricingEditor() {
@@ -49,7 +128,7 @@ export function PricingEditor() {
 
       <Unauthenticated>
         <p className="body-text text-muted-foreground">
-          Sign in to manage pricing visibility.
+          Sign in to manage pricing.
         </p>
       </Unauthenticated>
 
@@ -62,31 +141,119 @@ export function PricingEditor() {
 
 function PricingForm() {
   const { user } = useUser();
-  const section = useQuery(api.cms.getSection, { section: "pricing" });
-  const saveDraft = useMutation(api.cms.saveDraft);
-  const publish = useMutation(api.cms.publishSection);
+  const pricing = useQuery(api.admin.pricing.listDraft);
+  const saveDraft = useMutation(api.admin.pricing.saveDraftPricing);
+  const publish = useMutation(api.admin.pricing.publishPricing);
   const discard = useMutation(api.cms.discardDraft);
 
   const [localDraft, setLocalDraft] = useState<PricingContent | null>(null);
   const [busy, setBusy] = useState<string | null>(null);
   const [inlineError, setInlineError] = useState<string | null>(null);
 
-  const source: PricingContent | undefined =
-    localDraft ??
-    (section
-      ? toPricingContent(section.draftSnapshot ?? section.publishedSnapshot)
-      : undefined);
+  const source: PricingContent | undefined = useMemo(() => {
+    if (localDraft) return localDraft;
+    if (!pricing) return undefined;
+    return toPricingContent({
+      flags: pricing.flags,
+      packages: pricing.packages as PricingPackage[],
+    });
+  }, [localDraft, pricing]);
+
+  const mutate = useCallback(
+    (next: PricingContent) => {
+      setInlineError(null);
+      setLocalDraft(next);
+    },
+    [],
+  );
 
   const setPriceTabEnabled = useCallback(
     (checked: boolean) => {
       if (!source) return;
-      setInlineError(null);
-      setLocalDraft({
+      mutate({
         ...source,
         flags: { ...source.flags, priceTabEnabled: checked },
       });
     },
-    [source],
+    [source, mutate],
+  );
+
+  const addPackage = useCallback(() => {
+    if (!source) return;
+    const next: PricingPackage = {
+      id: generateId(),
+      name: "New package",
+      description: "",
+      priceCents: 0,
+      currency: "USD",
+      billingCadence: "hourly",
+      highlight: false,
+      sortOrder: source.packages.length,
+      isActive: true,
+      features: [],
+    };
+    mutate({
+      ...source,
+      packages: renumberSortOrder([...source.packages, next]),
+    });
+  }, [source, mutate]);
+
+  const updatePackage = useCallback(
+    (id: string, patch: Partial<PricingPackage>) => {
+      if (!source) return;
+      mutate({
+        ...source,
+        packages: source.packages.map((p) =>
+          p.id === id ? { ...p, ...patch } : p,
+        ),
+      });
+    },
+    [source, mutate],
+  );
+
+  const removePackage = useCallback(
+    (id: string) => {
+      if (!source) return;
+      mutate({
+        ...source,
+        packages: renumberSortOrder(
+          source.packages.filter((p) => p.id !== id),
+        ),
+      });
+    },
+    [source, mutate],
+  );
+
+  const movePackage = useCallback(
+    (id: string, direction: -1 | 1) => {
+      if (!source) return;
+      const idx = source.packages.findIndex((p) => p.id === id);
+      if (idx === -1) return;
+      const target = idx + direction;
+      if (target < 0 || target >= source.packages.length) return;
+      const next = [...source.packages];
+      const [moved] = next.splice(idx, 1);
+      next.splice(target, 0, moved);
+      mutate({
+        ...source,
+        packages: renumberSortOrder(next),
+      });
+    },
+    [source, mutate],
+  );
+
+  const toggleHighlight = useCallback(
+    (id: string) => {
+      if (!source) return;
+      mutate({
+        ...source,
+        packages: source.packages.map((p) => ({
+          ...p,
+          highlight: p.id === id ? !p.highlight : false,
+        })),
+      });
+    },
+    [source, mutate],
   );
 
   const runAction = useCallback(
@@ -105,7 +272,7 @@ function PricingForm() {
     [],
   );
 
-  const hasDraftOnServer = section?.hasDraftChanges ?? false;
+  const hasDraftOnServer = pricing?.hasDraftChanges ?? false;
 
   const handleDiscardConfirm = useCallback(async (): Promise<boolean> => {
     setInlineError(null);
@@ -129,7 +296,7 @@ function PricingForm() {
     return true;
   }, [discard, hasDraftOnServer]);
 
-  if (section === undefined) {
+  if (pricing === undefined) {
     return <p className="body-text text-muted-foreground">Loading pricing…</p>;
   }
 
@@ -142,12 +309,18 @@ function PricingForm() {
   }
 
   const hasLocalEdits = localDraft !== null;
-
   const publishedByLabel =
-    section.publishedBy && user?.id === section.publishedBy ? "You" : undefined;
+    pricing.publishedBy && user?.id === pricing.publishedBy ? "You" : undefined;
+
+  const saveDraftProgram = convexMutationEffect(() =>
+    saveDraft({
+      flags: source.flags,
+      packages: source.packages,
+    }),
+  );
 
   return (
-    <div className="space-y-8">
+    <div className="space-y-10">
       <fieldset className="space-y-3">
         <legend className="label-text text-muted-foreground">Visibility</legend>
         <div className="flex items-start gap-3">
@@ -171,41 +344,266 @@ function PricingForm() {
         </div>
       </fieldset>
 
+      <section className="space-y-4">
+        <div className="flex items-center justify-between">
+          <div>
+            <h2 className="text-lg font-semibold">Packages &amp; rates</h2>
+            <p className="body-text-small text-muted-foreground">
+              Hourly, 6-hour-block, or any other cadence. The highlighted row
+              is emphasized on the public site as the recommended package.
+            </p>
+          </div>
+          <Button type="button" variant="outline" onClick={addPackage}>
+            <Plus className="mr-1 size-4" aria-hidden />
+            Add package
+          </Button>
+        </div>
+
+        {source.packages.length === 0 ? (
+          <p className="rounded-md border border-dashed border-border p-6 text-center text-sm text-muted-foreground">
+            No packages yet. Click “Add package” to create the first one.
+          </p>
+        ) : (
+          <ul className="space-y-4">
+            {source.packages.map((pkg, idx) => (
+              <li
+                key={pkg.id}
+                className={cn(
+                  "rounded-lg border p-4 shadow-sm transition-colors",
+                  pkg.highlight
+                    ? "border-primary/60 bg-primary/5"
+                    : "border-border bg-background",
+                  !pkg.isActive && "opacity-60",
+                )}
+              >
+                <div className="flex flex-wrap items-start justify-between gap-3">
+                  <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                    <span className="font-mono text-xs">#{idx + 1}</span>
+                    {pkg.highlight ? (
+                      <span className="inline-flex items-center gap-1 rounded-full bg-primary/15 px-2 py-0.5 text-xs font-medium text-primary">
+                        <Star className="size-3" aria-hidden /> Recommended
+                      </span>
+                    ) : null}
+                    {!pkg.isActive ? (
+                      <span className="rounded-full bg-muted px-2 py-0.5 text-xs text-muted-foreground">
+                        Hidden
+                      </span>
+                    ) : null}
+                  </div>
+                  <div className="flex items-center gap-1">
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="icon"
+                      aria-label="Move up"
+                      disabled={idx === 0}
+                      onClick={() => movePackage(pkg.id, -1)}
+                    >
+                      <ArrowUp className="size-4" aria-hidden />
+                    </Button>
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="icon"
+                      aria-label="Move down"
+                      disabled={idx === source.packages.length - 1}
+                      onClick={() => movePackage(pkg.id, 1)}
+                    >
+                      <ArrowDown className="size-4" aria-hidden />
+                    </Button>
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="icon"
+                      aria-label="Delete package"
+                      onClick={() => removePackage(pkg.id)}
+                    >
+                      <Trash2 className="size-4 text-destructive" aria-hidden />
+                    </Button>
+                  </div>
+                </div>
+
+                <div className="mt-3 grid grid-cols-1 gap-3 md:grid-cols-2">
+                  <label className="block space-y-1">
+                    <span className="body-text-small text-muted-foreground">
+                      Name
+                    </span>
+                    <Input
+                      type="text"
+                      value={pkg.name}
+                      onChange={(e) =>
+                        updatePackage(pkg.id, { name: e.target.value })
+                      }
+                      placeholder="Recording — Hourly"
+                    />
+                  </label>
+
+                  <label className="block space-y-1">
+                    <span className="body-text-small text-muted-foreground">
+                      Cadence
+                    </span>
+                    <select
+                      value={pkg.billingCadence}
+                      onChange={(e) => {
+                        const raw = e.target.value;
+                        if (isCadence(raw)) {
+                          updatePackage(pkg.id, { billingCadence: raw });
+                        }
+                      }}
+                      className={cn(
+                        "h-8 w-full rounded-lg border border-input bg-transparent px-2.5 py-1 text-sm",
+                      )}
+                    >
+                      {VALID_CADENCES.map((c) => (
+                        <option key={c} value={c}>
+                          {CADENCE_LABELS[c]}
+                        </option>
+                      ))}
+                    </select>
+                  </label>
+
+                  <label className="block space-y-1">
+                    <span className="body-text-small text-muted-foreground">
+                      Price
+                    </span>
+                    <div className="flex items-center gap-2">
+                      <Input
+                        type="text"
+                        inputMode="decimal"
+                        aria-label="Price amount"
+                        value={priceCentsToDisplay(pkg.priceCents)}
+                        onChange={(e) => {
+                          const next = parsePriceInput(e.target.value);
+                          if (next === null) {
+                            if (e.target.value.trim() === "") {
+                              updatePackage(pkg.id, { priceCents: 0 });
+                            }
+                            return;
+                          }
+                          updatePackage(pkg.id, { priceCents: next });
+                        }}
+                        className="flex-1"
+                      />
+                      <Input
+                        type="text"
+                        aria-label="Currency"
+                        value={pkg.currency}
+                        maxLength={6}
+                        onChange={(e) =>
+                          updatePackage(pkg.id, {
+                            currency: e.target.value.toUpperCase(),
+                          })
+                        }
+                        className="w-20"
+                      />
+                    </div>
+                  </label>
+
+                  <label className="block space-y-1">
+                    <span className="body-text-small text-muted-foreground">
+                      Unit label (optional)
+                    </span>
+                    <Input
+                      type="text"
+                      value={pkg.unitLabel ?? ""}
+                      onChange={(e) =>
+                        updatePackage(pkg.id, {
+                          unitLabel:
+                            e.target.value.trim() === ""
+                              ? undefined
+                              : e.target.value,
+                        })
+                      }
+                      placeholder={CADENCE_LABELS[pkg.billingCadence]}
+                    />
+                  </label>
+
+                  <label className="col-span-full block space-y-1">
+                    <span className="body-text-small text-muted-foreground">
+                      Description
+                    </span>
+                    <textarea
+                      rows={2}
+                      value={pkg.description ?? ""}
+                      onChange={(e) =>
+                        updatePackage(pkg.id, {
+                          description:
+                            e.target.value.trim() === ""
+                              ? undefined
+                              : e.target.value,
+                        })
+                      }
+                      className="block w-full rounded-md border border-input bg-transparent px-3 py-2 text-sm"
+                    />
+                  </label>
+
+                  <label className="col-span-full block space-y-1">
+                    <span className="body-text-small text-muted-foreground">
+                      Features (one per line)
+                    </span>
+                    <textarea
+                      rows={3}
+                      value={(pkg.features ?? []).join("\n")}
+                      onChange={(e) => {
+                        const lines = e.target.value
+                          .split("\n")
+                          .map((line) => line.replace(/^[•\-\*]\s*/, ""));
+                        updatePackage(pkg.id, { features: lines });
+                      }}
+                      onBlur={(e) => {
+                        const cleaned = e.target.value
+                          .split("\n")
+                          .map((line) => line.trim())
+                          .filter((line) => line.length > 0);
+                        updatePackage(pkg.id, {
+                          features: cleaned.length > 0 ? cleaned : undefined,
+                        });
+                      }}
+                      className="block w-full rounded-md border border-input bg-transparent px-3 py-2 text-sm"
+                      placeholder={"Experienced engineer included\nFull signal chain\nKitchen & lounge access"}
+                    />
+                  </label>
+                </div>
+
+                <div className="mt-3 flex flex-wrap items-center gap-4">
+                  <label className="flex items-center gap-2 text-sm">
+                    <Switch
+                      checked={pkg.highlight}
+                      onCheckedChange={() => toggleHighlight(pkg.id)}
+                    />
+                    Recommended
+                  </label>
+                  <label className="flex items-center gap-2 text-sm">
+                    <Switch
+                      checked={pkg.isActive}
+                      onCheckedChange={(checked) =>
+                        updatePackage(pkg.id, { isActive: checked })
+                      }
+                    />
+                    Show on site
+                  </label>
+                </div>
+              </li>
+            ))}
+          </ul>
+        )}
+      </section>
+
       <CmsPublishToolbar
         section="pricing"
-        sectionLabel="pricing visibility"
+        sectionLabel="pricing"
         hasDraftOnServer={hasDraftOnServer}
         hasLocalEdits={hasLocalEdits}
-        publishedAt={section.publishedAt ?? null}
+        publishedAt={pricing.publishedAt ?? null}
         publishedByLabel={publishedByLabel}
         busy={busy}
         inlineError={inlineError}
         previewHref="/preview#services-pricing"
-        onSaveDraft={() =>
-          void runAction(
-            "Saving…",
-            convexMutationEffect(() =>
-              saveDraft({
-                section: "pricing",
-                content: { flags: source.flags },
-              }),
-            ),
-          )
-        }
+        onSaveDraft={() => void runAction("Saving…", saveDraftProgram)}
         onPublish={() => {
-          const publishOnce = convexMutationEffect(() =>
-            publish({ section: "pricing" }),
-          );
+          const publishOnce = convexMutationEffect(() => publish({}));
           const program = hasLocalEdits
-            ? pipe(
-                convexMutationEffect(() =>
-                  saveDraft({
-                    section: "pricing",
-                    content: { flags: source.flags },
-                  }),
-                ),
-                Effect.flatMap(() => publishOnce),
-              )
+            ? pipe(saveDraftProgram, Effect.flatMap(() => publishOnce))
             : publishOnce;
           return void runAction("Publishing…", program);
         }}

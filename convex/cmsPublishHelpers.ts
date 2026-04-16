@@ -1,6 +1,7 @@
 import type { MutationCtx } from "./_generated/server";
 import type { Doc, Id } from "./_generated/dataModel";
 import {
+  DEFAULT_PRICING_PACKAGES,
   PRICING_DEFAULTS,
   SETTINGS_DEFAULTS,
   cmsSnapshotsEqual,
@@ -40,7 +41,10 @@ async function initialSnapshotForSection(
     const legacyFlags = (legacy?.publishedSnapshot as SettingsSnapshot | undefined)
       ?.flags;
     if (legacyFlags) {
-      return { flags: legacyFlags } satisfies PricingSnapshot;
+      return {
+        flags: legacyFlags,
+        packages: DEFAULT_PRICING_PACKAGES,
+      } satisfies PricingSnapshot;
     }
     return PRICING_DEFAULTS;
   }
@@ -106,6 +110,60 @@ function collectPricingIssues(draft: PricingSnapshot): PublishIssue[] {
       message: "Pricing visibility flag must be a boolean.",
     });
   }
+
+  const packages = draft.packages ?? [];
+  const seenIds = new Set<string>();
+  for (let i = 0; i < packages.length; i++) {
+    const pkg = packages[i];
+    const base = `packages[${i}]`;
+    if (typeof pkg.id !== "string" || pkg.id.trim().length === 0) {
+      issues.push({
+        path: `${base}.id`,
+        message: "Each pricing package requires a stable id.",
+      });
+    } else if (seenIds.has(pkg.id)) {
+      issues.push({
+        path: `${base}.id`,
+        message: `Duplicate package id: ${pkg.id}`,
+      });
+    } else {
+      seenIds.add(pkg.id);
+    }
+
+    if (typeof pkg.name !== "string" || pkg.name.trim().length === 0) {
+      issues.push({
+        path: `${base}.name`,
+        message: "Display name is required.",
+      });
+    }
+
+    if (
+      typeof pkg.priceCents !== "number" ||
+      !Number.isFinite(pkg.priceCents) ||
+      pkg.priceCents < 0 ||
+      !Number.isInteger(pkg.priceCents)
+    ) {
+      issues.push({
+        path: `${base}.priceCents`,
+        message: "Price must be a non-negative whole-cent value.",
+      });
+    }
+
+    if (typeof pkg.currency !== "string" || pkg.currency.trim().length === 0) {
+      issues.push({
+        path: `${base}.currency`,
+        message: "Currency code is required (e.g. USD).",
+      });
+    }
+
+    if (typeof pkg.sortOrder !== "number" || !Number.isFinite(pkg.sortOrder)) {
+      issues.push({
+        path: `${base}.sortOrder`,
+        message: "Sort order must be a finite number.",
+      });
+    }
+  }
+
   return issues;
 }
 
