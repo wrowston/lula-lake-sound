@@ -3,6 +3,7 @@ import { v } from "convex/values";
 import {
   cmsSectionValidator,
   cmsSnapshotValidator,
+  gearScopeValidator,
   gearSpecsValidator,
 } from "./schema.shared";
 
@@ -59,7 +60,7 @@ export default defineSchema({
   }).index("by_singleton", ["singletonKey"]),
 
   gearCategories: defineTable({
-    scope: v.union(v.literal("draft"), v.literal("published")),
+    scope: gearScopeValidator,
     /** Client-generated stable id (not Convex `_id`). */
     stableId: v.string(),
     name: v.string(),
@@ -69,7 +70,7 @@ export default defineSchema({
     .index("by_scope_and_stableId", ["scope", "stableId"]),
 
   gearItems: defineTable({
-    scope: v.union(v.literal("draft"), v.literal("published")),
+    scope: gearScopeValidator,
     stableId: v.string(),
     /** References `gearCategories.stableId` for the same scope. */
     categoryStableId: v.string(),
