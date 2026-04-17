@@ -18,7 +18,8 @@ export type PricingPackage = {
     | "per_song"
     | "per_album"
     | "per_project"
-    | "flat";
+    | "flat"
+    | "custom";
   unitLabel?: string;
   highlight: boolean;
   sortOrder: number;

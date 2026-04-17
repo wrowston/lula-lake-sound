@@ -19,12 +19,17 @@ export const siteMetadataValidator = v.object({
 
 /**
  * Allowed billing cadences for a pricing package. `hourly` and `six_hour_block`
- * cover the studio's most common rate shapes; additional cadences are included
+ * cover the studio's most common rate shapes; additional presets are included
  * so mixing / mastering / production rows can describe their pricing naturally.
  *
+ * The `"custom"` variant lets the owner author any cadence string via the
+ * package's `unitLabel` field — the UI surfaces it as a "Custom…" option that
+ * pairs with the free-form unit label input, and publish validation requires
+ * `unitLabel` to be non-empty whenever `billingCadence === "custom"`.
+ *
  * Consumers should render a human label via `billingCadenceLabel` in
- * `cmsShared.ts` (or customize via the optional `unitLabel` override on the
- * package itself).
+ * `cmsShared.ts` (which returns the `unitLabel` for custom rows) or bypass it
+ * entirely by reading `unitLabel` directly.
  */
 export const pricingBillingCadenceValidator = v.union(
   v.literal("hourly"),
@@ -34,6 +39,7 @@ export const pricingBillingCadenceValidator = v.union(
   v.literal("per_album"),
   v.literal("per_project"),
   v.literal("flat"),
+  v.literal("custom"),
 );
 
 /**

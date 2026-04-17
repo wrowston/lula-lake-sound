@@ -161,6 +161,17 @@ function collectPricingIssues(draft: PricingSnapshot): PublishIssue[] {
         message: "Sort order must be a finite number.",
       });
     }
+
+    if (
+      pkg.billingCadence === "custom" &&
+      (typeof pkg.unitLabel !== "string" || pkg.unitLabel.trim().length === 0)
+    ) {
+      issues.push({
+        path: `${base}.unitLabel`,
+        message:
+          "Custom cadence requires a unit label (e.g. \"per weekend\").",
+      });
+    }
   }
 
   return issues;

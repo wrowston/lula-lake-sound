@@ -73,6 +73,39 @@ describe("collectPublishIssues(pricing)", () => {
     const issues = collectPublishIssues("pricing", snapshot);
     expect(issues).toEqual([]);
   });
+
+  test("custom cadence without unitLabel is an issue", () => {
+    const snapshot: PricingSnapshot = {
+      flags: { priceTabEnabled: true },
+      packages: [
+        {
+          ...validPackage(),
+          id: "pkg_custom",
+          billingCadence: "custom",
+        },
+      ],
+    };
+    const issues = collectPublishIssues("pricing", snapshot);
+    expect(issues.map((i) => i.path)).toEqual(
+      expect.arrayContaining(["packages[0].unitLabel"]),
+    );
+  });
+
+  test("custom cadence with unitLabel passes validation", () => {
+    const snapshot: PricingSnapshot = {
+      flags: { priceTabEnabled: true },
+      packages: [
+        {
+          ...validPackage(),
+          id: "pkg_custom_ok",
+          billingCadence: "custom",
+          unitLabel: "per weekend lockout",
+        },
+      ],
+    };
+    const issues = collectPublishIssues("pricing", snapshot);
+    expect(issues).toEqual([]);
+  });
 });
 
 describe("sanitizePricingPackages", () => {
@@ -94,6 +127,23 @@ describe("sanitizePricingPackages", () => {
       "not an object",
     ]);
     expect(sorted.map((p) => p.id)).toEqual(["pkg_1"]);
+  });
+
+  test("drops custom-cadence rows that lack a unitLabel", () => {
+    const sorted = sanitizePricingPackages([
+      {
+        ...validPackage(),
+        id: "custom_missing_label",
+        billingCadence: "custom",
+      },
+      {
+        ...validPackage(),
+        id: "custom_ok",
+        billingCadence: "custom",
+        unitLabel: "per lockout",
+      },
+    ]);
+    expect(sorted.map((p) => p.id)).toEqual(["custom_ok"]);
   });
 
   test("returns empty array for non-array input", () => {
@@ -119,5 +169,9 @@ describe("billingCadenceLabel", () => {
     expect(billingCadenceLabel("hourly")).toMatch(/hour/i);
     expect(billingCadenceLabel("six_hour_block")).toMatch(/6-hour/);
     expect(billingCadenceLabel("per_song")).toMatch(/song/);
+  });
+
+  test("returns empty string for custom so callers fall back to unitLabel", () => {
+    expect(billingCadenceLabel("custom")).toBe("");
   });
 });

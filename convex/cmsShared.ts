@@ -88,7 +88,13 @@ export function defaultSnapshotForSection(section: CmsSection): CmsSnapshot {
   return section === "settings" ? SETTINGS_DEFAULTS : PRICING_DEFAULTS;
 }
 
-/** Default user-facing label for each billing cadence. */
+/**
+ * Default user-facing label for each billing cadence.
+ *
+ * For the `"custom"` variant, callers should pass the package's `unitLabel`
+ * directly — this helper returns an empty string as a sentinel so ignoring
+ * the custom case is visible (never a plausible-but-wrong label).
+ */
 export function billingCadenceLabel(cadence: PricingBillingCadence): string {
   switch (cadence) {
     case "hourly":
@@ -105,6 +111,8 @@ export function billingCadenceLabel(cadence: PricingBillingCadence): string {
       return "per project";
     case "flat":
       return "flat rate";
+    case "custom":
+      return "";
   }
 }
 

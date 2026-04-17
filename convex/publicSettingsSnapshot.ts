@@ -27,6 +27,7 @@ const VALID_CADENCES = new Set<PricingPackage["billingCadence"]>([
   "per_album",
   "per_project",
   "flat",
+  "custom",
 ]);
 
 function isValidPackage(value: unknown): value is PricingPackage {
@@ -63,6 +64,12 @@ function isValidPackage(value: unknown): value is PricingPackage {
     typeof v.unitLabel !== "string"
   )
     return false;
+  if (
+    v.billingCadence === "custom" &&
+    (typeof v.unitLabel !== "string" || v.unitLabel.trim().length === 0)
+  ) {
+    return false;
+  }
   if (v.features !== undefined && v.features !== null) {
     if (!Array.isArray(v.features)) return false;
     if (!v.features.every((f) => typeof f === "string")) return false;

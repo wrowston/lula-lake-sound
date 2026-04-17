@@ -36,7 +36,8 @@ type BillingCadence =
   | "per_song"
   | "per_album"
   | "per_project"
-  | "flat";
+  | "flat"
+  | "custom";
 
 type PricingPackage = {
   id: string;
@@ -65,6 +66,7 @@ const VALID_CADENCES: readonly BillingCadence[] = [
   "per_album",
   "per_project",
   "flat",
+  "custom",
 ] as const;
 
 const CADENCE_LABELS: Record<BillingCadence, string> = {
@@ -75,6 +77,7 @@ const CADENCE_LABELS: Record<BillingCadence, string> = {
   per_album: "Per album",
   per_project: "Per project",
   flat: "Flat rate",
+  custom: "Custom…",
 };
 
 function isCadence(value: string): value is BillingCadence {
@@ -455,8 +458,26 @@ function PricingForm() {
                         value={pkg.billingCadence}
                         onChange={(e) => {
                           const raw = e.target.value;
-                          if (isCadence(raw)) {
-                            updatePackage(pkg.id, { billingCadence: raw });
+                          if (!isCadence(raw)) return;
+                          // Switching to a preset clears any custom unit
+                          // label so the preset's default label shows through.
+                          // Switching to custom preseeds unitLabel from the
+                          // previous preset so the user has a starting point.
+                          if (raw === "custom") {
+                            updatePackage(pkg.id, {
+                              billingCadence: raw,
+                              unitLabel:
+                                pkg.unitLabel && pkg.unitLabel.trim().length > 0
+                                  ? pkg.unitLabel
+                                  : CADENCE_LABELS[pkg.billingCadence]
+                                      .toLowerCase()
+                                      .replace(/…$/, ""),
+                            });
+                          } else {
+                            updatePackage(pkg.id, {
+                              billingCadence: raw,
+                              unitLabel: undefined,
+                            });
                           }
                         }}
                         className={cn(
@@ -515,7 +536,9 @@ function PricingForm() {
 
                   <label className="block space-y-1">
                     <span className="body-text-small text-muted-foreground">
-                      Unit label (optional)
+                      {pkg.billingCadence === "custom"
+                        ? "Custom cadence label"
+                        : "Unit label (optional)"}
                     </span>
                     <Input
                       type="text"
@@ -523,13 +546,35 @@ function PricingForm() {
                       onChange={(e) =>
                         updatePackage(pkg.id, {
                           unitLabel:
-                            e.target.value.trim() === ""
+                            e.target.value === ""
                               ? undefined
                               : e.target.value,
                         })
                       }
-                      placeholder={CADENCE_LABELS[pkg.billingCadence]}
+                      onBlur={(e) => {
+                        const trimmed = e.target.value.trim();
+                        if (trimmed !== (pkg.unitLabel ?? "")) {
+                          updatePackage(pkg.id, {
+                            unitLabel: trimmed === "" ? undefined : trimmed,
+                          });
+                        }
+                      }}
+                      placeholder={
+                        pkg.billingCadence === "custom"
+                          ? "e.g. per weekend lockout"
+                          : CADENCE_LABELS[pkg.billingCadence]
+                      }
+                      aria-invalid={
+                        pkg.billingCadence === "custom" &&
+                        (pkg.unitLabel ?? "").trim() === ""
+                      }
                     />
+                    {pkg.billingCadence === "custom" &&
+                    (pkg.unitLabel ?? "").trim() === "" ? (
+                      <p className="text-xs text-destructive">
+                        Required for custom cadence.
+                      </p>
+                    ) : null}
                   </label>
 
                   <label className="col-span-full block space-y-1">
