@@ -6,13 +6,13 @@ import {
 } from "@/lib/site-settings";
 
 interface ServicesAndPricingProps {
-  readonly packages?: PricingPackage[];
+  readonly packages: readonly PricingPackage[];
 }
 
 function sortedActivePackages(
-  packages: readonly PricingPackage[] | undefined,
+  packages: readonly PricingPackage[],
 ): PricingPackage[] {
-  if (!packages || packages.length === 0) return [];
+  if (packages.length === 0) return [];
   return [...packages]
     .filter((p) => p.isActive)
     .sort((a, b) => {
@@ -21,12 +21,47 @@ function sortedActivePackages(
     });
 }
 
+export function ServicesAndPricingSkeleton() {
+  return (
+    <section id="services-pricing" className="py-20 px-4 bg-sage relative">
+      <div className="absolute inset-0 opacity-10 bg-texture-stone" />
+      <div className="relative z-10 max-w-6xl mx-auto">
+        <div className="text-center mb-16 space-y-4">
+          <div className="h-10 max-w-md mx-auto rounded bg-washed-black/10 animate-pulse" />
+          <div className="h-5 max-w-2xl mx-auto rounded bg-washed-black/10 animate-pulse" />
+        </div>
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-8 mb-16">
+          {[0, 1, 2].map((i) => (
+            <div
+              key={i}
+              className="relative bg-white/60 border-2 border-forest/20 rounded-sm p-8 animate-pulse"
+            >
+              <div className="h-7 bg-washed-black/10 rounded mb-4" />
+              <div className="h-4 bg-washed-black/10 rounded mb-2" />
+              <div className="h-4 bg-washed-black/10 rounded w-4/5 mb-8" />
+              <div className="space-y-3 mb-8">
+                {[0, 1, 2].map((j) => (
+                  <div key={j} className="h-4 bg-washed-black/10 rounded" />
+                ))}
+              </div>
+              <div className="border-t border-forest/20 pt-6 mb-6">
+                <div className="h-8 bg-washed-black/10 rounded" />
+              </div>
+              <div className="h-11 bg-washed-black/10 rounded" />
+            </div>
+          ))}
+        </div>
+      </div>
+    </section>
+  );
+}
+
 export function ServicesAndPricing({ packages }: ServicesAndPricingProps) {
   const rows = sortedActivePackages(packages);
 
   return (
     <section id="services-pricing" className="py-20 px-4 bg-sage relative">
-      <div className="absolute inset-0 opacity-10 bg-texture-stone"></div>
+      <div className="absolute inset-0 opacity-10 bg-texture-stone" />
 
       <div className="relative z-10 max-w-6xl mx-auto">
         <div className="text-center mb-16">
@@ -55,7 +90,8 @@ export function ServicesAndPricing({ packages }: ServicesAndPricingProps) {
             }
           >
             {rows.map((pkg) => {
-              const unit = pkg.unitLabel ?? billingCadenceLabel(pkg.billingCadence);
+              const unit =
+                pkg.unitLabel ?? billingCadenceLabel(pkg.billingCadence);
               return (
                 <div
                   key={pkg.id}
@@ -88,7 +124,7 @@ export function ServicesAndPricing({ packages }: ServicesAndPricingProps) {
                     <ul className="space-y-3 mb-8">
                       {pkg.features.map((feature, index) => (
                         <li
-                          key={index}
+                          key={`${pkg.id}-f-${index}`}
                           className="flex items-start space-x-3"
                         >
                           <svg

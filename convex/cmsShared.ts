@@ -23,9 +23,9 @@ export const SETTINGS_DEFAULTS: SettingsSnapshot = {
 };
 
 /**
- * Default catalog shipped to brand-new deployments. Mirrors the legacy
- * hard-coded rates on `components/services-pricing.tsx` so the public site
- * renders the familiar pricing before the owner customizes anything.
+ * Default catalog shipped to brand-new deployments. Seeds the CMS so the
+ * marketing site can render familiar rates after the first publish; the
+ * public homepage reads published packages via `api.public.getPublishedPricingFlags`.
  */
 export const DEFAULT_PRICING_PACKAGES: PricingPackage[] = [
   {

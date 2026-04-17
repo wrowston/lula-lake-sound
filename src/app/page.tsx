@@ -1,10 +1,8 @@
-"use client";
-
-import { useQuery } from "convex/react";
+import { preloadQuery } from "convex/nextjs";
 import { api } from "../../convex/_generated/api";
-import { HomepageShell } from "@/components/homepage-shell";
+import { HomeClient } from "./home-client";
 
-export default function Home() {
-  const pricingFlags = useQuery(api.public.getPublishedPricingFlags);
-  return <HomepageShell pricingFlags={pricingFlags ?? null} />;
+export default async function Home() {
+  const preloadedPricing = await preloadQuery(api.public.getPublishedPricingFlags);
+  return <HomeClient preloadedPricing={preloadedPricing} />;
 }
