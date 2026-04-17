@@ -6,6 +6,37 @@ export type GearScope = "draft" | "published";
 type GearCategoryDoc = Doc<"gearCategories">;
 type GearItemDoc = Doc<"gearItems">;
 
+function compareBySortThenStableId(
+  a: { sort: number; stableId: string },
+  b: { sort: number; stableId: string },
+): number {
+  return a.sort - b.sort || a.stableId.localeCompare(b.stableId);
+}
+
+/**
+ * Groups gear items by category, sorts each group and categories by `sort` then
+ * `stableId`. Used by public gear reads and admin payloads so ordering stays in sync.
+ */
+export function buildSortedGearTreeGroups(
+  categories: GearCategoryDoc[],
+  items: GearItemDoc[],
+): Array<{ category: GearCategoryDoc; items: GearItemDoc[] }> {
+  const byCat = new Map<string, GearItemDoc[]>();
+  for (const it of items) {
+    const list = byCat.get(it.categoryStableId) ?? [];
+    list.push(it);
+    byCat.set(it.categoryStableId, list);
+  }
+  for (const list of byCat.values()) {
+    list.sort(compareBySortThenStableId);
+  }
+  const sortedCats = [...categories].sort(compareBySortThenStableId);
+  return sortedCats.map((category) => ({
+    category,
+    items: byCat.get(category.stableId) ?? [],
+  }));
+}
+
 function normalizeSpecsForCompare(specs: GearItemDoc["specs"]): unknown {
   if (specs.kind === "kv") {
     return {
