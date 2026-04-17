@@ -3,7 +3,7 @@ import {
   publishedPricingFromRows,
   publishedSettingsFromRow,
 } from "./publicSettingsSnapshot";
-import { buildSortedGearTreeGroups, loadGearDocs } from "./gearTree";
+import { loadGearDocs, mapSortedGearTree } from "./gearTree";
 import type { Doc } from "./_generated/dataModel";
 
 /**
@@ -66,24 +66,6 @@ type GearCategoryPublic = {
   items: GearItemPublic[];
 };
 
-function publishedGearTree(
-  categories: Doc<"gearCategories">[],
-  items: Doc<"gearItems">[],
-): GearCategoryPublic[] {
-  return buildSortedGearTreeGroups(categories, items).map(({ category: c, items: group }) => ({
-    stableId: c.stableId,
-    name: c.name,
-    sort: c.sort,
-    items: group.map((i) => ({
-      stableId: i.stableId,
-      name: i.name,
-      sort: i.sort,
-      specs: i.specs,
-      ...(i.url !== undefined ? { url: i.url } : {}),
-    })),
-  }));
-}
-
 /**
  * Published studio gear only (INF-86). Anonymous; reads `scope === "published"`.
  */
@@ -91,6 +73,14 @@ export const getPublishedGear = query({
   args: {},
   handler: async (ctx) => {
     const { categories, items } = await loadGearDocs(ctx, "published");
-    return { categories: publishedGearTree(categories, items) };
+    return {
+      categories: mapSortedGearTree<GearItemPublic>(categories, items, (i) => ({
+        stableId: i.stableId,
+        name: i.name,
+        sort: i.sort,
+        specs: i.specs,
+        ...(i.url !== undefined ? { url: i.url } : {}),
+      })),
+    };
   },
 });

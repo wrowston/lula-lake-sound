@@ -37,6 +37,33 @@ export function buildSortedGearTreeGroups(
   }));
 }
 
+export type SortedGearCategoryRow<T> = {
+  stableId: string;
+  name: string;
+  sort: number;
+  items: T[];
+};
+
+/**
+ * Group items by category, sort categories and items by `sort` then `stableId`,
+ * and map each item through `mapItem`. Used by public site reads and admin payloads
+ * so ordering rules stay in one place.
+ */
+export function mapSortedGearTree<T>(
+  categories: GearCategoryDoc[],
+  items: GearItemDoc[],
+  mapItem: (item: GearItemDoc) => T,
+): SortedGearCategoryRow<T>[] {
+  return buildSortedGearTreeGroups(categories, items).map(
+    ({ category: c, items: group }) => ({
+      stableId: c.stableId,
+      name: c.name,
+      sort: c.sort,
+      items: group.map(mapItem),
+    }),
+  );
+}
+
 function normalizeSpecsForCompare(specs: GearItemDoc["specs"]): unknown {
   if (specs.kind === "kv") {
     return {

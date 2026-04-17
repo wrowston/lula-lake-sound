@@ -17,11 +17,11 @@ import {
 } from "../_generated/server";
 import { gearSpecsValidator } from "../schema.shared";
 import {
-  buildSortedGearTreeGroups,
   copyGearScope,
   ensureGearMeta,
   gearDraftMatchesPublished,
   loadGearDocs,
+  mapSortedGearTree,
 } from "../gearTree";
 import { requireCmsOwner } from "../lib/auth";
 import { cmsPublishValidationFailed, cmsValidationError } from "../errors";
@@ -128,18 +128,13 @@ function toPayload(
   categories: Doc<"gearCategories">[],
   items: Doc<"gearItems">[],
 ): GearCategoryPayload[] {
-  return buildSortedGearTreeGroups(categories, items).map(({ category: c, items: group }) => ({
-    stableId: c.stableId,
-    name: c.name,
-    sort: c.sort,
-    items: group.map((i) => ({
-      stableId: i.stableId,
-      categoryStableId: i.categoryStableId,
-      name: i.name,
-      sort: i.sort,
-      specs: i.specs,
-      url: i.url ?? null,
-    })),
+  return mapSortedGearTree<GearItemPayload>(categories, items, (i) => ({
+    stableId: i.stableId,
+    categoryStableId: i.categoryStableId,
+    name: i.name,
+    sort: i.sort,
+    specs: i.specs,
+    url: i.url ?? null,
   }));
 }
 
