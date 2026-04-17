@@ -1,7 +1,6 @@
 import type { MutationCtx } from "./_generated/server";
 import type { Doc, Id } from "./_generated/dataModel";
 import {
-  DEFAULT_PRICING_PACKAGES,
   PRICING_DEFAULTS,
   SETTINGS_DEFAULTS,
   cmsSnapshotsEqual,
@@ -30,7 +29,10 @@ export async function getSectionRow(
  *
  * For `pricing`, we opportunistically backfill from any legacy `flags`
  * stored on the existing `settings` row so the first write doesn’t reset
- * the user’s previously-published value.
+ * the user’s previously-published value. Packages always start empty so
+ * that creating the row from a draft save never leaks default packages
+ * to the public site — the owner must explicitly publish to populate
+ * `packages`.
  */
 async function initialSnapshotForSection(
   ctx: MutationCtx,
@@ -40,13 +42,10 @@ async function initialSnapshotForSection(
     const legacy = await getSectionRow(ctx, "settings");
     const legacyFlags = (legacy?.publishedSnapshot as SettingsSnapshot | undefined)
       ?.flags;
-    if (legacyFlags) {
-      return {
-        flags: legacyFlags,
-        packages: DEFAULT_PRICING_PACKAGES,
-      } satisfies PricingSnapshot;
-    }
-    return PRICING_DEFAULTS;
+    return {
+      flags: legacyFlags ?? PRICING_DEFAULTS.flags,
+      packages: [],
+    } satisfies PricingSnapshot;
   }
   return SETTINGS_DEFAULTS;
 }

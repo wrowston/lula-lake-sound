@@ -63,10 +63,11 @@ function toListShape(
   if (!row) {
     return {
       flags: PRICING_DEFAULTS.flags,
+      // Drafts get the default catalog as a starting point for the editor;
+      // the public/published view stays empty until the owner publishes,
+      // matching `publishedPricingFromRows`.
       packages:
-        which === "draft"
-          ? [...DEFAULT_PRICING_PACKAGES]
-          : [...DEFAULT_PRICING_PACKAGES],
+        which === "draft" ? [...DEFAULT_PRICING_PACKAGES] : [],
       hasDraftChanges: false,
       publishedAt: null,
       publishedBy: null,

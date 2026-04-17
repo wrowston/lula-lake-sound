@@ -31,27 +31,13 @@ export type PricingFlags = {
   packages?: PricingPackage[];
 };
 
-/** Default display label for each billing cadence. */
-export function billingCadenceLabel(
-  cadence: PricingPackage["billingCadence"],
-): string {
-  switch (cadence) {
-    case "hourly":
-      return "per hour";
-    case "six_hour_block":
-      return "per 6-hour block";
-    case "daily":
-      return "per day";
-    case "per_song":
-      return "per song";
-    case "per_album":
-      return "per album";
-    case "per_project":
-      return "per project";
-    case "flat":
-      return "flat rate";
-  }
-}
+/**
+ * Default display label for each billing cadence.
+ *
+ * Re-exported from `convex/cmsShared.ts` so the convex backend tests and the
+ * Next.js frontend share a single source of truth for cadence labels.
+ */
+export { billingCadenceLabel } from "@convex/cmsShared";
 
 /** Format a package's price as a short display string (`$60`, `$400.00`). */
 export function formatPrice(
