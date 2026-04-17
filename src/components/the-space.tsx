@@ -1,4 +1,4 @@
-import { BrandButton as Button } from "@/components/ui/brand-button";
+import { Button } from "@/components/ui/button";
 import Image from "next/image";
 import { useEffect, useState } from "react";
 import { getStudioImages, type StudioImage } from "@/lib/storage";
@@ -119,8 +119,8 @@ function StudioGallery() {
       </div>
 
       {/* Gallery description */}
-      <div className="text-center mt-8 max-w-xl mx-auto">
-        <p className="body-text-small text-ivory/50">
+      <div className="mt-8 flex w-full flex-col items-center text-center">
+        <p className="body-text-small w-full max-w-xl text-ivory/50">
           Carefully designed and acoustically treated to capture the perfect sound for your musical vision.
         </p>
       </div>
@@ -134,14 +134,14 @@ export function TheSpace() {
       <div className="absolute inset-0 opacity-30 bg-texture-stone" />
 
       <div className="relative z-10 max-w-6xl mx-auto">
-        {/* Section header */}
-        <div className="text-center mb-16 reveal">
-          <p className="label-text text-sand/60 mb-4">Explore</p>
-          <h2 className="headline-primary text-3xl md:text-4xl lg:text-5xl text-warm-white mb-6">
+        {/* Section header — flex centers the max-width copy block on all viewports */}
+        <div className="mb-16 flex w-full flex-col items-center text-center reveal">
+          <p className="label-text mb-4 text-sand/60">Explore</p>
+          <h2 className="headline-primary mb-6 text-3xl text-warm-white md:text-4xl lg:text-5xl">
             The Space
           </h2>
-          <div className="section-rule max-w-xs mx-auto mb-8" />
-          <p className="body-text text-lg text-ivory/60 max-w-2xl mx-auto">
+          <div className="section-rule mb-8 w-full max-w-xs" />
+          <p className="body-text w-full max-w-2xl text-lg text-ivory/60">
             Step inside our carefully designed recording facility where world-class equipment
             meets natural inspiration. Every room is optimized for capturing the perfect
             sound while maintaining the comfort that fuels creativity.
@@ -152,18 +152,19 @@ export function TheSpace() {
         <StudioGallery />
 
         {/* CTA */}
-        <div className="text-center mt-16 reveal reveal-delay-3 py-12 border-t border-b border-sand/10">
-          <h3 className="headline-secondary text-2xl text-sand mb-4">
+        <div className="mt-16 flex w-full flex-col items-center border-t border-b border-sand/10 py-12 text-center reveal reveal-delay-3">
+          <h3 className="headline-secondary mb-4 text-2xl text-sand">
             Experience the Studio
           </h3>
-          <p className="body-text text-ivory/50 mb-8 max-w-xl mx-auto">
+          <p className="body-text mb-8 w-full max-w-xl text-ivory/50">
             Schedule a studio tour or start planning your recording session.
             We&apos;d love to show you around and discuss how our space can serve your vision.
           </p>
-          <div className="flex flex-col sm:flex-row gap-4 justify-center">
+          <div className="flex w-full flex-col items-center gap-4 sm:w-auto sm:flex-row sm:justify-center">
             <Button
-              variant="primary"
-              size="md"
+              variant="default"
+              size="lg"
+              className="h-10 px-6"
               onClick={() =>
                 document.getElementById("artist-inquiries")?.scrollIntoView({ behavior: "smooth" })
               }
@@ -172,7 +173,8 @@ export function TheSpace() {
             </Button>
             <Button
               variant="outline"
-              size="md"
+              size="lg"
+              className="h-10 px-6"
               onClick={() =>
                 document.getElementById("equipment-specs")?.scrollIntoView({ behavior: "smooth" })
               }

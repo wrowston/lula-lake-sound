@@ -1,4 +1,4 @@
-import { BrandButton as Button } from "@/components/ui/brand-button";
+import { Button } from "@/components/ui/button";
 
 // Audio portfolio data - in a real implementation, this would come from a CMS or database
 const AUDIO_SAMPLES = [
@@ -95,6 +95,7 @@ export function AudioPortfolio() {
           <Button 
             variant="outline" 
             size="lg"
+            className="h-10 px-6"
             onClick={() => document.getElementById('artist-inquiries')?.scrollIntoView({ behavior: 'smooth' })}
           >
             START YOUR PROJECT

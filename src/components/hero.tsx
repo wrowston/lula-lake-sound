@@ -1,5 +1,5 @@
 import Image from "next/image";
-import { BrandButton as Button } from "@/components/ui/brand-button";
+import { Button } from "@/components/ui/button";
 
 interface HeroProps {
   readonly logoScale: number;
@@ -28,9 +28,9 @@ export function Hero({ logoScale }: HeroProps) {
       </div>
 
       {/* Content */}
-      <div className="relative z-10 w-full max-w-6xl mx-auto px-6 md:px-12 py-20 flex flex-col md:flex-row items-center min-h-screen">
+      <div className="relative z-10 w-full max-w-6xl mx-auto px-6 md:px-12 pt-20 pb-32 sm:pb-28 md:py-20 flex flex-col md:flex-row items-stretch md:items-center min-h-screen">
         {/* Logo — right on desktop, top on mobile */}
-        <div className="w-full md:w-1/2 flex justify-center md:order-2 mb-12 md:mb-0">
+        <div className="w-full md:w-1/2 flex shrink-0 justify-center md:order-2 mb-12 md:mb-0">
           <Image
             src="/lula-lake-logo.png"
             alt="Lula Lake Sound Logo"
@@ -46,8 +46,9 @@ export function Hero({ logoScale }: HeroProps) {
         </div>
 
         {/* Hero Text — left on desktop, bottom on mobile */}
-        <div className="w-full md:w-1/2 md:pr-12 md:order-1 text-center md:text-left">
-          <div className="space-y-8 md:space-y-10">
+        <div className="w-full min-w-0 md:w-1/2 md:pr-12 md:order-1 text-center md:text-left">
+          {/* Narrow screens: constrain + center the whole copy block; md+: full column width */}
+          <div className="mx-auto w-full max-w-lg space-y-8 md:mx-0 md:max-w-none md:space-y-10">
             <p className="label-text text-sand/80 tracking-widest">
               Chattanooga, TN
             </p>
@@ -58,16 +59,17 @@ export function Hero({ logoScale }: HeroProps) {
               <span className="text-sand italic">Creative Refuge</span>
             </h1>
 
-            <p className="body-text text-lg text-ivory/70 max-w-lg leading-relaxed">
+            <p className="body-text text-lg text-ivory/70 leading-relaxed md:max-w-lg">
               Nestled in serene mountains just outside of Chattanooga, TN, Lula Lake Sound recording studio
               offers artists a space where state-of-the-art equipment, comfortable accommodations,
               and breathtaking surroundings converge to fuel your sonic vision.
             </p>
 
-            <div className="pt-2">
+            <div className="flex justify-center pt-2 md:justify-start">
               <Button
                 variant="outline"
                 size="lg"
+                className="h-10 px-6"
                 onClick={() =>
                   document
                     .getElementById("artist-inquiries")
