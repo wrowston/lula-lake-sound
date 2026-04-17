@@ -140,7 +140,7 @@ export function TheSpace() {
           <h2 className="headline-primary mb-6 text-3xl text-warm-white md:text-4xl lg:text-5xl">
             The Space
           </h2>
-          <div className="section-rule mb-8 max-w-xs" />
+          <div className="section-rule mb-8 w-full max-w-xs" />
           <p className="body-text w-full max-w-2xl text-lg text-ivory/60">
             Step inside our carefully designed recording facility where world-class equipment
             meets natural inspiration. Every room is optimized for capturing the perfect
