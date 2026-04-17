@@ -170,6 +170,12 @@ function sortItems(items: GearItemPayload[]): GearItemPayload[] {
   );
 }
 
+/** Next sort for a new row at the end; avoids colliding with gaps after deletes. */
+function nextAppendSort(sorts: readonly number[]): number {
+  if (sorts.length === 0) return 0;
+  return Math.max(...sorts) + 1;
+}
+
 function sequentialEffects(
   effects: Array<Effect.Effect<unknown, CmsAppError>>,
 ): Effect.Effect<void, CmsAppError> {
@@ -315,7 +321,7 @@ function GearEditorForm() {
         putCategory({
           stableId: categorySheet.stableId,
           name,
-          sort: tree.length,
+          sort: nextAppendSort(tree.map((c) => c.sort)),
         }),
       );
       const ok = await runAction("Saving…", program);
@@ -337,7 +343,7 @@ function GearEditorForm() {
         toast.success("Category updated.");
       }
     }
-  }, [categorySheet, data, putCategory, runAction, tree.length]);
+  }, [categorySheet, data, putCategory, runAction, tree]);
 
   const moveCategory = useCallback(
     async (stableId: string, direction: -1 | 1) => {
@@ -375,7 +381,9 @@ function GearEditorForm() {
 
   const openCreateItem = useCallback((categoryStableId: string) => {
     const cat = tree.find((c) => c.stableId === categoryStableId);
-    const sort = cat ? sortItems(cat.items).length : 0;
+    const sort = cat
+      ? nextAppendSort(sortItems(cat.items).map((i) => i.sort))
+      : 0;
     setItemSheet({
       mode: "create",
       stableId: generateItemId(),
