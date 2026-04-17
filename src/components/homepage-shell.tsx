@@ -8,7 +8,7 @@ import { EquipmentSpecs } from "@/components/equipment-specs";
 import { AmenitiesNearby } from "@/components/amenities-nearby";
 import { FAQ } from "@/components/faq";
 import { ArtistInquiries } from "@/components/artist-inquiries";
-import { ServicesAndPricing } from "@/components/services-pricing";
+import { MarketingPricingSection } from "@/components/dynamic-pricing";
 import type { PricingFlags } from "@/lib/site-settings";
 
 function calculateLogoScale(scrollY: number): number {
@@ -16,7 +16,8 @@ function calculateLogoScale(scrollY: number): number {
 }
 
 interface HomepageShellProps {
-  readonly pricingFlags: PricingFlags | null;
+  /** `undefined` while the client is still subscribing (preview only if not preloaded). */
+  readonly pricingFlags: PricingFlags | null | undefined;
   readonly banner?: React.ReactNode;
 }
 
@@ -58,20 +59,21 @@ export function HomepageShell({ pricingFlags, banner }: HomepageShellProps) {
     };
   }, []);
 
-  const showPricing = pricingFlags?.flags.priceTabEnabled ?? false;
-  const pricingPackages = pricingFlags?.packages ?? [];
   const logoScale = calculateLogoScale(scrollY);
+  const showPricing =
+    pricingFlags === undefined ||
+    (pricingFlags !== null && pricingFlags.flags.priceTabEnabled === true);
 
   return (
     <div ref={containerRef} className="min-h-screen bg-washed-black relative grain-overlay">
       {banner}
-      <Header scrollY={scrollY} />
+      <Header scrollY={scrollY} showPricing={showPricing} />
       <Hero logoScale={logoScale} />
 
       <div className="relative z-10">
         <TheSpace />
         <EquipmentSpecs />
-        {showPricing && <ServicesAndPricing packages={pricingPackages} />}
+        <MarketingPricingSection pricingFlags={pricingFlags} />
         <AmenitiesNearby />
         <FAQ />
         <ArtistInquiries />
