@@ -20,6 +20,7 @@ import {
   ensureGearMeta,
   gearDraftMatchesPublished,
   loadGearDocs,
+  mapSortedGearTree,
 } from "../gearTree";
 import { requireCmsOwner } from "../lib/auth";
 import { cmsPublishValidationFailed, cmsValidationError } from "../errors";
@@ -126,30 +127,13 @@ function toPayload(
   categories: Doc<"gearCategories">[],
   items: Doc<"gearItems">[],
 ): GearCategoryPayload[] {
-  const byCat = new Map<string, Doc<"gearItems">[]>();
-  for (const it of items) {
-    const list = byCat.get(it.categoryStableId) ?? [];
-    list.push(it);
-    byCat.set(it.categoryStableId, list);
-  }
-  for (const list of byCat.values()) {
-    list.sort((a, b) => a.sort - b.sort || a.stableId.localeCompare(b.stableId));
-  }
-  const sortedCats = [...categories].sort(
-    (a, b) => a.sort - b.sort || a.stableId.localeCompare(b.stableId),
-  );
-  return sortedCats.map((c) => ({
-    stableId: c.stableId,
-    name: c.name,
-    sort: c.sort,
-    items: (byCat.get(c.stableId) ?? []).map((i) => ({
-      stableId: i.stableId,
-      categoryStableId: i.categoryStableId,
-      name: i.name,
-      sort: i.sort,
-      specs: i.specs,
-      url: i.url ?? null,
-    })),
+  return mapSortedGearTree<GearItemPayload>(categories, items, (i) => ({
+    stableId: i.stableId,
+    categoryStableId: i.categoryStableId,
+    name: i.name,
+    sort: i.sort,
+    specs: i.specs,
+    url: i.url ?? null,
   }));
 }
 

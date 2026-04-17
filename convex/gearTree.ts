@@ -6,6 +6,43 @@ export type GearScope = "draft" | "published";
 type GearCategoryDoc = Doc<"gearCategories">;
 type GearItemDoc = Doc<"gearItems">;
 
+export type SortedGearCategoryRow<T> = {
+  stableId: string;
+  name: string;
+  sort: number;
+  items: T[];
+};
+
+/**
+ * Group items by category, sort categories and items by `sort` then `stableId`,
+ * and map each item through `mapItem`. Used by public site reads and admin payloads
+ * so ordering rules stay in one place.
+ */
+export function mapSortedGearTree<T>(
+  categories: GearCategoryDoc[],
+  items: GearItemDoc[],
+  mapItem: (item: GearItemDoc) => T,
+): SortedGearCategoryRow<T>[] {
+  const byCat = new Map<string, GearItemDoc[]>();
+  for (const it of items) {
+    const list = byCat.get(it.categoryStableId) ?? [];
+    list.push(it);
+    byCat.set(it.categoryStableId, list);
+  }
+  for (const list of byCat.values()) {
+    list.sort((a, b) => a.sort - b.sort || a.stableId.localeCompare(b.stableId));
+  }
+  const sortedCats = [...categories].sort(
+    (a, b) => a.sort - b.sort || a.stableId.localeCompare(b.stableId),
+  );
+  return sortedCats.map((c) => ({
+    stableId: c.stableId,
+    name: c.name,
+    sort: c.sort,
+    items: (byCat.get(c.stableId) ?? []).map(mapItem),
+  }));
+}
+
 function normalizeSpecsForCompare(specs: GearItemDoc["specs"]): unknown {
   if (specs.kind === "kv") {
     return {
