@@ -3,6 +3,7 @@ import { v } from "convex/values";
 import {
   cmsSectionValidator,
   cmsSnapshotValidator,
+  gearSpecsValidator,
 } from "./schema.shared";
 
 // Draft/publish model: see docs/cms-publish.md (INF-70).
@@ -42,4 +43,46 @@ export default defineSchema({
     draftSnapshot: v.optional(cmsSnapshotValidator),
     hasDraftChanges: v.boolean(),
   }).index("by_section", ["section"]),
+
+  /**
+   * Studio gear CMS (INF-86): separate rows per scope so we can index by category
+   * and sort. Publish replaces all `published` rows in one transaction; discard
+   * copies `published` → `draft` after clearing draft.
+   */
+  gearMeta: defineTable({
+    singletonKey: v.literal("default"),
+    hasDraftChanges: v.boolean(),
+    publishedAt: v.union(v.number(), v.null()),
+    publishedBy: v.optional(v.string()),
+    updatedAt: v.number(),
+    updatedBy: v.optional(v.string()),
+  }).index("by_singleton", ["singletonKey"]),
+
+  gearCategories: defineTable({
+    scope: v.union(v.literal("draft"), v.literal("published")),
+    /** Client-generated stable id (not Convex `_id`). */
+    stableId: v.string(),
+    name: v.string(),
+    sort: v.number(),
+  })
+    .index("by_scope_and_sort", ["scope", "sort"])
+    .index("by_scope_and_stableId", ["scope", "stableId"]),
+
+  gearItems: defineTable({
+    scope: v.union(v.literal("draft"), v.literal("published")),
+    stableId: v.string(),
+    /** References `gearCategories.stableId` for the same scope. */
+    categoryStableId: v.string(),
+    name: v.string(),
+    sort: v.number(),
+    specs: gearSpecsValidator,
+    url: v.optional(v.string()),
+  })
+    .index("by_scope", ["scope"])
+    .index("by_scope_and_category_and_sort", [
+      "scope",
+      "categoryStableId",
+      "sort",
+    ])
+    .index("by_scope_and_stableId", ["scope", "stableId"]),
 });

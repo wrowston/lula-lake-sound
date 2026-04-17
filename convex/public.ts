@@ -3,6 +3,8 @@ import {
   publishedPricingFromRows,
   publishedSettingsFromRow,
 } from "./publicSettingsSnapshot";
+import { loadGearDocs } from "./gearTree";
+import type { Doc } from "./_generated/dataModel";
 
 /**
  * **Public (anonymous) site reads** — published snapshot only.
@@ -46,5 +48,61 @@ export const getPublishedPricingFlags = query({
     ]);
 
     return publishedPricingFromRows(pricingRow, settingsRow);
+  },
+});
+
+type GearItemPublic = {
+  stableId: string;
+  name: string;
+  sort: number;
+  specs: Doc<"gearItems">["specs"];
+  url?: string;
+};
+
+type GearCategoryPublic = {
+  stableId: string;
+  name: string;
+  sort: number;
+  items: GearItemPublic[];
+};
+
+function publishedGearTree(
+  categories: Doc<"gearCategories">[],
+  items: Doc<"gearItems">[],
+): GearCategoryPublic[] {
+  const byCat = new Map<string, Doc<"gearItems">[]>();
+  for (const it of items) {
+    const list = byCat.get(it.categoryStableId) ?? [];
+    list.push(it);
+    byCat.set(it.categoryStableId, list);
+  }
+  for (const list of byCat.values()) {
+    list.sort((a, b) => a.sort - b.sort || a.stableId.localeCompare(b.stableId));
+  }
+  const sortedCats = [...categories].sort(
+    (a, b) => a.sort - b.sort || a.stableId.localeCompare(b.stableId),
+  );
+  return sortedCats.map((c) => ({
+    stableId: c.stableId,
+    name: c.name,
+    sort: c.sort,
+    items: (byCat.get(c.stableId) ?? []).map((i) => ({
+      stableId: i.stableId,
+      name: i.name,
+      sort: i.sort,
+      specs: i.specs,
+      ...(i.url !== undefined ? { url: i.url } : {}),
+    })),
+  }));
+}
+
+/**
+ * Published studio gear only (INF-86). Anonymous; reads `scope === "published"`.
+ */
+export const getPublishedGear = query({
+  args: {},
+  handler: async (ctx) => {
+    const { categories, items } = await loadGearDocs(ctx, "published");
+    return { categories: publishedGearTree(categories, items) };
   },
 });

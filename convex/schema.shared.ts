@@ -104,3 +104,20 @@ export const cmsSectionValidator = v.union(
   v.literal("settings"),
   v.literal("pricing"),
 );
+
+/** Draft vs published rows in `gearCategories` / `gearItems` (INF-86). */
+export const gearScopeValidator = v.union(
+  v.literal("draft"),
+  v.literal("published"),
+);
+
+/**
+ * Item specs: markdown string or structured key/value pairs.
+ */
+export const gearSpecsValidator = v.union(
+  v.object({ kind: v.literal("markdown"), text: v.string() }),
+  v.object({
+    kind: v.literal("kv"),
+    pairs: v.array(v.object({ key: v.string(), value: v.string() })),
+  }),
+);

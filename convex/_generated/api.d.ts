@@ -8,6 +8,7 @@
  * @module
  */
 
+import type * as admin_gear from "../admin/gear.js";
 import type * as admin_pricing from "../admin/pricing.js";
 import type * as admin_publish from "../admin/publish.js";
 import type * as admin_siteSettings from "../admin/siteSettings.js";
@@ -15,6 +16,8 @@ import type * as cms from "../cms.js";
 import type * as cmsPublishHelpers from "../cmsPublishHelpers.js";
 import type * as cmsShared from "../cmsShared.js";
 import type * as errors from "../errors.js";
+import type * as gearEquipmentSeed from "../gearEquipmentSeed.js";
+import type * as gearTree from "../gearTree.js";
 import type * as inquiries from "../inquiries.js";
 import type * as lib_auth from "../lib/auth.js";
 import type * as lib_sentryConvex from "../lib/sentryConvex.js";
@@ -33,6 +36,7 @@ import type {
 } from "convex/server";
 
 declare const fullApi: ApiFromModules<{
+  "admin/gear": typeof admin_gear;
   "admin/pricing": typeof admin_pricing;
   "admin/publish": typeof admin_publish;
   "admin/siteSettings": typeof admin_siteSettings;
@@ -40,6 +44,8 @@ declare const fullApi: ApiFromModules<{
   cmsPublishHelpers: typeof cmsPublishHelpers;
   cmsShared: typeof cmsShared;
   errors: typeof errors;
+  gearEquipmentSeed: typeof gearEquipmentSeed;
+  gearTree: typeof gearTree;
   inquiries: typeof inquiries;
   "lib/auth": typeof lib_auth;
   "lib/sentryConvex": typeof lib_sentryConvex;
