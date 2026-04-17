@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { BrandButton as Button } from "@/components/ui/brand-button";
+import { Button } from "@/components/ui/button";
 
 // Mock availability data - in real implementation, this would come from a booking system
 const AVAILABILITY_MONTHS = [
@@ -154,7 +154,7 @@ export function BookingAvailability() {
               <div className="space-y-3">
                 <Button 
                   variant="outline" 
-                  className="w-full justify-between"
+                  className="w-full h-10 justify-between"
                   onClick={() => document.getElementById('artist-inquiries')?.scrollIntoView({ behavior: 'smooth' })}
                 >
                   <span>Single Day Recording</span>
@@ -162,7 +162,7 @@ export function BookingAvailability() {
                 </Button>
                 <Button 
                   variant="outline" 
-                  className="w-full justify-between"
+                  className="w-full h-10 justify-between"
                   onClick={() => document.getElementById('artist-inquiries')?.scrollIntoView({ behavior: 'smooth' })}
                 >
                   <span>3-Day Album Package</span>
@@ -170,7 +170,7 @@ export function BookingAvailability() {
                 </Button>
                 <Button 
                   variant="outline" 
-                  className="w-full justify-between"
+                  className="w-full h-10 justify-between"
                   onClick={() => document.getElementById('artist-inquiries')?.scrollIntoView({ behavior: 'smooth' })}
                 >
                   <span>Mixing & Mastering</span>
@@ -187,8 +187,8 @@ export function BookingAvailability() {
               </p>
               <div className="space-y-4">
                 <Button 
-                  variant="primary" 
-                  className="w-full"
+                  variant="default" 
+                  className="w-full h-10"
                   onClick={() => document.getElementById('artist-inquiries')?.scrollIntoView({ behavior: 'smooth' })}
                 >
                   START PROJECT INQUIRY

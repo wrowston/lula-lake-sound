@@ -2,6 +2,7 @@
 
 import Image from "next/image";
 import { useState } from "react";
+import { Button } from "@/components/ui/button";
 
 export function ArtistInquiries() {
   const [formData, setFormData] = useState({
@@ -237,13 +238,15 @@ export function ArtistInquiries() {
 
             {/* Submit Button */}
             <div className="text-center pt-4">
-              <button
+              <Button
                 type="submit"
+                variant="default"
+                size="lg"
+                className="h-10 px-8"
                 disabled={isSubmitting}
-                className="label-text px-12 py-4 border border-sand/40 text-sand hover:bg-sand hover:text-washed-black transition-all duration-500 disabled:opacity-30 disabled:cursor-not-allowed"
               >
-                {isSubmitting ? "Sending..." : "Send Inquiry"}
-              </button>
+                {isSubmitting ? "Sending…" : "Send Inquiry"}
+              </Button>
             </div>
           </form>
 

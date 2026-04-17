@@ -1,6 +1,8 @@
 "use client";
 
 import { useState } from "react";
+import { Button, buttonVariants } from "@/components/ui/button";
+import { cn } from "@/lib/utils";
 
 const FAQ_CATEGORIES = [
   {
@@ -140,18 +142,23 @@ export function FAQ() {
           <div className="flex flex-col sm:flex-row gap-4 justify-center">
             <a
               href="mailto:info@lulalakesound.com"
-              className="label-text inline-flex items-center justify-center px-7 py-3 bg-sand text-washed-black hover:bg-warm-white transition-colors duration-300"
+              className={cn(
+                buttonVariants({ variant: "default", size: "lg" }),
+                "h-10 px-6",
+              )}
             >
               Email Us
             </a>
-            <button
+            <Button
+              variant="outline"
+              size="lg"
+              className="h-10 px-6"
               onClick={() =>
                 document.getElementById("artist-inquiries")?.scrollIntoView({ behavior: "smooth" })
               }
-              className="label-text inline-flex items-center justify-center px-7 py-3 border border-sand/40 text-sand hover:bg-sand/10 hover:border-sand/60 transition-all duration-300"
             >
               Send Inquiry
-            </button>
+            </Button>
           </div>
         </div>
       </div>

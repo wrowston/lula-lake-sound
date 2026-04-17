@@ -1,4 +1,4 @@
-import { BrandButton as Button } from "@/components/ui/brand-button";
+import { Button } from "@/components/ui/button";
 import {
   billingCadenceLabel,
   formatPrice,
@@ -174,8 +174,8 @@ export function ServicesAndPricing({ packages }: ServicesAndPricingProps) {
                   </div>
 
                   <Button
-                    variant={pkg.highlight ? "primary" : "outline"}
-                    className="w-full"
+                    variant={pkg.highlight ? "default" : "outline"}
+                    className="w-full h-10"
                     onClick={() =>
                       document
                         .getElementById("artist-inquiries")
@@ -202,6 +202,7 @@ export function ServicesAndPricing({ packages }: ServicesAndPricingProps) {
           <Button
             variant="outline"
             size="lg"
+            className="h-10 px-6"
             onClick={() =>
               document
                 .getElementById("artist-inquiries")

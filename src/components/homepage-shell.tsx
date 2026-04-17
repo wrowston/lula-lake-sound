@@ -65,7 +65,7 @@ export function HomepageShell({ pricingFlags, banner }: HomepageShellProps) {
     (pricingFlags !== null && pricingFlags.flags.priceTabEnabled === true);
 
   return (
-    <div ref={containerRef} className="min-h-screen bg-washed-black relative grain-overlay">
+    <div ref={containerRef} className="dark min-h-screen bg-washed-black relative grain-overlay">
       {banner}
       <Header scrollY={scrollY} showPricing={showPricing} />
       <Hero logoScale={logoScale} />
