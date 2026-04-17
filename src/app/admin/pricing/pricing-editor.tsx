@@ -12,7 +12,15 @@ import { api } from "../../../../convex/_generated/api";
 import { useCallback, useMemo, useState } from "react";
 import { Effect, pipe } from "effect";
 import { toast } from "sonner";
-import { ArrowDown, ArrowUp, Plus, Star, Trash2 } from "lucide-react";
+import {
+  ArrowDown,
+  ArrowUp,
+  ChevronDown,
+  Plus,
+  Star,
+  Trash2,
+  X,
+} from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Switch } from "@/components/ui/switch";
@@ -442,24 +450,30 @@ function PricingForm() {
                     <span className="body-text-small text-muted-foreground">
                       Cadence
                     </span>
-                    <select
-                      value={pkg.billingCadence}
-                      onChange={(e) => {
-                        const raw = e.target.value;
-                        if (isCadence(raw)) {
-                          updatePackage(pkg.id, { billingCadence: raw });
-                        }
-                      }}
-                      className={cn(
-                        "h-8 w-full rounded-lg border border-input bg-transparent px-2.5 py-1 text-sm",
-                      )}
-                    >
-                      {VALID_CADENCES.map((c) => (
-                        <option key={c} value={c}>
-                          {CADENCE_LABELS[c]}
-                        </option>
-                      ))}
-                    </select>
+                    <div className="relative">
+                      <select
+                        value={pkg.billingCadence}
+                        onChange={(e) => {
+                          const raw = e.target.value;
+                          if (isCadence(raw)) {
+                            updatePackage(pkg.id, { billingCadence: raw });
+                          }
+                        }}
+                        className={cn(
+                          "h-8 w-full min-w-0 appearance-none rounded-lg border border-input bg-background px-2.5 pr-8 py-1 text-sm font-medium text-foreground transition-colors outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 md:text-sm dark:bg-input/30",
+                        )}
+                      >
+                        {VALID_CADENCES.map((c) => (
+                          <option key={c} value={c}>
+                            {CADENCE_LABELS[c]}
+                          </option>
+                        ))}
+                      </select>
+                      <ChevronDown
+                        className="pointer-events-none absolute top-1/2 right-2 size-4 -translate-y-1/2 text-muted-foreground"
+                        aria-hidden
+                      />
+                    </div>
                   </label>
 
                   <label className="block space-y-1">
@@ -537,32 +551,19 @@ function PricingForm() {
                     />
                   </label>
 
-                  <label className="col-span-full block space-y-1">
+                  <div className="col-span-full space-y-2">
                     <span className="body-text-small text-muted-foreground">
-                      Features (one per line)
+                      Features
                     </span>
-                    <textarea
-                      rows={3}
-                      value={(pkg.features ?? []).join("\n")}
-                      onChange={(e) => {
-                        const lines = e.target.value
-                          .split("\n")
-                          .map((line) => line.replace(/^[•\-\*]\s*/, ""));
-                        updatePackage(pkg.id, { features: lines });
-                      }}
-                      onBlur={(e) => {
-                        const cleaned = e.target.value
-                          .split("\n")
-                          .map((line) => line.trim())
-                          .filter((line) => line.length > 0);
+                    <FeaturesEditor
+                      features={pkg.features ?? []}
+                      onChange={(next) =>
                         updatePackage(pkg.id, {
-                          features: cleaned.length > 0 ? cleaned : undefined,
-                        });
-                      }}
-                      className="block w-full rounded-md border border-input bg-transparent px-3 py-2 text-sm"
-                      placeholder={"Experienced engineer included\nFull signal chain\nKitchen & lounge access"}
+                          features: next.length > 0 ? next : undefined,
+                        })
+                      }
                     />
-                  </label>
+                  </div>
                 </div>
 
                 <div className="mt-3 flex flex-wrap items-center gap-4">
@@ -609,6 +610,80 @@ function PricingForm() {
         }}
         onDiscardConfirm={handleDiscardConfirm}
       />
+    </div>
+  );
+}
+
+interface FeaturesEditorProps {
+  readonly features: readonly string[];
+  readonly onChange: (next: string[]) => void;
+}
+
+/**
+ * One input per feature so each bullet is an obvious, focusable field. Empty
+ * rows are trimmed on blur so the stored list never contains whitespace-only
+ * entries, but the row itself stays visible while the user is typing.
+ */
+function FeaturesEditor({ features, onChange }: FeaturesEditorProps) {
+  const update = (idx: number, value: string) => {
+    const next = [...features];
+    next[idx] = value;
+    onChange(next);
+  };
+
+  const remove = (idx: number) => {
+    const next = features.filter((_, i) => i !== idx);
+    onChange(next);
+  };
+
+  const add = () => {
+    onChange([...features, ""]);
+  };
+
+  const commit = () => {
+    const cleaned = features.map((f) => f.trim()).filter((f) => f.length > 0);
+    if (cleaned.length !== features.length) {
+      onChange(cleaned);
+    }
+  };
+
+  return (
+    <div className="space-y-2">
+      {features.length === 0 ? (
+        <p className="rounded-md border border-dashed border-border px-3 py-2 text-xs text-muted-foreground">
+          No features yet. Add bullet points describing what this package
+          includes.
+        </p>
+      ) : (
+        <ul className="space-y-2">
+          {features.map((feature, idx) => (
+            <li key={idx} className="flex items-center gap-2">
+              <Input
+                type="text"
+                value={feature}
+                onChange={(e) => update(idx, e.target.value)}
+                onBlur={commit}
+                placeholder={`Feature ${idx + 1}`}
+                className="flex-1"
+              />
+              <Button
+                type="button"
+                variant="ghost"
+                size="icon"
+                aria-label={`Remove feature ${idx + 1}`}
+                onClick={() => remove(idx)}
+              >
+                <X className="size-4 text-muted-foreground" aria-hidden />
+              </Button>
+            </li>
+          ))}
+        </ul>
+      )}
+
+      <Button type="button" variant="outline" size="sm" onClick={add}>
+        <Plus className="mr-1 size-3.5" aria-hidden />
+        Add feature
+      </Button>
     </div>
   );
 }
