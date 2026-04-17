@@ -16,8 +16,8 @@ export default function GearPage() {
   return (
     <>
       <AdminHeader title="Gear" />
-      <div className="flex-1 p-6">
-        <div className="mx-auto max-w-3xl">
+      <div className="flex-1 px-5 py-8 pb-12 sm:px-8">
+        <div className="mx-auto max-w-4xl">
           <GearEditor />
         </div>
       </div>

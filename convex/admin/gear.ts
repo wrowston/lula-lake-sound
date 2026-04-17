@@ -3,8 +3,9 @@
  * for atomic snapshot swaps. See `convex/gearTree.ts` for tree helpers.
  *
  * One-time import from legacy `equipment-specs.tsx` data: run
- * `bunx convex run internal.seed.seedGearFromEquipmentSpecs` after deploy
- * (or enter via admin when the UI exists).
+ * `bunx convex run seed:seedGearFromEquipmentSpecs` (draft only), or
+ * `bunx convex run migrations/gearFromEquipmentSpecs:migrateGearFromEquipmentSpecs`
+ * to seed and publish in one step.
  */
 import { v } from "convex/values";
 import type { Doc } from "../_generated/dataModel";

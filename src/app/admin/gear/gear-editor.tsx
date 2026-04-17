@@ -31,14 +31,6 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
-import {
   Sheet,
   SheetContent,
   SheetDescription,
@@ -191,11 +183,11 @@ export function GearEditor() {
   return (
     <>
       <AuthLoading>
-        <p className="body-text text-muted-foreground">Authenticating…</p>
+        <p className="body-text text-foreground/80">Authenticating…</p>
       </AuthLoading>
 
       <Unauthenticated>
-        <p className="body-text text-muted-foreground">
+        <p className="body-text text-foreground/80">
           Sign in to manage studio gear.
         </p>
       </Unauthenticated>
@@ -515,63 +507,70 @@ function GearEditorForm() {
 
   if (data === undefined) {
     return (
-      <p className="body-text text-muted-foreground">Loading gear…</p>
+      <p className="body-text text-foreground/80">Loading gear…</p>
     );
   }
 
   return (
-    <div className="space-y-10">
-      <div className="space-y-1">
-        <h2 className="text-lg font-semibold">Studio gear</h2>
-        <p className="body-text-small text-muted-foreground">
-          Organize equipment by category. Edits stay in draft until you publish
-          the gear section.
-        </p>
-      </div>
+    <div className="space-y-8">
+      <div className="space-y-6">
+        <div className="space-y-2">
+          <h2 className="text-xl font-semibold tracking-tight text-foreground">
+            Studio gear
+          </h2>
+          <p className="body-text-small max-w-2xl text-foreground/85">
+            Organize equipment by category. Edits stay in draft until you publish
+            the gear section.
+          </p>
+        </div>
 
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-        <p className="body-text-small text-muted-foreground">
-          {tree.length === 0
-            ? "Start by adding a category, then add items inside it."
-            : `${tree.length} categor${tree.length === 1 ? "y" : "ies"}`}
-        </p>
-        <Button
-          type="button"
-          variant="outline"
-          className="w-full shrink-0 sm:w-auto"
-          onClick={openCreateCategory}
-        >
-          <Plus className="mr-1 size-4" aria-hidden />
-          Add category
-        </Button>
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+          <p className="body-text-small text-foreground/85">
+            {tree.length === 0
+              ? "Start by adding a category, then add items inside it."
+              : `${tree.length} categor${tree.length === 1 ? "y" : "ies"}`}
+          </p>
+          <Button
+            type="button"
+            variant="outline"
+            className="w-full shrink-0 sm:w-auto"
+            onClick={openCreateCategory}
+          >
+            <Plus className="mr-1 size-4" aria-hidden />
+            Add category
+          </Button>
+        </div>
       </div>
 
       {tree.length === 0 ? (
-        <p className="rounded-md border border-dashed border-border p-8 text-center text-sm text-muted-foreground">
+        <p className="rounded-xl border border-dashed border-border bg-muted/20 px-6 py-10 text-center text-sm text-foreground/80">
           No gear yet. Add a category to list microphones, consoles, and other
           studio equipment.
         </p>
       ) : (
-        <div className="space-y-6">
+        <div className="space-y-5">
           {tree.map((cat, catIdx) => (
             <section
               key={cat.stableId}
-              className="rounded-lg border border-border bg-background p-4 shadow-sm"
+              className="overflow-hidden rounded-xl border border-border bg-card shadow-sm"
             >
-              <div className="mb-3 flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-                <div className="min-w-0 space-y-1">
-                  <h3 className="truncate font-heading text-base font-medium text-foreground">
+              <div className="flex flex-col gap-3 border-b border-border/60 bg-muted/40 px-5 py-4 sm:flex-row sm:items-center sm:justify-between">
+                <div className="min-w-0 flex-1 space-y-1">
+                  <p className="text-[10px] font-semibold uppercase tracking-wider text-foreground/55">
+                    Category
+                  </p>
+                  <h3 className="font-heading text-lg font-semibold leading-snug tracking-tight text-foreground">
                     {cat.name}
                   </h3>
-                  <p className="body-text-small text-muted-foreground">
+                  <p className="body-text-small text-foreground/75">
                     {cat.items.length} item{cat.items.length === 1 ? "" : "s"}
                   </p>
                 </div>
-                <div className="flex flex-wrap items-center gap-1">
+                <div className="flex flex-wrap items-center justify-end gap-0.5 sm:flex-nowrap">
                   <Button
                     type="button"
                     variant="ghost"
-                    size="icon"
+                    size="icon-lg"
                     aria-label="Move category up"
                     disabled={catIdx === 0 || busy !== null}
                     onClick={() => void moveCategory(cat.stableId, -1)}
@@ -581,7 +580,7 @@ function GearEditorForm() {
                   <Button
                     type="button"
                     variant="ghost"
-                    size="icon"
+                    size="icon-lg"
                     aria-label="Move category down"
                     disabled={catIdx === tree.length - 1 || busy !== null}
                     onClick={() => void moveCategory(cat.stableId, 1)}
@@ -591,7 +590,7 @@ function GearEditorForm() {
                   <Button
                     type="button"
                     variant="ghost"
-                    size="icon"
+                    size="icon-lg"
                     aria-label="Edit category name"
                     disabled={busy !== null}
                     onClick={() =>
@@ -608,7 +607,7 @@ function GearEditorForm() {
                   <Button
                     type="button"
                     variant="ghost"
-                    size="icon"
+                    size="icon-lg"
                     aria-label="Delete category"
                     disabled={busy !== null}
                     onClick={() => setDeleteCategoryId(cat.stableId)}
@@ -619,7 +618,7 @@ function GearEditorForm() {
                     type="button"
                     variant="outline"
                     size="sm"
-                    className="ml-1"
+                    className="ml-1 shrink-0"
                     disabled={busy !== null}
                     onClick={() => openCreateItem(cat.stableId)}
                   >
@@ -630,132 +629,119 @@ function GearEditorForm() {
               </div>
 
               {sortItems(cat.items).length === 0 ? (
-                <p className="rounded-md border border-dashed border-border px-3 py-6 text-center text-xs text-muted-foreground">
+                <p className="px-5 py-10 text-center text-sm text-foreground/80">
                   No items in this category yet.
                 </p>
               ) : (
-                <div className="-mx-2 overflow-x-auto sm:mx-0">
-                  <Table>
-                    <TableHeader>
-                      <TableRow>
-                        <TableHead className="min-w-[10rem]">Name</TableHead>
-                        <TableHead className="hidden min-w-[12rem] sm:table-cell">
-                          Details preview
-                        </TableHead>
-                        <TableHead className="w-[1%] text-right">
-                          Actions
-                        </TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {sortItems(cat.items).map((item, itemIdx, arr) => (
-                        <TableRow key={item.stableId}>
-                          <TableCell className="max-w-[14rem] align-top font-medium whitespace-normal">
-                            <div className="space-y-1">
-                              <span>{item.name}</span>
-                              <p className="body-text-small text-muted-foreground sm:hidden">
-                                {specsPreview(item.specs)}
-                              </p>
-                            </div>
-                          </TableCell>
-                          <TableCell className="hidden max-w-md align-top whitespace-normal text-muted-foreground sm:table-cell">
+                <ul className="divide-y divide-border">
+                  {sortItems(cat.items).map((item, itemIdx, arr) => (
+                    <li key={item.stableId}>
+                      <div className="grid grid-cols-1 gap-3 px-5 py-3.5 transition-colors hover:bg-muted/25 sm:grid-cols-[minmax(0,1fr)_minmax(0,1.35fr)_auto] sm:items-start sm:gap-6 sm:py-3.5">
+                        <div className="min-w-0 space-y-1">
+                          <p className="text-sm font-medium leading-snug text-foreground">
+                            {item.name}
+                          </p>
+                          <p className="body-text-small text-foreground/80 sm:hidden">
                             {specsPreview(item.specs)}
-                          </TableCell>
-                          <TableCell className="align-top text-right">
-                            <div className="inline-flex flex-wrap justify-end gap-1">
-                              <Button
-                                type="button"
-                                variant="ghost"
-                                size="icon"
-                                aria-label={`Move ${item.name} up`}
-                                disabled={itemIdx === 0 || busy !== null}
-                                onClick={() =>
-                                  void moveItem(
-                                    cat.stableId,
-                                    item.stableId,
-                                    -1,
-                                  )
-                                }
-                              >
-                                <ArrowUp className="size-4" aria-hidden />
-                              </Button>
-                              <Button
-                                type="button"
-                                variant="ghost"
-                                size="icon"
-                                aria-label={`Move ${item.name} down`}
-                                disabled={
-                                  itemIdx === arr.length - 1 || busy !== null
-                                }
-                                onClick={() =>
-                                  void moveItem(
-                                    cat.stableId,
-                                    item.stableId,
-                                    1,
-                                  )
-                                }
-                              >
-                                <ArrowDown className="size-4" aria-hidden />
-                              </Button>
-                              <Button
-                                type="button"
-                                variant="ghost"
-                                size="icon"
-                                aria-label={`Edit ${item.name}`}
-                                disabled={busy !== null}
-                                onClick={() => openEditItem(item)}
-                              >
-                                <Pencil className="size-4" aria-hidden />
-                              </Button>
-                              <Button
-                                type="button"
-                                variant="ghost"
-                                size="icon"
-                                aria-label={`Delete ${item.name}`}
-                                disabled={busy !== null}
-                                onClick={() =>
-                                  setDeleteItemId(item.stableId)
-                                }
-                              >
-                                <Trash2
-                                  className="size-4 text-destructive"
-                                  aria-hidden
-                                />
-                              </Button>
-                            </div>
-                          </TableCell>
-                        </TableRow>
-                      ))}
-                    </TableBody>
-                  </Table>
-                </div>
+                          </p>
+                        </div>
+                        <p className="body-text-small hidden min-w-0 whitespace-normal text-foreground/80 sm:block">
+                          {specsPreview(item.specs)}
+                        </p>
+                        <div className="flex flex-nowrap items-center justify-end gap-0.5 sm:justify-self-end sm:pt-0.5">
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="icon-sm"
+                            aria-label={`Move ${item.name} up`}
+                            disabled={itemIdx === 0 || busy !== null}
+                            onClick={() =>
+                              void moveItem(
+                                cat.stableId,
+                                item.stableId,
+                                -1,
+                              )
+                            }
+                          >
+                            <ArrowUp className="size-3.5" aria-hidden />
+                          </Button>
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="icon-sm"
+                            aria-label={`Move ${item.name} down`}
+                            disabled={
+                              itemIdx === arr.length - 1 || busy !== null
+                            }
+                            onClick={() =>
+                              void moveItem(
+                                cat.stableId,
+                                item.stableId,
+                                1,
+                              )
+                            }
+                          >
+                            <ArrowDown className="size-3.5" aria-hidden />
+                          </Button>
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="icon-sm"
+                            aria-label={`Edit ${item.name}`}
+                            disabled={busy !== null}
+                            onClick={() => openEditItem(item)}
+                          >
+                            <Pencil className="size-3.5" aria-hidden />
+                          </Button>
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="icon-sm"
+                            aria-label={`Delete ${item.name}`}
+                            disabled={busy !== null}
+                            onClick={() =>
+                              setDeleteItemId(item.stableId)
+                            }
+                          >
+                            <Trash2
+                              className="size-3.5 text-destructive"
+                              aria-hidden
+                            />
+                          </Button>
+                        </div>
+                      </div>
+                    </li>
+                  ))}
+                </ul>
               )}
             </section>
           ))}
         </div>
       )}
 
-      <CmsPublishToolbar
-        section="gear"
-        sectionLabel="gear"
-        hasDraftOnServer={hasDraftOnServer}
-        hasLocalEdits={hasLocalEdits}
-        publishedAt={data.publishedAt ?? null}
-        publishedByLabel={publishedByLabel}
-        busy={busy}
-        inlineError={inlineError}
-        previewHref="/#equipment-specs"
-        onSaveDraft={() => {}}
-        onPublish={() => {
-          void (async () => {
-            const ok = await runAction("Publishing…", publishProgram);
-            if (ok !== undefined) {
-              toast.success("Gear published.");
-            }
-          })();
-        }}
-        onDiscardConfirm={handleDiscardConfirm}
-      />
+      <div className="border-t border-border/70 pt-8">
+        <CmsPublishToolbar
+          section="gear"
+          sectionLabel="gear"
+          hasDraftOnServer={hasDraftOnServer}
+          hasLocalEdits={hasLocalEdits}
+          publishedAt={data.publishedAt ?? null}
+          publishedByLabel={publishedByLabel}
+          busy={busy}
+          inlineError={inlineError}
+          previewHref="/#equipment-specs"
+          onSaveDraft={() => {}}
+          onPublish={() => {
+            void (async () => {
+              const ok = await runAction("Publishing…", publishProgram);
+              if (ok !== undefined) {
+                toast.success("Gear published.");
+              }
+            })();
+          }}
+          onDiscardConfirm={handleDiscardConfirm}
+        />
+      </div>
 
       <Sheet
         open={categorySheet !== null}
@@ -971,7 +957,7 @@ function ItemSheetBody({
           <div className="space-y-2">
             <div className="flex items-baseline justify-between gap-2">
               <Label htmlFor="gear-markdown">Details</Label>
-              <span className="text-xs text-muted-foreground">
+              <span className="text-xs text-foreground/75 tabular-nums">
                 {itemSheet.markdown.length}/{MAX_MARKDOWN_LEN}
               </span>
             </div>
