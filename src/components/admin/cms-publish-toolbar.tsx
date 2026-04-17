@@ -12,6 +12,7 @@ import {
 } from "@/components/ui/tooltip";
 import { DraftStatusBadge } from "@/components/admin/draft-status-badge";
 import { DiscardDraftDialog } from "@/components/admin/discard-draft-dialog";
+import { PublishConfirmDialog } from "@/components/admin/publish-confirm-dialog";
 
 export interface CmsPublishToolbarProps {
   /** CMS section key (e.g. `settings`) — used for context in labels. */
@@ -56,6 +57,7 @@ export function CmsPublishToolbar({
   inlineError,
 }: CmsPublishToolbarProps) {
   const [discardOpen, setDiscardOpen] = useState(false);
+  const [publishOpen, setPublishOpen] = useState(false);
 
   const handleDiscardConfirm = useCallback(async () => {
     const ok = await onDiscardConfirm();
@@ -86,7 +88,7 @@ export function CmsPublishToolbar({
                 variant="default"
                 className={actionButtonClass}
                 disabled={(!hasDraftOnServer && !hasLocalEdits) || isBusy}
-                onClick={() => onPublish()}
+                onClick={() => setPublishOpen(true)}
               >
                 {busy === "Publishing…" ? "Publishing…" : "Publish"}
               </Button>
@@ -171,6 +173,16 @@ export function CmsPublishToolbar({
           {inlineError}
         </p>
       ) : null}
+
+      <PublishConfirmDialog
+        open={publishOpen}
+        onOpenChange={setPublishOpen}
+        sectionLabel={sectionLabel}
+        onConfirm={() => {
+          setPublishOpen(false);
+          onPublish();
+        }}
+      />
 
       <DiscardDraftDialog
         open={discardOpen}

@@ -6,6 +6,37 @@ export type GearScope = "draft" | "published";
 type GearCategoryDoc = Doc<"gearCategories">;
 type GearItemDoc = Doc<"gearItems">;
 
+function compareBySortThenStableId(
+  a: { sort: number; stableId: string },
+  b: { sort: number; stableId: string },
+): number {
+  return a.sort - b.sort || a.stableId.localeCompare(b.stableId);
+}
+
+/**
+ * Groups gear items by category, sorts each group and categories by `sort` then
+ * `stableId`. Used by public gear reads and admin payloads so ordering stays in sync.
+ */
+export function buildSortedGearTreeGroups(
+  categories: GearCategoryDoc[],
+  items: GearItemDoc[],
+): Array<{ category: GearCategoryDoc; items: GearItemDoc[] }> {
+  const byCat = new Map<string, GearItemDoc[]>();
+  for (const it of items) {
+    const list = byCat.get(it.categoryStableId) ?? [];
+    list.push(it);
+    byCat.set(it.categoryStableId, list);
+  }
+  for (const list of byCat.values()) {
+    list.sort(compareBySortThenStableId);
+  }
+  const sortedCats = [...categories].sort(compareBySortThenStableId);
+  return sortedCats.map((category) => ({
+    category,
+    items: byCat.get(category.stableId) ?? [],
+  }));
+}
+
 export type SortedGearCategoryRow<T> = {
   stableId: string;
   name: string;
@@ -23,24 +54,14 @@ export function mapSortedGearTree<T>(
   items: GearItemDoc[],
   mapItem: (item: GearItemDoc) => T,
 ): SortedGearCategoryRow<T>[] {
-  const byCat = new Map<string, GearItemDoc[]>();
-  for (const it of items) {
-    const list = byCat.get(it.categoryStableId) ?? [];
-    list.push(it);
-    byCat.set(it.categoryStableId, list);
-  }
-  for (const list of byCat.values()) {
-    list.sort((a, b) => a.sort - b.sort || a.stableId.localeCompare(b.stableId));
-  }
-  const sortedCats = [...categories].sort(
-    (a, b) => a.sort - b.sort || a.stableId.localeCompare(b.stableId),
+  return buildSortedGearTreeGroups(categories, items).map(
+    ({ category: c, items: group }) => ({
+      stableId: c.stableId,
+      name: c.name,
+      sort: c.sort,
+      items: group.map(mapItem),
+    }),
   );
-  return sortedCats.map((c) => ({
-    stableId: c.stableId,
-    name: c.name,
-    sort: c.sort,
-    items: (byCat.get(c.stableId) ?? []).map(mapItem),
-  }));
 }
 
 function normalizeSpecsForCompare(specs: GearItemDoc["specs"]): unknown {
