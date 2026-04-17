@@ -21,33 +21,54 @@ function sortedActivePackages(
     });
 }
 
+function SectionHeader() {
+  return (
+    <div className="text-center mb-16 reveal">
+      <p className="label-text text-sand/60 mb-4">Rates</p>
+      <h2 className="headline-primary text-3xl md:text-4xl lg:text-5xl text-warm-white mb-6">
+        Services &amp; Pricing
+      </h2>
+      <div className="section-rule max-w-xs mx-auto mb-8" />
+      <p className="body-text text-lg text-ivory/60 max-w-2xl mx-auto">
+        Transparent pricing for professional recording services. Every package
+        includes our full attention to your artistic vision and access to our
+        complete facility.
+      </p>
+    </div>
+  );
+}
+
 export function ServicesAndPricingSkeleton() {
   return (
-    <section id="services-pricing" className="py-20 px-4 bg-sage relative">
-      <div className="absolute inset-0 opacity-10 bg-texture-stone" />
+    <section
+      id="services-pricing"
+      className="py-24 md:py-32 px-6 bg-washed-black relative"
+    >
+      <div className="absolute inset-0 opacity-20 bg-texture-stone" />
+
       <div className="relative z-10 max-w-6xl mx-auto">
-        <div className="text-center mb-16 space-y-4">
-          <div className="h-10 max-w-md mx-auto rounded bg-washed-black/10 animate-pulse" />
-          <div className="h-5 max-w-2xl mx-auto rounded bg-washed-black/10 animate-pulse" />
-        </div>
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-8 mb-16">
+        <SectionHeader />
+
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
           {[0, 1, 2].map((i) => (
             <div
               key={i}
-              className="relative bg-white/60 border-2 border-forest/20 rounded-sm p-8 animate-pulse"
+              className="relative flex flex-col p-8 border border-sand/8 bg-washed-black/40 animate-pulse"
             >
-              <div className="h-7 bg-washed-black/10 rounded mb-4" />
-              <div className="h-4 bg-washed-black/10 rounded mb-2" />
-              <div className="h-4 bg-washed-black/10 rounded w-4/5 mb-8" />
+              <div className="mb-6">
+                <div className="h-6 w-1/2 bg-sand/10 mb-3" />
+                <div className="h-4 bg-sand/10 mb-2" />
+                <div className="h-4 w-4/5 bg-sand/10" />
+              </div>
               <div className="space-y-3 mb-8">
                 {[0, 1, 2].map((j) => (
-                  <div key={j} className="h-4 bg-washed-black/10 rounded" />
+                  <div key={j} className="h-3 bg-sand/10" />
                 ))}
               </div>
-              <div className="border-t border-forest/20 pt-6 mb-6">
-                <div className="h-8 bg-washed-black/10 rounded" />
+              <div className="mt-auto border-t border-sand/10 pt-6 mb-6">
+                <div className="h-8 bg-sand/10" />
               </div>
-              <div className="h-11 bg-washed-black/10 rounded" />
+              <div className="h-11 bg-sand/10" />
             </div>
           ))}
         </div>
@@ -60,33 +81,28 @@ export function ServicesAndPricing({ packages }: ServicesAndPricingProps) {
   const rows = sortedActivePackages(packages);
 
   return (
-    <section id="services-pricing" className="py-20 px-4 bg-sage relative">
-      <div className="absolute inset-0 opacity-10 bg-texture-stone" />
+    <section
+      id="services-pricing"
+      className="py-24 md:py-32 px-6 bg-washed-black relative"
+    >
+      <div className="absolute inset-0 opacity-20 bg-texture-stone" />
 
       <div className="relative z-10 max-w-6xl mx-auto">
-        <div className="text-center mb-16">
-          <h2 className="text-3xl md:text-4xl font-bold text-washed-black mb-6 tracking-wide font-acumin">
-            SERVICES &amp; RATES
-          </h2>
-          <p className="text-lg text-washed-black/80 font-titillium max-w-3xl mx-auto leading-relaxed">
-            Transparent pricing for professional recording services. Every
-            package includes our full attention to your artistic vision and
-            access to our complete facility.
-          </p>
-        </div>
+        <SectionHeader />
 
         {rows.length === 0 ? (
-          <p className="text-center text-washed-black/70 font-titillium">
-            Pricing is being updated — please reach out for a custom quote.
+          <p className="text-center body-text text-ivory/50">
+            Pricing is being updated &mdash; please reach out for a custom
+            quote.
           </p>
         ) : (
           <div
             className={
               rows.length >= 3
-                ? "grid grid-cols-1 md:grid-cols-3 gap-8 mb-16"
+                ? "grid grid-cols-1 md:grid-cols-3 gap-6 reveal reveal-delay-2"
                 : rows.length === 2
-                  ? "grid grid-cols-1 md:grid-cols-2 gap-8 mb-16"
-                  : "grid grid-cols-1 gap-8 mb-16 max-w-xl mx-auto"
+                  ? "grid grid-cols-1 md:grid-cols-2 gap-6 reveal reveal-delay-2"
+                  : "grid grid-cols-1 gap-6 max-w-xl mx-auto reveal reveal-delay-2"
             }
           >
             {rows.map((pkg) => {
@@ -95,26 +111,26 @@ export function ServicesAndPricing({ packages }: ServicesAndPricingProps) {
               return (
                 <div
                   key={pkg.id}
-                  className={`relative bg-white/90 border-2 rounded-sm p-8 hover:shadow-lg transition-all ${
+                  className={`relative flex flex-col p-8 border transition-all duration-500 ${
                     pkg.highlight
-                      ? "border-forest scale-105 shadow-xl"
-                      : "border-forest/30"
+                      ? "bg-washed-black/60 border-sand/30 hover:border-sand/50"
+                      : "bg-washed-black/40 border-sand/8 hover:border-sand/20"
                   }`}
                 >
                   {pkg.highlight && (
-                    <div className="absolute -top-4 left-1/2 transform -translate-x-1/2">
-                      <span className="bg-forest text-sand px-4 py-1 rounded-full text-sm font-acumin font-bold tracking-wide">
-                        RECOMMENDED
+                    <div className="absolute -top-3 left-1/2 -translate-x-1/2">
+                      <span className="label-text bg-sand text-washed-black px-3 py-1 text-[10px]">
+                        Recommended
                       </span>
                     </div>
                   )}
 
-                  <div className="text-center mb-6">
-                    <h3 className="text-2xl font-bold text-washed-black mb-3 font-acumin">
+                  <div className="mb-6">
+                    <h3 className="headline-secondary text-sand text-xl mb-3">
                       {pkg.name}
                     </h3>
                     {pkg.description ? (
-                      <p className="text-washed-black/70 font-titillium text-sm leading-relaxed">
+                      <p className="body-text-small text-ivory/50 leading-relaxed">
                         {pkg.description}
                       </p>
                     ) : null}
@@ -125,20 +141,22 @@ export function ServicesAndPricing({ packages }: ServicesAndPricingProps) {
                       {pkg.features.map((feature, index) => (
                         <li
                           key={`${pkg.id}-f-${index}`}
-                          className="flex items-start space-x-3"
+                          className="flex items-start gap-3"
                         >
                           <svg
-                            className="w-5 h-5 text-forest mt-0.5 flex-shrink-0"
-                            fill="currentColor"
-                            viewBox="0 0 20 20"
+                            className="w-4 h-4 text-sand/60 mt-0.5 flex-shrink-0"
+                            fill="none"
+                            stroke="currentColor"
+                            viewBox="0 0 24 24"
                           >
                             <path
-                              fillRule="evenodd"
-                              d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z"
-                              clipRule="evenodd"
+                              strokeLinecap="round"
+                              strokeLinejoin="round"
+                              strokeWidth={1.5}
+                              d="M5 13l4 4L19 7"
                             />
                           </svg>
-                          <span className="text-washed-black/80 font-titillium text-sm">
+                          <span className="body-text-small text-ivory/70">
                             {feature}
                           </span>
                         </li>
@@ -146,12 +164,10 @@ export function ServicesAndPricing({ packages }: ServicesAndPricingProps) {
                     </ul>
                   ) : null}
 
-                  <div className="border-t border-forest/20 pt-6 mb-6">
+                  <div className="mt-auto border-t border-sand/10 pt-6 mb-6">
                     <div className="flex items-baseline justify-between gap-2">
-                      <span className="text-washed-black/70 font-titillium text-sm">
-                        {unit}
-                      </span>
-                      <span className="text-forest font-acumin font-bold text-2xl">
+                      <span className="label-text text-ivory/40">{unit}</span>
+                      <span className="headline-secondary text-sand text-2xl">
                         {formatPrice(pkg.priceCents, pkg.currency)}
                       </span>
                     </div>
@@ -166,7 +182,7 @@ export function ServicesAndPricing({ packages }: ServicesAndPricingProps) {
                         ?.scrollIntoView({ behavior: "smooth" })
                     }
                   >
-                    BOOK NOW
+                    Book Your Session
                   </Button>
                 </div>
               );
@@ -174,12 +190,17 @@ export function ServicesAndPricing({ packages }: ServicesAndPricingProps) {
           </div>
         )}
 
-        <div className="text-center mt-12">
-          <p className="text-washed-black/70 font-titillium mb-4">
-            Need a custom package or have questions about pricing?
+        <div className="text-center mt-16 reveal reveal-delay-3 pt-12 border-t border-sand/10">
+          <h3 className="headline-secondary text-2xl text-sand mb-4">
+            Need Something Different?
+          </h3>
+          <p className="body-text text-ivory/50 mb-8 max-w-xl mx-auto">
+            Have questions about pricing or need a custom package tailored to
+            your project? We&apos;re happy to design something that fits your
+            vision and timeline.
           </p>
           <Button
-            variant="secondary"
+            variant="outline"
             size="lg"
             onClick={() =>
               document
@@ -187,7 +208,7 @@ export function ServicesAndPricing({ packages }: ServicesAndPricingProps) {
                 ?.scrollIntoView({ behavior: "smooth" })
             }
           >
-            GET CUSTOM QUOTE
+            Get Custom Quote
           </Button>
         </div>
       </div>
