@@ -61,9 +61,8 @@ export function HomepageShell({ pricingFlags, banner }: HomepageShellProps) {
 
   const logoScale = calculateLogoScale(scrollY);
   const showPricing =
-    pricingFlags !== null &&
-    pricingFlags !== undefined &&
-    pricingFlags.flags.priceTabEnabled === true;
+    pricingFlags === undefined ||
+    (pricingFlags !== null && pricingFlags.flags.priceTabEnabled === true);
 
   return (
     <div ref={containerRef} className="min-h-screen bg-washed-black relative grain-overlay">
