@@ -5,13 +5,14 @@ import { useState } from "react";
 
 interface HeaderProps {
   readonly scrollY: number;
+  readonly showPricing?: boolean;
 }
 
 function lerp(start: number, end: number, progress: number): number {
   return start + (end - start) * progress;
 }
 
-export function Header({ scrollY }: HeaderProps) {
+export function Header({ scrollY, showPricing = false }: HeaderProps) {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
   const scrollProgress = Math.min(scrollY / 200, 1);
@@ -31,6 +32,7 @@ export function Header({ scrollY }: HeaderProps) {
   const navigationItems = [
     { id: "the-space", label: "The Studio" },
     { id: "equipment-specs", label: "Gear" },
+    ...(showPricing ? [{ id: "services-pricing", label: "Pricing" }] : []),
     { id: "local-favorites", label: "Nearby" },
     { id: "faq", label: "FAQ" },
     { id: "artist-inquiries", label: "Inquire" },
