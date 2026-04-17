@@ -3,6 +3,8 @@ import {
   publishedPricingFromRows,
   publishedSettingsFromRow,
 } from "./publicSettingsSnapshot";
+import { loadGearDocs, mapSortedGearTree } from "./gearTree";
+import type { Doc } from "./_generated/dataModel";
 
 /**
  * **Public (anonymous) site reads** — published snapshot only.
@@ -46,5 +48,39 @@ export const getPublishedPricingFlags = query({
     ]);
 
     return publishedPricingFromRows(pricingRow, settingsRow);
+  },
+});
+
+type GearItemPublic = {
+  stableId: string;
+  name: string;
+  sort: number;
+  specs: Doc<"gearItems">["specs"];
+  url?: string;
+};
+
+type GearCategoryPublic = {
+  stableId: string;
+  name: string;
+  sort: number;
+  items: GearItemPublic[];
+};
+
+/**
+ * Published studio gear only (INF-86). Anonymous; reads `scope === "published"`.
+ */
+export const getPublishedGear = query({
+  args: {},
+  handler: async (ctx) => {
+    const { categories, items } = await loadGearDocs(ctx, "published");
+    return {
+      categories: mapSortedGearTree<GearItemPublic>(categories, items, (i) => ({
+        stableId: i.stableId,
+        name: i.name,
+        sort: i.sort,
+        specs: i.specs,
+        ...(i.url !== undefined ? { url: i.url } : {}),
+      })),
+    };
   },
 });
