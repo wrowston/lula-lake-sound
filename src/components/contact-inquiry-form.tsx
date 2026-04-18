@@ -21,8 +21,8 @@ import {
   type ContactInquiryValues,
 } from "@/lib/contact-inquiry-schema"
 
-/** Slightly taller than default `h-8` inputs for touch / form readability. */
-const fieldClassName = "h-10 px-3 text-base md:text-sm"
+/** Slightly taller than the base underline input for touch / form legibility. */
+const fieldClassName = "h-11 text-base md:text-sm"
 
 export function ContactInquiryForm() {
   const [showSuccess, setShowSuccess] = useState(false)
@@ -143,9 +143,9 @@ export function ContactInquiryForm() {
             name="artistName"
             render={({ field }) => (
               <FormItem>
-                <FormLabel className="text-sand/90">
-                  Artist / Band Name *
-                </FormLabel>
+              <FormLabel className="label-text text-sand/70">
+                Artist / band name *
+              </FormLabel>
                 <FormControl>
                   <Input
                     placeholder="Your artist or band name"
@@ -163,9 +163,9 @@ export function ContactInquiryForm() {
             name="contactName"
             render={({ field }) => (
               <FormItem>
-                <FormLabel className="text-sand/90">
-                  Contact Name *
-                </FormLabel>
+              <FormLabel className="label-text text-sand/70">
+                Contact name *
+              </FormLabel>
                 <FormControl>
                   <Input
                     placeholder="Your full name"
@@ -186,9 +186,9 @@ export function ContactInquiryForm() {
             name="email"
             render={({ field }) => (
               <FormItem>
-                <FormLabel className="text-sand/90">
-                  Email Address *
-                </FormLabel>
+              <FormLabel className="label-text text-sand/70">
+                Email address *
+              </FormLabel>
                 <FormControl>
                   <Input
                     type="email"
@@ -207,9 +207,9 @@ export function ContactInquiryForm() {
             name="phone"
             render={({ field }) => (
               <FormItem>
-                <FormLabel className="text-sand/90">
-                  Phone Number
-                </FormLabel>
+              <FormLabel className="label-text text-sand/70">
+                Phone (optional)
+              </FormLabel>
                 <FormControl>
                   <Input
                     type="tel"
@@ -251,14 +251,14 @@ export function ContactInquiryForm() {
           name="message"
           render={({ field }) => (
             <FormItem>
-              <FormLabel className="text-sand/90">
-                Tell Us About Your Project *
+              <FormLabel className="label-text text-sand/70">
+                Tell us about your project *
               </FormLabel>
               <FormControl>
                 <Textarea
                   rows={6}
-                  placeholder="Describe your musical style, project goals, what you're looking for from the studio experience..."
-                  className="min-h-[10rem] resize-y px-3 py-2.5 text-base md:text-sm"
+                  placeholder="A little about your project — style, scope, timeline, what you want from the room..."
+                  className="min-h-[10rem] resize-y text-base md:text-sm"
                   {...field}
                 />
               </FormControl>
@@ -267,15 +267,15 @@ export function ContactInquiryForm() {
           )}
         />
 
-        <div className="flex justify-center pt-4">
+        <div className="flex justify-center pt-6">
           <Button
             type="submit"
             variant="default"
             size="lg"
-            className="h-10 px-8"
+            className="h-11 px-9"
             disabled={form.formState.isSubmitting}
           >
-            {form.formState.isSubmitting ? "Sending…" : "Send Inquiry"}
+            {form.formState.isSubmitting ? "Sending…" : "Send inquiry"}
           </Button>
         </div>
       </form>

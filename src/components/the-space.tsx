@@ -1,35 +1,13 @@
-import { Button } from "@/components/ui/button";
+"use client";
+
 import Image from "next/image";
-import { useEffect, useState } from "react";
-import { getStudioImages, type StudioImage } from "@/lib/storage";
+import { useState } from "react";
+import { Button } from "@/components/ui/button";
+import { studioImages } from "@/lib/storage";
 
 function StudioGallery() {
-  const [isHovered, setIsHovered] = useState(false);
   const [currentIndex, setCurrentIndex] = useState(0);
-  const [images, setImages] = useState<StudioImage[]>([]);
-  const [loading, setLoading] = useState(true);
-
-  useEffect(() => {
-    async function loadImages() {
-      try {
-        const studioImages = await getStudioImages();
-        setImages(studioImages);
-      } catch (error) {
-        console.error("Failed to load studio images:", error);
-      } finally {
-        setLoading(false);
-      }
-    }
-    loadImages();
-  }, []);
-
-  useEffect(() => {
-    if (isHovered || images.length === 0) return;
-    const interval = setInterval(() => {
-      setCurrentIndex((prev) => (prev + 1) % images.length);
-    }, 4000);
-    return () => clearInterval(interval);
-  }, [isHovered, images.length]);
+  const images = studioImages;
 
   const goToImage = (index: number) => setCurrentIndex(index);
   const goToPrevious = () =>
@@ -37,92 +15,109 @@ function StudioGallery() {
   const goToNext = () =>
     setCurrentIndex((prev) => (prev + 1) % images.length);
 
+  if (images.length === 0) {
+    return null;
+  }
+
+  const activeImage = images[currentIndex];
+
   return (
     <div className="reveal reveal-delay-2">
-      {/* Gallery container */}
-      <div
-        className="relative group"
-        onMouseEnter={() => setIsHovered(true)}
-        onMouseLeave={() => setIsHovered(false)}
-      >
-        <div className="relative w-full max-w-5xl mx-auto">
-          <div className="relative overflow-hidden bg-washed-black border border-sand/10">
-            <div className="relative w-full h-[55vh] md:h-[65vh] flex items-center justify-center">
-              {loading ? (
-                <div className="flex items-center justify-center h-full">
-                  <div className="body-text-small text-ivory/40">Loading gallery...</div>
-                </div>
-              ) : images.length > 0 ? (
-                <Image
-                  src={images[currentIndex]?.url}
-                  alt={`Studio image ${currentIndex + 1}`}
-                  fill
-                  className="object-contain transition-opacity duration-700"
-                  sizes="(max-width: 768px) 100vw, (max-width: 1200px) 90vw, 1200px"
-                  priority={currentIndex === 0}
-                  quality={80}
-                />
-              ) : (
-                <div className="flex items-center justify-center h-full">
-                  <div className="body-text-small text-ivory/40">No images available</div>
-                </div>
-              )}
-            </div>
+      <div className="group relative mx-auto w-full max-w-5xl">
+        {/* Frame — no rounded corners, a single hairline rule that
+         * whispers around the photograph rather than shouting. */}
+        <div className="relative overflow-hidden bg-deep-forest">
+          <div className="absolute inset-0 border border-sand/10" />
 
-            {/* Image counter */}
-            {!loading && images.length > 0 && (
-              <div className="absolute bottom-4 right-4 label-text text-ivory/40 text-[10px] bg-washed-black/60 backdrop-blur-sm px-3 py-1.5">
-                {currentIndex + 1} / {images.length}
-              </div>
-            )}
+          <div className="relative flex h-[58vh] w-full items-center justify-center md:h-[72vh]">
+            <Image
+              key={activeImage.id}
+              src={activeImage.url}
+              alt={`Lula Lake Sound studio — frame ${currentIndex + 1}`}
+              fill
+              className="object-cover transition-opacity duration-700 ease-out"
+              sizes="(max-width: 768px) 100vw, (max-width: 1200px) 90vw, 1200px"
+              priority={currentIndex === 0}
+              quality={80}
+            />
+
+            {/* Subtle cinematic vignette so the gallery feels
+             * photographic rather than like a stock frame. */}
+            <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-washed-black/70 via-transparent to-washed-black/10" />
+          </div>
+
+          {/* Image counter */}
+          <div className="absolute bottom-5 right-6 flex items-center gap-3">
+            <span className="label-text text-sand/70">
+              {String(currentIndex + 1).padStart(2, "0")}
+            </span>
+            <span className="h-px w-6 bg-sand/40" />
+            <span className="label-text text-ivory/45">
+              {String(images.length).padStart(2, "0")}
+            </span>
           </div>
         </div>
 
         {/* Navigation dots */}
-        {!loading && images.length > 0 && (
-          <div className="flex justify-center mt-6 gap-1.5">
-            {images.map((_, index) => (
-              <button
-                key={index}
-                onClick={() => goToImage(index)}
-                className={`h-1 rounded-full transition-all duration-500 ${
-                  index === currentIndex
-                    ? "bg-sand w-6"
-                    : "bg-ivory/15 w-1 hover:bg-ivory/30"
-                }`}
-              />
-            ))}
-          </div>
-        )}
+        <div className="mt-10 flex justify-center gap-3">
+          {images.map((img, index) => (
+            <button
+              key={img.id}
+              onClick={() => goToImage(index)}
+              aria-label={`Show image ${index + 1}`}
+              className={
+                "h-px transition-all duration-500 " +
+                (index === currentIndex
+                  ? "w-10 bg-sand"
+                  : "w-5 bg-ivory/20 hover:bg-ivory/40")
+              }
+            />
+          ))}
+        </div>
 
         {/* Navigation arrows */}
-        {!loading && images.length > 1 && (
+        {images.length > 1 ? (
           <>
             <button
               onClick={goToPrevious}
-              className="absolute left-3 top-1/2 -translate-y-1/2 bg-washed-black/60 backdrop-blur-sm hover:bg-washed-black/80 text-ivory/60 hover:text-sand p-2.5 rounded-full transition-all duration-300 opacity-0 group-hover:opacity-100 border border-sand/10"
+              aria-label="Previous image"
+              className="absolute left-4 top-1/2 -translate-y-1/2 p-3 text-ivory/55 opacity-0 transition-all duration-500 hover:text-sand group-hover:opacity-100"
             >
-              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M15 19l-7-7 7-7" />
+              <svg
+                className="h-5 w-5"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={1}
+                  d="M15 19l-7-7 7-7"
+                />
               </svg>
             </button>
             <button
               onClick={goToNext}
-              className="absolute right-3 top-1/2 -translate-y-1/2 bg-washed-black/60 backdrop-blur-sm hover:bg-washed-black/80 text-ivory/60 hover:text-sand p-2.5 rounded-full transition-all duration-300 opacity-0 group-hover:opacity-100 border border-sand/10"
+              aria-label="Next image"
+              className="absolute right-4 top-1/2 -translate-y-1/2 p-3 text-ivory/55 opacity-0 transition-all duration-500 hover:text-sand group-hover:opacity-100"
             >
-              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 5l7 7-7 7" />
+              <svg
+                className="h-5 w-5"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={1}
+                  d="M9 5l7 7-7 7"
+                />
               </svg>
             </button>
           </>
-        )}
-      </div>
-
-      {/* Gallery description */}
-      <div className="mt-8 flex w-full flex-col items-center text-center">
-        <p className="body-text-small w-full max-w-xl text-ivory/50">
-          Carefully designed and acoustically treated to capture the perfect sound for your musical vision.
-        </p>
+        ) : null}
       </div>
     </div>
   );
@@ -130,56 +125,66 @@ function StudioGallery() {
 
 export function TheSpace() {
   return (
-    <section id="the-space" className="py-24 md:py-32 px-6 bg-washed-black relative overflow-hidden">
-      <div className="absolute inset-0 opacity-30 bg-texture-stone" />
+    <section
+      id="the-space"
+      className="relative overflow-hidden bg-washed-black px-6 py-28 md:py-40 lg:py-48"
+    >
+      <div className="absolute inset-0 bg-texture-stone opacity-40" />
 
-      <div className="relative z-10 max-w-6xl mx-auto">
-        {/* Section header — flex centers the max-width copy block on all viewports */}
-        <div className="mb-16 flex w-full flex-col items-center text-center reveal">
-          <p className="label-text mb-4 text-sand/60">Explore</p>
-          <h2 className="headline-primary mb-6 text-3xl text-warm-white md:text-4xl lg:text-5xl">
-            The Space
-          </h2>
-          <div className="section-rule mb-8 w-full max-w-xs" />
-          <p className="body-text w-full max-w-2xl text-lg text-ivory/60">
-            Step inside our carefully designed recording facility where world-class equipment
-            meets natural inspiration. Every room is optimized for capturing the perfect
-            sound while maintaining the comfort that fuels creativity.
+      <div className="relative z-10 mx-auto max-w-[88rem]">
+        {/* Section header */}
+        <header className="reveal mx-auto mb-20 flex w-full max-w-3xl flex-col items-center text-center md:mb-28">
+          <p className="label-text mb-6 text-sand/65">
+            01 &middot; The Studio
           </p>
-        </div>
+          <h2 className="headline-primary mb-8 text-[2.25rem] text-warm-white md:text-[3rem] lg:text-[3.5rem]">
+            Rooms built for listening
+          </h2>
+          <div className="section-rule mb-10 w-24" />
+          <p className="body-text max-w-2xl text-lg text-ivory/70">
+            A main live room, an iso booth, a vocal booth, a dead room, and a
+            control room that feels like a library — tuned to let performances
+            breathe instead of hiding behind processing.
+          </p>
+        </header>
 
-        {/* Studio Gallery */}
         <StudioGallery />
 
-        {/* CTA */}
-        <div className="mt-16 flex w-full flex-col items-center border-t border-b border-sand/10 py-12 text-center reveal reveal-delay-3">
-          <h3 className="headline-secondary mb-4 text-2xl text-sand">
-            Experience the Studio
+        {/* CTA — framed between two hairlines, editorial rather than card-y */}
+        <div className="reveal reveal-delay-3 mt-24 flex w-full flex-col items-center border-y border-sand/10 py-16 text-center md:mt-32">
+          <p className="label-text mb-4 text-sand/65">Visit</p>
+          <h3 className="headline-secondary mb-5 text-2xl text-warm-white md:text-3xl">
+            Come spend a day in the room
           </h3>
-          <p className="body-text mb-8 w-full max-w-xl text-ivory/50">
-            Schedule a studio tour or start planning your recording session.
-            We&apos;d love to show you around and discuss how our space can serve your vision.
+          <p className="body-text mb-10 max-w-xl text-ivory/60">
+            We keep the calendar small on purpose. Reach out and we&rsquo;ll
+            show you around, play you what&rsquo;s been tracked recently, and
+            figure out whether it&rsquo;s a fit.
           </p>
           <div className="flex w-full flex-col items-center gap-4 sm:w-auto sm:flex-row sm:justify-center">
             <Button
               variant="default"
               size="lg"
-              className="h-10 px-6"
+              className="h-11 px-7"
               onClick={() =>
-                document.getElementById("artist-inquiries")?.scrollIntoView({ behavior: "smooth" })
+                document
+                  .getElementById("artist-inquiries")
+                  ?.scrollIntoView({ behavior: "smooth" })
               }
             >
-              Book Your Session
+              Plan a visit
             </Button>
             <Button
               variant="outline"
               size="lg"
-              className="h-10 px-6"
+              className="h-11 px-7"
               onClick={() =>
-                document.getElementById("equipment-specs")?.scrollIntoView({ behavior: "smooth" })
+                document
+                  .getElementById("equipment-specs")
+                  ?.scrollIntoView({ behavior: "smooth" })
               }
             >
-              View Equipment
+              See the gear
             </Button>
           </div>
         </div>

@@ -15,18 +15,19 @@ const STUDIO_IMAGE_URLS: readonly string[] = [
   "https://g3ik3pexma.ufs.sh/f/Ans4G8qtRkcnlDpo7kAVektLHUCp59bOQSyZsY3dhJa8v6Ec",
   "https://g3ik3pexma.ufs.sh/f/Ans4G8qtRkcnDeHTxFcjwcQ4o9dq8RzDyMmHUW2L3ANGbuX0",
   "https://g3ik3pexma.ufs.sh/f/Ans4G8qtRkcnaaBwzY5E6xa1cmW8klTXKG9BfZjqtQngYb7o",
-
 ];
 
+/** Synchronous studio-image list for components that render the gallery
+ * declaratively. The URLs are hard-coded constants, so there is no need
+ * to await any network work. */
+export const studioImages: readonly StudioImage[] = STUDIO_IMAGE_URLS.map(
+  (url, index) => ({
+    name: `Studio ${index + 1}`,
+    url,
+    id: `studio-${index + 1}`,
+  }),
+);
+
 export async function getStudioImages(): Promise<StudioImage[]> {
-  try {
-    return STUDIO_IMAGE_URLS.map((url, index) => ({
-      name: `Studio ${index + 1}`,
-      url,
-      id: `studio-${index + 1}`,
-    }));
-  } catch (error) {
-    console.error("Error loading studio images:", error);
-    return [];
-  }
+  return [...studioImages];
 }

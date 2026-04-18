@@ -172,11 +172,11 @@ const EQUIPMENT_CATEGORIES: EquipmentCategory[] = [
 
 const STUDIO_SPECS = [
   {
-    label: "Isolation Booths",
-    value: "1 isolated amp closet, 1 isolated vocal booth, 1 isolated dead room",
+    label: "Isolation",
+    value: "1 iso amp closet · 1 vocal booth · 1 dead room",
   },
-  { label: "Monitoring", value: "Focal Solo6, ATC SCM45" },
-  { label: "Cue System", value: "16-channel Hear Technology Cue System" },
+  { label: "Monitoring", value: "Focal Solo6 · ATC SCM45" },
+  { label: "Cue System", value: "16-channel Hear Technology" },
 ] as const;
 
 export function EquipmentSpecs() {
@@ -184,60 +184,73 @@ export function EquipmentSpecs() {
 
   const toggleCategory = (index: number) => {
     setExpandedCategories((prev) =>
-      prev.includes(index) ? prev.filter((i) => i !== index) : [...prev, index]
+      prev.includes(index) ? prev.filter((i) => i !== index) : [...prev, index],
     );
   };
 
   return (
-    <section id="equipment-specs" className="py-24 md:py-32 px-6 bg-charcoal relative">
-      <div className="absolute inset-0 opacity-20 bg-texture-stone" />
+    <section
+      id="equipment-specs"
+      className="relative overflow-hidden bg-deep-forest px-6 py-28 md:py-40 lg:py-48"
+    >
+      <div className="absolute inset-0 bg-texture-ink-wash opacity-30" />
 
-      <div className="relative z-10 max-w-6xl mx-auto">
+      <div className="relative z-10 mx-auto max-w-[72rem]">
         {/* Section header */}
-        <div className="text-center mb-16 reveal">
-          <p className="label-text text-sand/60 mb-4">Equipment</p>
-          <h2 className="headline-primary text-3xl md:text-4xl lg:text-5xl text-warm-white mb-6">
-            Studio Specifications
+        <header className="reveal mx-auto mb-20 flex w-full max-w-3xl flex-col items-center text-center md:mb-28">
+          <p className="label-text mb-6 text-sand/65">02 &middot; The Gear</p>
+          <h2 className="headline-primary mb-8 text-[2.25rem] text-warm-white md:text-[3rem] lg:text-[3.5rem]">
+            An honest list of instruments
           </h2>
-          <div className="section-rule max-w-xs mx-auto mb-8" />
-          <p className="body-text text-lg text-ivory/60 max-w-2xl mx-auto">
-            World-class equipment and acoustically designed spaces ensure your recordings
-            capture every nuance with pristine clarity and character.
+          <div className="section-rule mb-10 w-24" />
+          <p className="body-text max-w-2xl text-lg text-ivory/70">
+            The rack, the mic locker, the drum room. Gathered slowly over
+            years of recording, chosen because they sound like themselves.
           </p>
+        </header>
+
+        {/* Room specs — three quiet callouts, separated by hairlines */}
+        <div className="reveal reveal-delay-1 mb-24 grid grid-cols-1 gap-px overflow-hidden bg-sand/10 md:grid-cols-3">
+          {STUDIO_SPECS.map((spec, index) => (
+            <div
+              key={index}
+              className="bg-deep-forest px-6 py-10 text-center md:py-14"
+            >
+              <div className="label-text mb-4 text-sand/70">{spec.label}</div>
+              <div className="body-text text-ivory/75">{spec.value}</div>
+            </div>
+          ))}
         </div>
 
-        {/* Studio Room Specs */}
-        <div className="reveal reveal-delay-1 mb-16">
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-px bg-sand/10 border border-sand/10">
-            {STUDIO_SPECS.map((spec, index) => (
-              <div key={index} className="bg-washed-black p-6 md:p-8 text-center">
-                <div className="label-text text-sand mb-3">{spec.label}</div>
-                <div className="body-text-small text-ivory/60">{spec.value}</div>
-              </div>
-            ))}
-          </div>
-        </div>
-
-        {/* Equipment Categories — accordion style */}
-        <div className="reveal reveal-delay-2 space-y-px">
+        {/* Equipment categories — accordion on an editorial list */}
+        <div className="reveal reveal-delay-2 border-t border-sand/10">
           {EQUIPMENT_CATEGORIES.map((category, categoryIndex) => {
             const isExpanded = expandedCategories.includes(categoryIndex);
+            const categoryLabel = String(categoryIndex + 1).padStart(2, "0");
             return (
-              <div key={categoryIndex} className="border border-sand/8 bg-washed-black/60">
+              <div
+                key={categoryIndex}
+                className="border-b border-sand/10"
+              >
                 <button
                   onClick={() => toggleCategory(categoryIndex)}
-                  className="w-full px-6 py-5 flex items-center justify-between hover:bg-sand/5 transition-colors"
+                  className="flex w-full items-baseline justify-between gap-6 px-2 py-6 text-left transition-colors duration-300 hover:text-sand md:px-4 md:py-8"
                 >
-                  <span className="headline-secondary text-lg text-sand">
-                    {category.category}
+                  <span className="flex items-baseline gap-6 md:gap-10">
+                    <span className="label-text text-sand/50">
+                      {categoryLabel}
+                    </span>
+                    <span className="headline-secondary text-xl text-ivory/90 md:text-2xl">
+                      {category.category}
+                    </span>
                   </span>
-                  <div className="flex items-center gap-3">
-                    <span className="label-text text-ivory/30 text-[10px]">
-                      {category.items.length}
+                  <span className="flex items-center gap-5">
+                    <span className="label-text text-ivory/35">
+                      {String(category.items.length).padStart(2, "0")}
                     </span>
                     <svg
-                      className={`w-4 h-4 text-ivory/30 transition-transform duration-300 ${
-                        isExpanded ? "rotate-180" : ""
+                      className={`h-3 w-3 text-sand/60 transition-transform duration-500 ${
+                        isExpanded ? "rotate-45" : ""
                       }`}
                       fill="none"
                       stroke="currentColor"
@@ -246,30 +259,40 @@ export function EquipmentSpecs() {
                       <path
                         strokeLinecap="round"
                         strokeLinejoin="round"
-                        strokeWidth={1.5}
-                        d="M19 9l-7 7-7-7"
+                        strokeWidth={1.25}
+                        d="M12 4v16m8-8H4"
                       />
                     </svg>
-                  </div>
+                  </span>
                 </button>
 
-                {isExpanded && (
-                  <div className="px-6 pb-6 grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-1">
-                    {category.items.map((item, itemIndex) => (
-                      <div
-                        key={itemIndex}
-                        className="py-2 border-b border-sand/5 last:border-0 flex items-baseline justify-between gap-4"
-                      >
-                        <span className="body-text text-ivory/70 text-sm">{item.name}</span>
-                        {item.specs && (
-                          <span className="body-text-small text-ivory/35 text-xs whitespace-nowrap">
-                            {item.specs}
+                <div
+                  className={`grid overflow-hidden transition-[grid-template-rows,opacity] duration-500 ease-[cubic-bezier(0.22,1,0.36,1)] ${
+                    isExpanded
+                      ? "grid-rows-[1fr] opacity-100"
+                      : "grid-rows-[0fr] opacity-0"
+                  }`}
+                >
+                  <div className="min-h-0">
+                    <div className="grid grid-cols-1 gap-x-16 gap-y-1 px-2 pb-10 pt-2 md:grid-cols-2 md:px-16">
+                      {category.items.map((item, itemIndex) => (
+                        <div
+                          key={itemIndex}
+                          className="flex items-baseline justify-between gap-6 border-b border-sand/5 py-3 last:border-0"
+                        >
+                          <span className="body-text-small text-ivory/75">
+                            {item.name}
                           </span>
-                        )}
-                      </div>
-                    ))}
+                          {item.specs ? (
+                            <span className="body-text-small whitespace-normal text-right text-ivory/40 md:whitespace-nowrap">
+                              {item.specs}
+                            </span>
+                          ) : null}
+                        </div>
+                      ))}
+                    </div>
                   </div>
-                )}
+                </div>
               </div>
             );
           })}
