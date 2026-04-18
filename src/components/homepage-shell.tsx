@@ -9,10 +9,14 @@ import { AmenitiesNearby } from "@/components/amenities-nearby";
 import { FAQ } from "@/components/faq";
 import { ArtistInquiries } from "@/components/artist-inquiries";
 import { MarketingPricingSection } from "@/components/dynamic-pricing";
+import { Footer } from "@/components/footer";
 import type { PricingFlags } from "@/lib/site-settings";
 
 function calculateLogoScale(scrollY: number): number {
-  return Math.max(0.7, 1 - scrollY * 0.0008);
+  // Very gentle parallax shrink — the hero mark settles rather than
+  // dramatically contracts. Brand guide calls for "subtle parallax
+  // only if tasteful".
+  return Math.max(0.82, 1 - scrollY * 0.00045);
 }
 
 interface HomepageShellProps {
@@ -77,6 +81,7 @@ export function HomepageShell({ pricingFlags, banner }: HomepageShellProps) {
         <AmenitiesNearby />
         <FAQ />
         <ArtistInquiries />
+        <Footer />
       </div>
     </div>
   );

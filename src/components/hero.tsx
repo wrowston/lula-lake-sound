@@ -5,88 +5,118 @@ interface HeroProps {
   readonly logoScale: number;
 }
 
+/**
+ * Editorial hero for Lula Lake Sound.
+ *
+ * The composition is intentionally quiet:
+ *   - A natural, softly-contrasted photograph anchors the top of the
+ *     page.
+ *   - A thin vertical rule separates the eyebrow copy from the
+ *     headline, giving the block an editorial feel rather than a
+ *     marketing splash.
+ *   - The only motion is a gentle parallax on the word-mark; there
+ *     are no loud gradients, glossy UI chrome or CTA screams.
+ */
 export function Hero({ logoScale }: HeroProps) {
   return (
     <section
       id="hero"
-      className="relative min-h-screen flex flex-col items-center justify-center overflow-hidden"
+      className="relative flex min-h-screen flex-col items-center justify-center overflow-hidden bg-deep-forest"
     >
-      {/* Background Image */}
+      {/* Photographic backdrop */}
       <div className="absolute inset-0 z-0">
         <Image
           src="/hero-bg.jpg"
-          alt="Atmospheric clouds background"
+          alt=""
           fill
           className="object-cover object-center"
           priority
           quality={85}
         />
-        {/* Cinematic overlays */}
-        <div className="absolute inset-0 bg-washed-black/50" />
-        <div className="absolute inset-0 bg-gradient-to-b from-washed-black/40 via-transparent to-washed-black/80" />
-        <div className="absolute inset-0 bg-gradient-to-r from-washed-black/30 via-transparent to-transparent" />
+
+        {/* Soft editorial wash — kept calm, no aggressive gradients. */}
+        <div className="absolute inset-0 bg-washed-black/55" />
+        <div className="absolute inset-0 bg-gradient-to-b from-transparent via-washed-black/30 to-washed-black/90" />
+        <div className="absolute inset-0 bg-texture-chladni opacity-40" />
       </div>
 
       {/* Content */}
-      <div className="relative z-10 w-full max-w-6xl mx-auto px-6 md:px-12 pt-20 pb-32 sm:pb-28 md:py-20 flex flex-col md:flex-row items-stretch md:items-center min-h-screen">
-        {/* Logo — right on desktop, top on mobile */}
-        <div className="w-full md:w-1/2 flex shrink-0 justify-center md:order-2 mb-12 md:mb-0">
-          <Image
-            src="/lula-lake-logo.png"
-            alt="Lula Lake Sound Logo"
-            width={500}
-            height={375}
-            className="max-w-full h-auto filter brightness-0 invert transition-transform duration-700 ease-out"
-            style={{
-              transform: `scale(${logoScale})`,
-              maxWidth: "85%",
-            }}
-            priority
-          />
-        </div>
-
-        {/* Hero Text — left on desktop, bottom on mobile */}
-        <div className="w-full min-w-0 md:w-1/2 md:pr-12 md:order-1 text-center md:text-left">
-          {/* Narrow screens: constrain + center the whole copy block; md+: full column width */}
-          <div className="mx-auto w-full max-w-lg space-y-8 md:mx-0 md:max-w-none md:space-y-10">
-            <p className="label-text text-sand/80 tracking-widest">
-              Chattanooga, TN
+      <div className="relative z-10 mx-auto flex min-h-screen w-full max-w-[88rem] flex-col items-stretch px-6 pb-28 pt-28 md:flex-row md:items-center md:px-12 md:py-32 lg:px-16">
+        {/* Copy column */}
+        <div className="order-2 w-full md:order-1 md:w-1/2 md:pr-12">
+          <div className="mx-auto w-full max-w-xl space-y-10 text-center md:mx-0 md:text-left">
+            <p
+              className="label-text text-ivory/60"
+              style={{ letterSpacing: "0.32em" }}
+            >
+              Chattanooga, Tennessee
             </p>
 
-            <h1 className="headline-primary text-3xl md:text-5xl lg:text-6xl text-warm-white leading-tight">
-              A Natural
+            <h1 className="headline-display text-4xl text-warm-white md:text-5xl lg:text-[4.5rem]">
+              A natural
               <br />
-              <span className="text-sand italic">Creative Refuge</span>
+              <span className="italic font-normal text-sand">
+                creative refuge
+              </span>
+              <span className="text-gold">.</span>
             </h1>
 
-            <p className="body-text text-lg text-ivory/70 leading-relaxed md:max-w-lg">
-              Nestled in serene mountains just outside of Chattanooga, TN, Lula Lake Sound recording studio
-              offers artists a space where state-of-the-art equipment, comfortable accommodations,
-              and breathtaking surroundings converge to fuel your sonic vision.
+            <div className="flex justify-center md:justify-start">
+              <span className="block h-px w-14 bg-sand/60" />
+            </div>
+
+            <p className="body-text mx-auto max-w-md text-base text-ivory/75 md:mx-0 md:max-w-lg md:text-lg">
+              A recording studio tucked into the mountains outside Chattanooga.
+              Thoughtful equipment, quiet rooms, and the kind of long, unhurried
+              days that let records find themselves.
             </p>
 
-            <div className="flex justify-center pt-2 md:justify-start">
+            <div className="flex flex-col items-center gap-5 pt-2 sm:flex-row sm:justify-center md:justify-start">
               <Button
                 variant="outline"
                 size="lg"
-                className="h-10 px-6"
+                className="h-11 px-7"
                 onClick={() =>
                   document
                     .getElementById("artist-inquiries")
                     ?.scrollIntoView({ behavior: "smooth" })
                 }
               >
-                Get in touch
+                Plan a session
               </Button>
+              <a
+                href="#the-space"
+                className="label-text text-ivory/50 transition-colors duration-500 hover:text-sand"
+              >
+                See the space →
+              </a>
             </div>
           </div>
+        </div>
+
+        {/* Mark column */}
+        <div className="order-1 mb-12 flex w-full shrink-0 justify-center md:order-2 md:mb-0 md:w-1/2">
+          <Image
+            src="/LLS_Logo_Stack_White.png"
+            alt="Lula Lake Sound"
+            width={520}
+            height={520}
+            className="h-auto w-[72%] max-w-[26rem] opacity-95 transition-transform duration-[1200ms] ease-[cubic-bezier(0.22,1,0.36,1)] md:w-[86%] md:max-w-[32rem]"
+            style={{ transform: `scale(${logoScale})` }}
+            priority
+          />
         </div>
       </div>
 
       {/* Scroll indicator */}
-      <div className="absolute bottom-8 left-1/2 -translate-x-1/2 z-10 flex flex-col items-center gap-2 opacity-50">
-        <span className="label-text text-sand/60 text-[10px]">Scroll</span>
-        <div className="w-px h-8 bg-gradient-to-b from-sand/40 to-transparent" />
+      <div className="pointer-events-none absolute bottom-10 left-1/2 z-10 flex -translate-x-1/2 flex-col items-center gap-3 opacity-60">
+        <span
+          className="label-text text-sand/70"
+          style={{ letterSpacing: "0.45em" }}
+        >
+          Scroll
+        </span>
+        <div className="h-10 w-px bg-gradient-to-b from-sand/50 to-transparent" />
       </div>
     </section>
   );

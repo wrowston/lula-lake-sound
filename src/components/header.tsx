@@ -8,18 +8,22 @@ interface HeaderProps {
   readonly showPricing?: boolean;
 }
 
-function lerp(start: number, end: number, progress: number): number {
-  return start + (end - start) * progress;
-}
-
+/**
+ * Restrained editorial header for Lula Lake Sound.
+ *
+ * Brand guide calls for "understated, grounded" navigation — so the
+ * only thing that changes on scroll is a soft background wash that
+ * lets the nav stay legible over photography. No glassmorphism, no
+ * morphing pill, no attention-seeking effects.
+ */
 export function Header({ scrollY, showPricing = false }: HeaderProps) {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
-  const scrollProgress = Math.min(scrollY / 200, 1);
-  const headerOpacity = Math.min(0.92, scrollY * 0.005);
-  const headerPadding = lerp(14, 12, scrollProgress);
-  const headerRadius = lerp(0, 999, scrollProgress);
-  const headerMargin = lerp(0, 12, scrollProgress);
+  const scrollProgress = Math.min(scrollY / 240, 1);
+  // Soft veil that fades in once the user has scrolled past the hero
+  // halo. Topping out at 0.9 keeps it feeling like tinted paper, not
+  // an opaque banner.
+  const veilOpacity = Math.min(0.9, scrollY * 0.005);
 
   function handleNavigation() {
     setIsMobileMenuOpen(false);
@@ -32,110 +36,107 @@ export function Header({ scrollY, showPricing = false }: HeaderProps) {
   const navigationItems = [
     { id: "the-space", label: "The Studio" },
     { id: "equipment-specs", label: "Gear" },
-    ...(showPricing ? [{ id: "services-pricing", label: "Pricing" }] : []),
+    ...(showPricing ? [{ id: "services-pricing", label: "Rates" }] : []),
     { id: "local-favorites", label: "Nearby" },
-    { id: "faq", label: "FAQ" },
+    { id: "faq", label: "Notes" },
     { id: "artist-inquiries", label: "Inquire" },
   ];
 
   return (
     <>
       <header
-        className="fixed top-0 left-0 right-0 z-50 transition-all duration-500 ease-out flex justify-center"
+        className="fixed inset-x-0 top-0 z-50 transition-colors duration-500"
         style={{
-          paddingTop: `${headerMargin}px`,
-          paddingLeft: `${headerMargin}px`,
-          paddingRight: `${headerMargin}px`,
+          backgroundColor: `rgba(20, 22, 16, ${veilOpacity})`,
+          borderBottom:
+            scrollProgress > 0.25
+              ? "1px solid rgba(198, 189, 160, 0.08)"
+              : "1px solid transparent",
         }}
       >
-        <div
-          className="w-full max-w-5xl mx-auto flex items-center justify-between transition-all duration-500 ease-out"
-          style={{
-            backgroundColor: `rgba(31, 30, 28, ${headerOpacity})`,
-            backdropFilter: scrollY > 50 ? "blur(16px) saturate(1.2)" : "none",
-            WebkitBackdropFilter: scrollY > 50 ? "blur(16px) saturate(1.2)" : "none",
-            borderRadius: `${headerRadius}px`,
-            border: scrollProgress > 0.3 ? "1px solid rgba(198, 189, 160, 0.08)" : "1px solid transparent",
-            paddingTop: `${headerPadding}px`,
-            paddingBottom: `${headerPadding}px`,
-            paddingLeft: `${lerp(16, 32, scrollProgress)}px`,
-            paddingRight: `${lerp(16, 32, scrollProgress)}px`,
-          }}
-        >
+        <div className="mx-auto flex w-full max-w-[88rem] items-center justify-between px-6 py-5 md:px-10 lg:px-14">
           {/* Logo */}
           <button
             onClick={handleLogoClick}
-            className="flex items-center transition-transform duration-300 hover:scale-105"
+            aria-label="Lula Lake Sound — back to top"
+            className="group flex items-center gap-3 transition-opacity duration-500 hover:opacity-80"
           >
             <Image
               src="/LLS_Logo_Full_Tar.png"
-              alt="Lula Lake Sound Logo"
-              width={60}
-              height={60}
-              className="filter brightness-0 invert transition-all duration-500"
-              style={{
-                height: `${lerp(36, 28, scrollProgress)}px`,
-                width: "auto",
-              }}
+              alt=""
+              width={64}
+              height={64}
+              className="h-7 w-auto brightness-0 invert md:h-8"
               priority
             />
+            <span className="label-text hidden text-ivory/70 md:inline">
+              Lula Lake Sound
+            </span>
           </button>
 
-          {/* Desktop Navigation */}
-          <nav
-            className="hidden lg:flex items-center transition-all duration-500"
-            style={{
-              gap: `${lerp(28, 24, scrollProgress)}px`,
-            }}
-          >
+          {/* Desktop navigation */}
+          <nav className="hidden items-center gap-10 lg:flex">
             {navigationItems.map((item) => (
               <a
                 key={item.id}
                 href={`#${item.id}`}
-                className="label-text text-ivory/60 hover:text-sand transition-colors duration-300 relative group"
+                className="label-text group relative text-ivory/55 transition-colors duration-500 hover:text-sand"
               >
                 {item.label}
-                <span className="absolute -bottom-1 left-0 w-0 h-px bg-sand transition-all duration-300 group-hover:w-full" />
+                <span className="absolute -bottom-2 left-0 h-px w-0 bg-sand/60 transition-all duration-500 group-hover:w-full" />
               </a>
             ))}
           </nav>
 
-          {/* Mobile Menu Button */}
+          {/* Mobile menu toggle */}
           <button
-            className="lg:hidden text-ivory/60 hover:text-sand transition-colors"
+            className="p-1 text-ivory/70 transition-colors duration-300 hover:text-sand lg:hidden"
             onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
+            aria-label={isMobileMenuOpen ? "Close menu" : "Open menu"}
+            aria-expanded={isMobileMenuOpen}
           >
             <svg
-              className="w-5 h-5 transition-all duration-300"
+              className="h-5 w-5"
               fill="none"
               stroke="currentColor"
               viewBox="0 0 24 24"
             >
               {isMobileMenuOpen ? (
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M6 18L18 6M6 6l12 12" />
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={1.25}
+                  d="M6 18L18 6M6 6l12 12"
+                />
               ) : (
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M4 6h16M4 12h16M4 18h16" />
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={1.25}
+                  d="M4 7h16M4 13h16M4 19h16"
+                />
               )}
             </svg>
           </button>
         </div>
       </header>
 
-      {/* Mobile Menu Overlay */}
-      {isMobileMenuOpen && (
+      {/* Mobile menu overlay */}
+      {isMobileMenuOpen ? (
         <div className="fixed inset-0 z-40 lg:hidden">
-          <div
-            className="absolute inset-0 bg-washed-black/80 backdrop-blur-sm"
+          <button
+            aria-label="Close menu"
+            className="absolute inset-0 bg-deep-forest/80"
             onClick={() => setIsMobileMenuOpen(false)}
           />
-          <div className="absolute top-20 left-4 right-4 bg-charcoal/95 backdrop-blur-xl rounded-2xl border border-sand/10 p-8">
-            <nav className="flex flex-col space-y-6">
+          <div className="absolute inset-x-0 top-[72px] border-y border-sand/10 bg-washed-black/95 px-8 py-12">
+            <nav className="mx-auto flex max-w-md flex-col gap-8">
               {navigationItems.map((item) => (
                 <a
                   key={item.id}
                   href={`#${item.id}`}
                   onClick={handleNavigation}
-                  className="headline-secondary text-ivory/80 hover:text-sand transition-colors duration-300 text-xl"
+                  className="headline-secondary text-2xl text-ivory/85 transition-colors duration-300 hover:text-sand"
                 >
                   {item.label}
                 </a>
@@ -143,7 +144,7 @@ export function Header({ scrollY, showPricing = false }: HeaderProps) {
             </nav>
           </div>
         </div>
-      )}
+      ) : null}
     </>
   );
 }

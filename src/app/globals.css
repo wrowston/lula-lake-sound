@@ -1,5 +1,19 @@
-/* Import Adobe Fonts - Acumin and Titillium Web */
-@import url('https://fonts.googleapis.com/css2?family=Acumin+Variable:wght@400;500;600;700&family=Titillium+Web:wght@300;400;600;700&display=swap');
+/* ============================================================
+ * Lula Lake Sound — global styles
+ *
+ * This file is the canonical source of truth for brand tokens,
+ * typography, texture treatments and motion. Keep in sync with
+ * `src/lib/brand.ts`, which exports the same values to TS.
+ *
+ * House typefaces per brand guide:
+ *   - Display: Acumin Variable Concept Wide Semibold
+ *     (commercial Adobe Fonts face — not redistributable in a
+ *     public repository, falls back to Arial Bold as sanctioned
+ *     by the brand guide.)
+ *   - Body:    Titillium Web Regular
+ *     (loaded via `next/font` in `src/app/layout.tsx`, with
+ *     Verdana as the sanctioned fallback.)
+ * ============================================================ */
 
 @import "tailwindcss";
 
@@ -10,208 +24,71 @@
 @custom-variant dark (&:is(.dark *));
 
 @theme {
-  /* Lula Lake Sound Brand Colors — refined */
+  /* ————————————————————————————————————————————————
+   * Brand palette
+   * ———————————————————————————————————————————————— */
+
+  /* Primary (dominant) */
   --color-washed-black: #1f1e1c;
+  --color-sand: #c6bda0;
   --color-rust: #54340d;
   --color-ivory: #bfbbb5;
-  --color-forest: #1c1e15;
-  --color-gold: #a3822e;
-  --color-sand: #c6bda0;
-  --color-fire: #ef3c23;
+
+  /* Secondary (support) */
   --color-sage: #55656a;
-  --color-pond: #5a4c1b;
+  --color-forest: #1c1e15;
   --color-maroon: #3d1516;
 
-  /* Extended palette */
+  /* Accent (sparingly) */
+  --color-gold: #a3822e;
+  --color-pond: #5a4c1b;
+  --color-fire: #ef3c23;
+
+  /* Extended neutrals */
   --color-warm-white: #e8e4dc;
   --color-charcoal: #2a2725;
   --color-deep-forest: #141610;
 
-  /* Font families - Adobe Fonts */
-  --font-family-acumin: "Acumin Variable", system-ui, -apple-system, sans-serif;
-  --font-family-titillium: "Titillium Web", system-ui, -apple-system, sans-serif;
+  /* ————————————————————————————————————————————————
+   * Typography
+   * ———————————————————————————————————————————————— */
 
-  /* Typography scale — fluid */
-  --font-size-h1: clamp(2.75rem, 5vw, 4.5rem);
-  --font-size-h2: clamp(2rem, 3.5vw, 3rem);
-  --font-size-h3: clamp(1.5rem, 2.5vw, 2rem);
-  --font-size-body: 1rem;
-  --font-size-small: 0.875rem;
+  --font-family-display:
+    "Acumin Variable Concept", "Acumin Pro Wide", "Acumin Pro",
+    Arial, Helvetica, system-ui, sans-serif;
+  --font-family-body:
+    "Titillium Web", Verdana, system-ui, -apple-system, sans-serif;
+
+  /* Legacy alias kept so existing `font-acumin` / `font-titillium`
+   * utility classes keep resolving during the migration. */
+  --font-family-acumin: var(--font-family-display);
+  --font-family-titillium: var(--font-family-body);
+
+  /* Editorial fluid type scale. Intentionally restrained –
+   * headlines are bold but should not shout. */
+  --font-size-display: clamp(2.75rem, 6vw, 5.25rem);
+  --font-size-h1: clamp(2.25rem, 4.5vw, 3.75rem);
+  --font-size-h2: clamp(1.75rem, 3.25vw, 2.75rem);
+  --font-size-h3: clamp(1.25rem, 2vw, 1.65rem);
+  --font-size-body: 1.0625rem;
+  --font-size-small: 0.9375rem;
   --font-size-xs: 0.75rem;
 
-  /* Spacing */
-  --letter-spacing-headline: 0.02em;
-  --letter-spacing-wide: 0.05em;
+  --letter-spacing-display: 0.005em;
+  --letter-spacing-headline: 0.015em;
+  --letter-spacing-wide: 0.22em;
+  --letter-spacing-body: 0.005em;
 
-  --line-height-headline: 1.2;
-  --line-height-relaxed: 1.6;
+  --line-height-display: 1.04;
+  --line-height-headline: 1.12;
+  --line-height-relaxed: 1.65;
   --line-height-loose: 1.8;
 }
 
-body {
-  background-color: #1f1e1c;
-  color: #bfbbb5;
-  font-family: "Titillium Web", system-ui, -apple-system, sans-serif;
-  font-weight: 400;
-  font-feature-settings: "rlig" 1, "calt" 1;
-  line-height: var(--line-height-relaxed);
-  -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
-}
-
-html {
-  color-scheme: light dark;
-  scroll-behavior: smooth;
-}
-
-html.dark {
-  color-scheme: dark;
-}
-
-html.light {
-  color-scheme: light;
-}
-
-/* ——— Typography utility classes ——— */
-
-.headline-primary {
-  font-family: var(--font-family-acumin);
-  font-weight: 600;
-  font-stretch: expanded;
-  letter-spacing: var(--letter-spacing-headline);
-  line-height: var(--line-height-headline);
-}
-
-.headline-secondary {
-  font-family: var(--font-family-acumin);
-  font-weight: 600;
-  letter-spacing: var(--letter-spacing-headline);
-  line-height: var(--line-height-headline);
-}
-
-.label-text {
-  font-family: var(--font-family-titillium);
-  font-weight: 600;
-  letter-spacing: var(--letter-spacing-wide);
-  text-transform: uppercase;
-  font-size: var(--font-size-xs);
-}
-
-.body-text {
-  font-family: var(--font-family-titillium);
-  font-weight: 400;
-  line-height: var(--line-height-relaxed);
-}
-
-.body-text-small {
-  font-family: var(--font-family-titillium);
-  font-weight: 400;
-  line-height: var(--line-height-relaxed);
-  font-size: var(--font-size-small);
-}
-
-/* ——— Scroll-triggered reveal animations ——— */
-
-@keyframes reveal-up {
-  from {
-    opacity: 0;
-    transform: translateY(40px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
-}
-
-@keyframes reveal-fade {
-  from { opacity: 0; }
-  to { opacity: 1; }
-}
-
-.reveal {
-  opacity: 0;
-  transform: translateY(40px);
-  animation: reveal-up 0.8s cubic-bezier(0.16, 1, 0.3, 1) forwards;
-  animation-play-state: paused;
-}
-
-.reveal.in-view {
-  animation-play-state: running;
-}
-
-.reveal-delay-1 { animation-delay: 0.1s; }
-.reveal-delay-2 { animation-delay: 0.2s; }
-.reveal-delay-3 { animation-delay: 0.3s; }
-.reveal-delay-4 { animation-delay: 0.4s; }
-.reveal-delay-5 { animation-delay: 0.5s; }
-.reveal-delay-6 { animation-delay: 0.6s; }
-
-/* ——— Atmospheric background textures ——— */
-
-.bg-texture-stone {
-  background-image:
-    radial-gradient(circle at 20% 80%, rgba(85, 101, 106, 0.08) 0%, transparent 50%),
-    radial-gradient(circle at 80% 20%, rgba(163, 130, 46, 0.06) 0%, transparent 50%),
-    radial-gradient(circle at 50% 50%, rgba(31, 30, 28, 0.04) 0%, transparent 60%);
-}
-
-.bg-texture-ink-wash {
-  background-image:
-    radial-gradient(circle at 25% 25%, rgba(28, 30, 21, 0.1) 0%, transparent 50%),
-    radial-gradient(circle at 75% 75%, rgba(84, 52, 13, 0.08) 0%, transparent 50%);
-}
-
-/* Film grain overlay */
-.grain-overlay::after {
-  content: "";
-  position: absolute;
-  inset: 0;
-  z-index: 2;
-  opacity: 0.035;
-  pointer-events: none;
-  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)' opacity='1'/%3E%3C/svg%3E");
-  background-size: 128px 128px;
-}
-
-/* Horizontal rule styling */
-.section-rule {
-  height: 1px;
-  background: linear-gradient(
-    to right,
-    transparent,
-    rgba(198, 189, 160, 0.3) 20%,
-    rgba(198, 189, 160, 0.3) 80%,
-    transparent
-  );
-  border: none;
-}
-
-/* ——— Scrollbar ——— */
-
-.scrollbar-hide {
-  -ms-overflow-style: none;
-  scrollbar-width: none;
-}
-
-.scrollbar-hide::-webkit-scrollbar {
-  display: none;
-}
-
-/* ——— Selection ——— */
-
-::selection {
-  background-color: rgba(163, 130, 46, 0.3);
-  color: #e8e4dc;
-}
-
-html.light ::selection {
-  background-color: rgba(163, 130, 46, 0.35);
-  color: #2a2725;
-}
-
 @theme inline {
-  --font-heading: "Acumin Variable", system-ui, -apple-system, sans-serif;
-  --font-sans: "Titillium Web", system-ui, -apple-system, sans-serif;
+  --font-heading: var(--font-family-display);
+  --font-sans: var(--font-family-body);
+
   --color-sidebar-ring: var(--sidebar-ring);
   --color-sidebar-border: var(--sidebar-border);
   --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
@@ -243,29 +120,35 @@ html.light ::selection {
   --color-card: var(--card);
   --color-foreground: var(--foreground);
   --color-background: var(--background);
-  --radius-sm: calc(var(--radius) * 0.6);
-  --radius-md: calc(var(--radius) * 0.8);
-  --radius-lg: var(--radius);
-  --radius-xl: calc(var(--radius) * 1.4);
-  --radius-2xl: calc(var(--radius) * 1.8);
-  --radius-3xl: calc(var(--radius) * 2.2);
-  --radius-4xl: calc(var(--radius) * 2.6);
+
+  /* Radii: kept very tight — the brand guide explicitly rejects
+   * rounded SaaS cards. Only tiny radii for a hint of craft. */
+  --radius-sm: 2px;
+  --radius-md: 3px;
+  --radius-lg: 4px;
+  --radius-xl: 6px;
+  --radius-2xl: 8px;
+  --radius-3xl: 10px;
+  --radius-4xl: 12px;
 }
 
 :root {
-  --background: #faf9f7;
+  /* Light surface — the marketing site is delivered in the dark
+   * palette by default, but admin tooling still runs light. These
+   * tokens keep shadcn UI legible there. */
+  --background: #f5f1ea;
   --foreground: #2a2725;
-  --card: #ffffff;
+  --card: #faf7f1;
   --card-foreground: #2a2725;
-  --popover: #ffffff;
+  --popover: #faf7f1;
   --popover-foreground: #2a2725;
   --primary: #54340d;
-  --primary-foreground: #faf9f7;
-  --secondary: #f0ede8;
+  --primary-foreground: #f5f1ea;
+  --secondary: #eae4d8;
   --secondary-foreground: #54340d;
-  --muted: #f0ede8;
-  --muted-foreground: #78746d;
-  --accent: #f0ede8;
+  --muted: #eae4d8;
+  --muted-foreground: #6a645c;
+  --accent: #eae4d8;
   --accent-foreground: #54340d;
   --destructive: #ef3c23;
   --border: rgba(42, 39, 37, 0.12);
@@ -276,11 +159,11 @@ html.light ::selection {
   --chart-3: #55656a;
   --chart-4: #54340d;
   --chart-5: #3d1516;
-  --radius: 0.5rem;
-  --sidebar: #f5f3ef;
+  --radius: 0.25rem;
+  --sidebar: #efeae0;
   --sidebar-foreground: #2a2725;
   --sidebar-primary: #54340d;
-  --sidebar-primary-foreground: #faf9f7;
+  --sidebar-primary-foreground: #f5f1ea;
   --sidebar-accent: rgba(42, 39, 37, 0.06);
   --sidebar-accent-foreground: #2a2725;
   --sidebar-border: rgba(42, 39, 37, 0.1);
@@ -290,21 +173,21 @@ html.light ::selection {
 .dark {
   --background: #1f1e1c;
   --foreground: #bfbbb5;
-  --card: #2a2725;
+  --card: #232220;
   --card-foreground: #bfbbb5;
-  --popover: #2a2725;
+  --popover: #232220;
   --popover-foreground: #bfbbb5;
   --primary: #c6bda0;
   --primary-foreground: #1f1e1c;
   --secondary: #2a2725;
   --secondary-foreground: #c6bda0;
   --muted: #2a2725;
-  --muted-foreground: #bfbbb5;
+  --muted-foreground: #8a857b;
   --accent: #2a2725;
   --accent-foreground: #c6bda0;
   --destructive: #ef3c23;
   --border: rgba(198, 189, 160, 0.12);
-  --input: rgba(198, 189, 160, 0.15);
+  --input: rgba(198, 189, 160, 0.16);
   --ring: #a3822e;
   --chart-1: #c6bda0;
   --chart-2: #a3822e;
@@ -319,6 +202,268 @@ html.light ::selection {
   --sidebar-accent-foreground: #e8e4dc;
   --sidebar-border: rgba(198, 189, 160, 0.1);
   --sidebar-ring: #a3822e;
+}
+
+/* ————————————————————————————————————————————————
+ * Base
+ * ———————————————————————————————————————————————— */
+
+html {
+  color-scheme: light dark;
+  scroll-behavior: smooth;
+}
+
+html.dark {
+  color-scheme: dark;
+}
+
+html.light {
+  color-scheme: light;
+}
+
+body {
+  background-color: #1f1e1c;
+  color: #bfbbb5;
+  font-family: var(--font-family-body);
+  font-weight: 400;
+  font-feature-settings: "rlig" 1, "calt" 1, "ss01" 1;
+  line-height: var(--line-height-relaxed);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* ————————————————————————————————————————————————
+ * Typography utilities
+ *
+ * These classes encode the brand voice directly so that
+ * component code stays declarative. The display stack is
+ * rendered at semi-bold 600 because that is the target
+ * weight of Acumin Variable Concept Wide Semibold; the
+ * Arial fallback is letter-spaced slightly wider so the
+ * visual cadence feels similar even without the licensed
+ * face installed.
+ * ———————————————————————————————————————————————— */
+
+.headline-display {
+  font-family: var(--font-family-display);
+  font-weight: 600;
+  font-stretch: expanded;
+  letter-spacing: var(--letter-spacing-display);
+  line-height: var(--line-height-display);
+}
+
+.headline-primary {
+  font-family: var(--font-family-display);
+  font-weight: 600;
+  font-stretch: expanded;
+  letter-spacing: var(--letter-spacing-headline);
+  line-height: var(--line-height-headline);
+}
+
+.headline-secondary {
+  font-family: var(--font-family-display);
+  font-weight: 600;
+  letter-spacing: var(--letter-spacing-headline);
+  line-height: var(--line-height-headline);
+}
+
+/* Eyebrow / section label. The brand guide discourages all-caps
+ * spam but uppercase labels at small sizes are still permitted
+ * as quiet editorial signposts. */
+.label-text {
+  font-family: var(--font-family-body);
+  font-weight: 600;
+  letter-spacing: var(--letter-spacing-wide);
+  text-transform: uppercase;
+  font-size: var(--font-size-xs);
+}
+
+.body-text {
+  font-family: var(--font-family-body);
+  font-weight: 400;
+  line-height: var(--line-height-relaxed);
+  letter-spacing: var(--letter-spacing-body);
+}
+
+.body-text-small {
+  font-family: var(--font-family-body);
+  font-weight: 400;
+  line-height: var(--line-height-relaxed);
+  font-size: var(--font-size-small);
+  letter-spacing: var(--letter-spacing-body);
+}
+
+/* ————————————————————————————————————————————————
+ * Scroll-triggered reveal animations — calm + slow
+ * ———————————————————————————————————————————————— */
+
+@keyframes reveal-up {
+  from {
+    opacity: 0;
+    transform: translateY(18px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes reveal-fade {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+.reveal {
+  opacity: 0;
+  transform: translateY(18px);
+  animation: reveal-up 1.1s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+  animation-play-state: paused;
+}
+
+.reveal.in-view {
+  animation-play-state: running;
+}
+
+.reveal-delay-1 { animation-delay: 0.1s; }
+.reveal-delay-2 { animation-delay: 0.22s; }
+.reveal-delay-3 { animation-delay: 0.35s; }
+.reveal-delay-4 { animation-delay: 0.48s; }
+.reveal-delay-5 { animation-delay: 0.6s; }
+.reveal-delay-6 { animation-delay: 0.72s; }
+
+@media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
+  }
+  .reveal,
+  .reveal.in-view {
+    animation: none !important;
+    opacity: 1 !important;
+    transform: none !important;
+  }
+}
+
+/* ————————————————————————————————————————————————
+ * Atmospheric background textures
+ *
+ * Everything is kept at low opacity to remain atmospheric and
+ * never compete with content.
+ * ———————————————————————————————————————————————— */
+
+.bg-texture-stone {
+  background-image:
+    radial-gradient(circle at 18% 82%, rgba(85, 101, 106, 0.07) 0%, transparent 55%),
+    radial-gradient(circle at 82% 18%, rgba(163, 130, 46, 0.05) 0%, transparent 55%),
+    radial-gradient(circle at 50% 50%, rgba(31, 30, 28, 0.04) 0%, transparent 65%);
+}
+
+.bg-texture-ink-wash {
+  background-image:
+    radial-gradient(circle at 25% 25%, rgba(28, 30, 21, 0.09) 0%, transparent 55%),
+    radial-gradient(circle at 75% 75%, rgba(84, 52, 13, 0.07) 0%, transparent 55%);
+}
+
+.bg-texture-paper {
+  background-image:
+    radial-gradient(ellipse at top left, rgba(198, 189, 160, 0.04), transparent 60%),
+    radial-gradient(ellipse at bottom right, rgba(84, 52, 13, 0.05), transparent 60%);
+}
+
+/* Inspired by Chladni patterns — a faint, atmospheric wave
+ * signature used only in the hero. Kept below 8% opacity so
+ * the photograph always reads first. */
+.bg-texture-chladni {
+  background-image:
+    radial-gradient(
+      circle at 50% 50%,
+      rgba(198, 189, 160, 0.06) 0px,
+      rgba(198, 189, 160, 0.06) 1px,
+      transparent 1px,
+      transparent 5px
+    ),
+    radial-gradient(
+      circle at 50% 50%,
+      rgba(163, 130, 46, 0.05) 0px,
+      rgba(163, 130, 46, 0.05) 1px,
+      transparent 1px,
+      transparent 11px
+    );
+  background-size: 220px 220px, 340px 340px;
+  mix-blend-mode: screen;
+}
+
+/* Film grain overlay */
+.grain-overlay::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  opacity: 0.04;
+  pointer-events: none;
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)' opacity='1'/%3E%3C/svg%3E");
+  background-size: 140px 140px;
+}
+
+/* ————————————————————————————————————————————————
+ * Dividers
+ * ———————————————————————————————————————————————— */
+
+.section-rule {
+  height: 1px;
+  background: linear-gradient(
+    to right,
+    transparent,
+    rgba(198, 189, 160, 0.35) 20%,
+    rgba(198, 189, 160, 0.35) 80%,
+    transparent
+  );
+  border: none;
+}
+
+.hairline {
+  height: 1px;
+  background-color: rgba(198, 189, 160, 0.12);
+  border: none;
+}
+
+/* ————————————————————————————————————————————————
+ * Utility polish
+ * ———————————————————————————————————————————————— */
+
+.scrollbar-hide {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
+.scrollbar-hide::-webkit-scrollbar {
+  display: none;
+}
+
+::selection {
+  background-color: rgba(163, 130, 46, 0.3);
+  color: #e8e4dc;
+}
+
+html.light ::selection {
+  background-color: rgba(163, 130, 46, 0.35);
+  color: #2a2725;
+}
+
+/* Link underline for in-copy links only (keeps nav + button
+ * hover states from accidentally picking up an underline). */
+.brand-link {
+  color: var(--color-sand);
+  text-decoration-thickness: 1px;
+  text-underline-offset: 4px;
+  transition: color 240ms ease, text-decoration-color 240ms ease;
+}
+
+.brand-link:hover {
+  color: var(--color-warm-white);
 }
 
 @layer base {

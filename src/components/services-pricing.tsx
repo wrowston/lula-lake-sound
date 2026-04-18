@@ -23,52 +23,47 @@ function sortedActivePackages(
 
 function SectionHeader() {
   return (
-    <div className="text-center mb-16 reveal">
-      <p className="label-text text-sand/60 mb-4">Rates</p>
-      <h2 className="headline-primary text-3xl md:text-4xl lg:text-5xl text-warm-white mb-6">
-        Services &amp; Pricing
+    <header className="reveal mx-auto mb-20 flex w-full max-w-3xl flex-col items-center text-center md:mb-28">
+      <p className="label-text mb-6 text-sand/65">05 · Rates</p>
+      <h2 className="headline-primary mb-8 text-[2.25rem] text-warm-white md:text-[3rem] lg:text-[3.5rem]">
+        Honest, transparent pricing
       </h2>
-      <div className="section-rule max-w-xs mx-auto mb-8" />
-      <p className="body-text text-lg text-ivory/60 max-w-2xl mx-auto">
-        Transparent pricing for professional recording services. Every package
-        includes our full attention to your artistic vision and access to our
-        complete facility.
+      <div className="section-rule mb-10 w-24" />
+      <p className="body-text max-w-2xl text-lg text-ivory/70">
+        We keep the pricing simple and let the work speak for itself. Every
+        day includes full use of the facility, our engineering attention, and
+        the time needed to do things right.
       </p>
-    </div>
+    </header>
   );
+}
+
+function sectionClassName() {
+  return "relative overflow-hidden bg-washed-black px-6 py-28 md:py-40 lg:py-48";
 }
 
 export function ServicesAndPricingSkeleton() {
   return (
-    <section
-      id="services-pricing"
-      className="py-24 md:py-32 px-6 bg-washed-black relative"
-    >
-      <div className="absolute inset-0 opacity-20 bg-texture-stone" />
+    <section id="services-pricing" className={sectionClassName()}>
+      <div className="absolute inset-0 bg-texture-stone opacity-30" />
 
-      <div className="relative z-10 max-w-6xl mx-auto">
+      <div className="relative z-10 mx-auto max-w-[72rem]">
         <SectionHeader />
 
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+        <div className="grid animate-pulse grid-cols-1 gap-px bg-sand/10 md:grid-cols-3">
           {[0, 1, 2].map((i) => (
             <div
               key={i}
-              className="relative flex flex-col p-8 border border-sand/8 bg-washed-black/40 animate-pulse"
+              className="flex flex-col gap-6 bg-washed-black px-6 py-12 md:px-10 md:py-16"
             >
-              <div className="mb-6">
-                <div className="h-6 w-1/2 bg-sand/10 mb-3" />
-                <div className="h-4 bg-sand/10 mb-2" />
-                <div className="h-4 w-4/5 bg-sand/10" />
-              </div>
-              <div className="space-y-3 mb-8">
+              <div className="h-6 w-1/2 bg-sand/10" />
+              <div className="h-3 w-4/5 bg-sand/10" />
+              <div className="mt-6 space-y-3">
                 {[0, 1, 2].map((j) => (
                   <div key={j} className="h-3 bg-sand/10" />
                 ))}
               </div>
-              <div className="mt-auto border-t border-sand/10 pt-6 mb-6">
-                <div className="h-8 bg-sand/10" />
-              </div>
-              <div className="h-11 bg-sand/10" />
+              <div className="mt-auto h-9 bg-sand/10" />
             </div>
           ))}
         </div>
@@ -81,81 +76,70 @@ export function ServicesAndPricing({ packages }: ServicesAndPricingProps) {
   const rows = sortedActivePackages(packages);
 
   return (
-    <section
-      id="services-pricing"
-      className="py-24 md:py-32 px-6 bg-washed-black relative"
-    >
-      <div className="absolute inset-0 opacity-20 bg-texture-stone" />
+    <section id="services-pricing" className={sectionClassName()}>
+      <div className="absolute inset-0 bg-texture-stone opacity-30" />
 
-      <div className="relative z-10 max-w-6xl mx-auto">
+      <div className="relative z-10 mx-auto max-w-[72rem]">
         <SectionHeader />
 
         {rows.length === 0 ? (
-          <p className="text-center body-text text-ivory/50">
-            Pricing is being updated &mdash; please reach out for a custom
-            quote.
+          <p className="body-text mx-auto max-w-md text-center text-ivory/60">
+            Rates are being refreshed — please reach out for a current quote.
           </p>
         ) : (
           <div
             className={
-              rows.length >= 3
-                ? "grid grid-cols-1 md:grid-cols-3 gap-6 reveal reveal-delay-2"
+              "reveal reveal-delay-2 grid gap-px bg-sand/10 " +
+              (rows.length >= 3
+                ? "grid-cols-1 md:grid-cols-3"
                 : rows.length === 2
-                  ? "grid grid-cols-1 md:grid-cols-2 gap-6 reveal reveal-delay-2"
-                  : "grid grid-cols-1 gap-6 max-w-xl mx-auto reveal reveal-delay-2"
+                  ? "grid-cols-1 md:grid-cols-2"
+                  : "mx-auto max-w-xl grid-cols-1")
             }
           >
-            {rows.map((pkg) => {
+            {rows.map((pkg, index) => {
               const unit =
                 pkg.unitLabel ?? billingCadenceLabel(pkg.billingCadence);
+              const cardIndex = String(index + 1).padStart(2, "0");
               return (
-                <div
+                <article
                   key={pkg.id}
-                  className={`relative flex flex-col p-8 border transition-all duration-500 ${
-                    pkg.highlight
-                      ? "bg-washed-black/60 border-sand/30 hover:border-sand/50"
-                      : "bg-washed-black/40 border-sand/8 hover:border-sand/20"
-                  }`}
+                  className={
+                    "relative flex h-full flex-col gap-8 px-6 py-12 transition-colors duration-500 md:px-10 md:py-16 " +
+                    (pkg.highlight
+                      ? "bg-washed-black/90"
+                      : "bg-washed-black")
+                  }
                 >
-                  {pkg.highlight && (
-                    <div className="absolute -top-3 left-1/2 -translate-x-1/2">
-                      <span className="label-text bg-sand text-washed-black px-3 py-1 text-[10px]">
-                        Recommended
-                      </span>
-                    </div>
+                  {pkg.highlight ? (
+                    <span className="label-text absolute left-6 top-6 text-gold md:left-10 md:top-10">
+                      Recommended
+                    </span>
+                  ) : (
+                    <span className="label-text absolute left-6 top-6 text-sand/45 md:left-10 md:top-10">
+                      {cardIndex}
+                    </span>
                   )}
 
-                  <div className="mb-6">
-                    <h3 className="headline-secondary text-sand text-xl mb-3">
+                  <div className="pt-12">
+                    <h3 className="headline-secondary mb-5 text-2xl text-ivory/95 md:text-[1.75rem]">
                       {pkg.name}
                     </h3>
                     {pkg.description ? (
-                      <p className="body-text-small text-ivory/50 leading-relaxed">
+                      <p className="body-text-small max-w-xs text-ivory/60">
                         {pkg.description}
                       </p>
                     ) : null}
                   </div>
 
                   {pkg.features && pkg.features.length > 0 ? (
-                    <ul className="space-y-3 mb-8">
-                      {pkg.features.map((feature, index) => (
+                    <ul className="space-y-3 border-t border-sand/10 pt-6">
+                      {pkg.features.map((feature, featureIndex) => (
                         <li
-                          key={`${pkg.id}-f-${index}`}
+                          key={`${pkg.id}-f-${featureIndex}`}
                           className="flex items-start gap-3"
                         >
-                          <svg
-                            className="w-4 h-4 text-sand/60 mt-0.5 flex-shrink-0"
-                            fill="none"
-                            stroke="currentColor"
-                            viewBox="0 0 24 24"
-                          >
-                            <path
-                              strokeLinecap="round"
-                              strokeLinejoin="round"
-                              strokeWidth={1.5}
-                              d="M5 13l4 4L19 7"
-                            />
-                          </svg>
+                          <span className="mt-[0.55rem] h-px w-4 flex-shrink-0 bg-sand/40" />
                           <span className="body-text-small text-ivory/70">
                             {feature}
                           </span>
@@ -164,52 +148,50 @@ export function ServicesAndPricing({ packages }: ServicesAndPricingProps) {
                     </ul>
                   ) : null}
 
-                  <div className="mt-auto border-t border-sand/10 pt-6 mb-6">
-                    <div className="flex items-baseline justify-between gap-2">
-                      <span className="label-text text-ivory/40">{unit}</span>
-                      <span className="headline-secondary text-sand text-2xl">
-                        {formatPrice(pkg.priceCents, pkg.currency)}
-                      </span>
-                    </div>
+                  <div className="mt-auto flex items-baseline justify-between gap-4 border-t border-sand/10 pt-6">
+                    <span className="label-text text-ivory/45">{unit}</span>
+                    <span className="headline-secondary text-3xl text-sand">
+                      {formatPrice(pkg.priceCents, pkg.currency)}
+                    </span>
                   </div>
 
                   <Button
                     variant={pkg.highlight ? "default" : "outline"}
-                    className="w-full h-10"
+                    className="h-11 w-full"
                     onClick={() =>
                       document
                         .getElementById("artist-inquiries")
                         ?.scrollIntoView({ behavior: "smooth" })
                     }
                   >
-                    Book Your Session
+                    Book this
                   </Button>
-                </div>
+                </article>
               );
             })}
           </div>
         )}
 
-        <div className="text-center mt-16 reveal reveal-delay-3 pt-12 border-t border-sand/10">
-          <h3 className="headline-secondary text-2xl text-sand mb-4">
-            Need Something Different?
+        <div className="reveal reveal-delay-3 mt-24 border-t border-sand/10 pt-16 text-center">
+          <h3 className="headline-secondary mb-4 text-2xl text-warm-white md:text-3xl">
+            Something else in mind?
           </h3>
-          <p className="body-text text-ivory/50 mb-8 max-w-xl mx-auto">
-            Have questions about pricing or need a custom package tailored to
-            your project? We&apos;re happy to design something that fits your
-            vision and timeline.
+          <p className="body-text mx-auto mb-10 max-w-xl text-ivory/60">
+            Longer runs, mixing on a retainer, a writing week — we quote
+            custom projects every month. Tell us what you&rsquo;re thinking
+            about and we&rsquo;ll put something together.
           </p>
           <Button
             variant="outline"
             size="lg"
-            className="h-10 px-6"
+            className="h-11 px-7"
             onClick={() =>
               document
                 .getElementById("artist-inquiries")
                 ?.scrollIntoView({ behavior: "smooth" })
             }
           >
-            Get Custom Quote
+            Request a custom quote
           </Button>
         </div>
       </div>

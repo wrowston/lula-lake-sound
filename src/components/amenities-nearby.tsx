@@ -3,57 +3,68 @@ import { AmenityCard } from "./ui/amenity-card";
 const AMENITIES_DATA = [
   {
     name: "Massey's Kitchen",
-    type: "Mediterranean Cuisine",
+    type: "Mediterranean",
     description:
-      "Elevated dining experience featuring made-from-scratch Mediterranean dishes. Authentic flavors crafted with imported ingredients and techniques learned from travels across the Mediterranean region.",
+      "A made-from-scratch kitchen working from recipes and techniques brought back from years travelling the Mediterranean. Quiet room, short menu, long lunches.",
     website: "https://www.masseyskitchen.com",
   },
   {
     name: "Canopy Coffee & Wine Bar",
-    type: "Coffee \u00B7 Wine \u00B7 Craft Beer",
+    type: "Coffee · Wine · Beer",
     description:
-      "Authentic Lookout Mountain experience in a casual, cozy atmosphere. Perfect community gathering spot with excellent coffee, local beer selections, and wine in a trendy yet laid-back setting.",
+      "Community gathering place on top of Lookout Mountain. Good coffee in the morning, a thoughtful wine list and local beer after dark.",
     website: "http://www.canopylkt.com",
   },
   {
     name: "Canyon Grill",
-    type: "Fine Dining \u00B7 Fresh Seafood",
+    type: "Fine Dining · Seafood",
     description:
-      "Relaxed fine dining featuring sustainably sourced seafood and hickory wood-grilled specialties. Simple, careful preparation highlights natural flavors with ingredients stored on ice for optimal freshness.",
+      "Unfussy fine dining built around sustainably-sourced seafood and hickory-grilled specialities. Everything kept on ice, cooked simply, served honestly.",
     website: "https://www.canyongrill.com",
   },
   {
     name: "Mountain Escape Spa",
-    type: "Spa \u00B7 Wellness \u00B7 Relaxation",
+    type: "Spa · Wellness",
     description:
-      "Full-service spa offering a range of treatments designed to rejuvenate and restore balance. Massages, facials, body treatments, and more, all designed to help guests feel relaxed and refreshed.",
+      "A quiet full-service spa minutes from the studio — massages, facials, body treatments. A good place to end a long tracking day.",
     website: "https://www.mountainescapespa.com/",
   },
 ] as const;
 
 export function AmenitiesNearby() {
   return (
-    <section id="local-favorites" className="py-24 md:py-32 px-6 bg-deep-forest relative">
-      <div className="absolute inset-0 opacity-20 bg-texture-stone" />
+    <section
+      id="local-favorites"
+      className="relative overflow-hidden bg-washed-black px-6 py-28 md:py-40 lg:py-48"
+    >
+      <div className="absolute inset-0 bg-texture-paper opacity-40" />
 
-      <div className="relative z-10 max-w-6xl mx-auto">
-        <div className="text-center mb-16 reveal">
-          <p className="label-text text-sand/60 mb-4">Local Favorites</p>
-          <h2 className="headline-primary text-3xl md:text-4xl lg:text-5xl text-warm-white mb-6">
-            Amenities Nearby
+      <div className="relative z-10 mx-auto max-w-[80rem]">
+        {/* Section header */}
+        <header className="reveal mx-auto mb-20 flex w-full max-w-3xl flex-col items-center text-center md:mb-28">
+          <p className="label-text mb-6 text-sand/65">03 &middot; Nearby</p>
+          <h2 className="headline-primary mb-8 text-[2.25rem] text-warm-white md:text-[3rem] lg:text-[3.5rem]">
+            A quiet corner of Chattanooga
           </h2>
-          <div className="section-rule max-w-xs mx-auto" />
-        </div>
+          <div className="section-rule mb-10 w-24" />
+          <p className="body-text max-w-2xl text-lg text-ivory/70">
+            A short list of places we send artists to when sessions break.
+            Unhurried food, good coffee, and somewhere to put your shoulders
+            down.
+          </p>
+        </header>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-px bg-sand/8 reveal reveal-delay-2">
+        <div className="reveal reveal-delay-2 grid grid-cols-1 gap-px bg-sand/10 md:grid-cols-2">
           {AMENITIES_DATA.map((amenity, index) => (
-            <AmenityCard
-              key={index}
-              name={amenity.name}
-              type={amenity.type}
-              description={amenity.description}
-              website={amenity.website}
-            />
+            <div key={amenity.name} className="bg-washed-black">
+              <AmenityCard
+                index={index}
+                name={amenity.name}
+                type={amenity.type}
+                description={amenity.description}
+                website={amenity.website}
+              />
+            </div>
           ))}
         </div>
       </div>

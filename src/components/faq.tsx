@@ -6,42 +6,42 @@ import { cn } from "@/lib/utils";
 
 const FAQ_CATEGORIES = [
   {
-    category: "Studio Sessions & Recording",
+    category: "Sessions & recording",
     questions: [
       {
         id: 1,
-        question: "What should I bring to my recording session?",
+        question: "What should I bring to my session?",
         answer:
-          "Bring your instruments, any specific pedals or equipment you want to use, backup cables, and your music (charts, lyrics, demo recordings). We provide all basic cables, microphones, and recording equipment. If you have specific instruments you prefer (like your own snare drum or guitar), feel free to bring them!",
+          "Your instruments, any pedals or gear you particularly want to use, backup cables, and whatever charts, lyrics or demos you want to work from. We cover cables, microphones and the rest of the signal chain — but if you play a specific snare or favourite guitar, bring it.",
       },
       {
         id: 2,
-        question: "Do you provide instruments and amplifiers?",
+        question: "Do you provide instruments and amps?",
         answer:
-          "Yes! Please see our gear list for a list of our available instruments and amplifiers.",
+          "Yes. The gear list has the full picture, but there are several amps, a DW and a vintage Rogers kit, acoustics, electrics and a bass already at the studio.",
       },
       {
         id: 3,
         question: "Can I bring my own engineer or producer?",
         answer:
-          "Absolutely! We welcome outside engineers and producers. Our studio engineer will assist with setup and technical support. If you prefer to work solo or with your team, that's perfectly fine too. We're here to support your creative process however works best for you.",
+          "Absolutely — we’re happy to assist with setup and patching or to hand the room over entirely. However you like to work is fine.",
       },
       {
         id: 4,
         question: "How far in advance should I book?",
         answer:
-          "We recommend booking 2-4 weeks in advance, especially during busy seasons (spring and fall). However, we often have last-minute availability. Contact us to check our current schedule - sometimes we can accommodate short-notice bookings.",
+          "Spring and fall fill up earliest, so two to four weeks out is a safe window. That said, last-minute availability does come up — it’s worth reaching out even on short notice.",
       },
     ],
   },
   {
-    category: "Studio Logistics",
+    category: "Stay & logistics",
     questions: [
       {
         id: 9,
         question: "Is there accommodation nearby?",
         answer:
-          "Yes! We can help arrange lodging for out-of-town artists. Many artists love staying nearby to maintain the creative flow between sessions.",
+          "Yes. We keep a short list of places we’ve vetted for out-of-town artists and can help you arrange lodging within a few minutes of the studio.",
       },
     ],
   },
@@ -54,50 +54,55 @@ export function FAQ() {
     setOpenQuestions((prev) =>
       prev.includes(questionId)
         ? prev.filter((id) => id !== questionId)
-        : [...prev, questionId]
+        : [...prev, questionId],
     );
   };
 
   return (
-    <section id="faq" className="py-24 md:py-32 px-6 bg-washed-black relative">
-      <div className="absolute inset-0 opacity-20 bg-texture-stone" />
+    <section
+      id="faq"
+      className="relative bg-deep-forest px-6 py-28 md:py-40 lg:py-48"
+    >
+      <div className="absolute inset-0 bg-texture-stone opacity-30" />
 
-      <div className="relative z-10 max-w-3xl mx-auto">
+      <div className="relative z-10 mx-auto max-w-3xl">
         {/* Section header */}
-        <div className="text-center mb-16 reveal">
-          <p className="label-text text-sand/60 mb-4">Support</p>
-          <h2 className="headline-primary text-3xl md:text-4xl lg:text-5xl text-warm-white mb-6">
-            Frequently Asked Questions
+        <header className="reveal mx-auto mb-20 flex w-full flex-col items-center text-center md:mb-28">
+          <p className="label-text mb-6 text-sand/65">04 &middot; Notes</p>
+          <h2 className="headline-primary mb-8 text-[2.25rem] text-warm-white md:text-[3rem] lg:text-[3.5rem]">
+            Answered honestly
           </h2>
-          <div className="section-rule max-w-xs mx-auto mb-8" />
-          <p className="body-text text-lg text-ivory/60 max-w-2xl mx-auto">
-            Everything you need to know about recording at Lula Lake Sound.
-            Don&apos;t see your question? Just ask.
+          <div className="section-rule mb-10 w-24" />
+          <p className="body-text max-w-2xl text-lg text-ivory/70">
+            A few things we get asked often. If yours isn&rsquo;t here, a short
+            email works — we answer them personally.
           </p>
-        </div>
+        </header>
 
-        {/* FAQ sections */}
-        <div className="space-y-12 reveal reveal-delay-2">
+        <div className="reveal reveal-delay-2 space-y-16">
           {FAQ_CATEGORIES.map((category, categoryIndex) => (
             <div key={categoryIndex}>
-              <h3 className="label-text text-sand mb-6 pb-3 border-b border-sand/10">
+              <h3 className="label-text mb-8 text-sand/70">
                 {category.category}
               </h3>
 
-              <div className="space-y-px">
+              <div className="border-t border-sand/10">
                 {category.questions.map((faq) => {
                   const isOpen = openQuestions.includes(faq.id);
                   return (
-                    <div key={faq.id} className="border-b border-sand/8">
+                    <div
+                      key={faq.id}
+                      className="border-b border-sand/10"
+                    >
                       <button
                         onClick={() => toggleQuestion(faq.id)}
-                        className="w-full py-5 text-left flex items-start justify-between gap-4 group"
+                        className="group flex w-full items-start justify-between gap-6 py-6 text-left transition-colors duration-300 hover:text-sand md:py-7"
                       >
-                        <span className="body-text text-ivory/80 group-hover:text-warm-white transition-colors">
+                        <span className="body-text text-[1.05rem] text-ivory/85 group-hover:text-warm-white">
                           {faq.question}
                         </span>
                         <svg
-                          className={`w-4 h-4 text-sand/40 shrink-0 mt-1 transition-transform duration-300 ${
+                          className={`mt-1.5 h-3 w-3 shrink-0 text-sand/60 transition-transform duration-500 ${
                             isOpen ? "rotate-45" : ""
                           }`}
                           fill="none"
@@ -107,20 +112,24 @@ export function FAQ() {
                           <path
                             strokeLinecap="round"
                             strokeLinejoin="round"
-                            strokeWidth={1.5}
+                            strokeWidth={1.25}
                             d="M12 4v16m8-8H4"
                           />
                         </svg>
                       </button>
 
                       <div
-                        className={`overflow-hidden transition-all duration-500 ease-out ${
-                          isOpen ? "max-h-96 opacity-100 pb-6" : "max-h-0 opacity-0"
+                        className={`grid overflow-hidden transition-[grid-template-rows,opacity] duration-500 ease-[cubic-bezier(0.22,1,0.36,1)] ${
+                          isOpen
+                            ? "grid-rows-[1fr] opacity-100"
+                            : "grid-rows-[0fr] opacity-0"
                         }`}
                       >
-                        <p className="body-text text-ivory/50 pl-0 leading-relaxed">
-                          {faq.answer}
-                        </p>
+                        <div className="min-h-0">
+                          <p className="body-text max-w-xl pb-8 text-ivory/60">
+                            {faq.answer}
+                          </p>
+                        </div>
                       </div>
                     </div>
                   );
@@ -130,34 +139,36 @@ export function FAQ() {
           ))}
         </div>
 
-        {/* Contact CTA */}
-        <div className="mt-16 text-center reveal reveal-delay-3 pt-12 border-t border-sand/10">
-          <h3 className="headline-secondary text-2xl text-sand mb-4">
-            Still Have Questions?
+        <div className="reveal reveal-delay-3 mt-24 border-t border-sand/10 pt-16 text-center">
+          <h3 className="headline-secondary mb-4 text-2xl text-warm-white md:text-3xl">
+            Still thinking it over?
           </h3>
-          <p className="body-text text-ivory/50 mb-8 max-w-xl mx-auto">
-            We&apos;re here to help make your recording experience perfect.
-            Reach out with any questions about our studio, services, or your project needs.
+          <p className="body-text mx-auto mb-10 max-w-xl text-ivory/60">
+            Send us what you&rsquo;re working on — a rough demo, a sketch, or
+            just a paragraph about the record you want to make. We&rsquo;ll
+            write back.
           </p>
-          <div className="flex flex-col sm:flex-row gap-4 justify-center">
+          <div className="flex flex-col items-center justify-center gap-4 sm:flex-row">
             <a
               href="mailto:info@lulalakesound.com"
               className={cn(
                 buttonVariants({ variant: "default", size: "lg" }),
-                "h-10 px-6",
+                "h-11 px-7",
               )}
             >
-              Email Us
+              Email us
             </a>
             <Button
               variant="outline"
               size="lg"
-              className="h-10 px-6"
+              className="h-11 px-7"
               onClick={() =>
-                document.getElementById("artist-inquiries")?.scrollIntoView({ behavior: "smooth" })
+                document
+                  .getElementById("artist-inquiries")
+                  ?.scrollIntoView({ behavior: "smooth" })
               }
             >
-              Send Inquiry
+              Send an inquiry
             </Button>
           </div>
         </div>
