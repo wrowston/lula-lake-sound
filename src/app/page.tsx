@@ -16,7 +16,11 @@ export default async function Home() {
       gearSettled.status === "fulfilled" ? gearSettled.value : null;
     const preloadedPhotos =
       photosSettled.status === "fulfilled" ? photosSettled.value : null;
-    if (preloadedPricing === null && preloadedGear === null) {
+    if (
+      preloadedPricing === null &&
+      preloadedGear === null &&
+      preloadedPhotos === null
+    ) {
       return <HomepageShell pricingFlags={null} gear={null} photos={null} />;
     }
     return (
