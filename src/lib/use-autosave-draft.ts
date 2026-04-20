@@ -14,6 +14,14 @@ export interface UseAutosaveDraftOptions {
    * transitions to `true`, the debounce timer is (re)started.
    */
   readonly dirty: boolean;
+  /**
+   * When `dirty` is true, include a value that changes on every local edit
+   * (e.g. the draft object from React state, or a serialized snapshot) so the
+   * debounce timer clears and restarts after each keystroke — idle debounce
+   * from the last edit, not from the first time `dirty` became true.
+   * Ignored when `dirty` is false (the effect still clears any pending timer).
+   */
+  readonly debounceResetKey?: unknown;
   /** Debounce delay before persisting to the server. Defaults to 1000ms. */
   readonly delayMs?: number;
   /**
@@ -48,12 +56,16 @@ export interface UseAutosaveDraftResult {
 }
 
 /**
- * Debounced autosave hook. Whenever `dirty` becomes (or stays) `true`, a
- * timer is scheduled that runs `saveEffect` after `delayMs` of inactivity.
- * In-flight timers are cancelled on unmount or when `pauseWhen` is `true`.
+ * Debounced autosave hook. While `dirty` is true, a timer runs `saveEffect`
+ * after `delayMs` with no further edits. The timer is cleared and restarted
+ * whenever `debounceResetKey` changes (pass draft state or a revision counter
+ * from the editor so each keystroke resets the idle window). When `dirty` is
+ * false, pending timers are cleared and no save is scheduled. Timers are also
+ * cancelled on unmount or when `pauseWhen` is `true`.
  */
 export function useAutosaveDraft({
   dirty,
+  debounceResetKey,
   delayMs = 1000,
   saveEffect,
   pauseWhen = false,
@@ -121,7 +133,7 @@ export function useAutosaveDraft({
       void runSave();
     }, delayMs);
     return clearTimer;
-  }, [dirty, delayMs, pauseWhen, runSave]);
+  }, [dirty, debounceResetKey, delayMs, pauseWhen, runSave]);
 
   useEffect(() => {
     mountedRef.current = true;
