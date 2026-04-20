@@ -1,6 +1,5 @@
 import Link from "next/link";
 import { AdminHeader } from "@/components/admin/admin-header";
-import { PosthogAnalyticsSection } from "@/components/admin/posthog-analytics-section";
 import { ADMIN_MANAGE_NAV_ITEMS } from "@/lib/admin-nav";
 
 export const revalidate = 300;
@@ -19,8 +18,6 @@ export default function DashboardPage() {
               Manage your studio site content from here.
             </p>
           </div>
-
-          <PosthogAnalyticsSection />
 
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
             {ADMIN_MANAGE_NAV_ITEMS.map((item) => (
