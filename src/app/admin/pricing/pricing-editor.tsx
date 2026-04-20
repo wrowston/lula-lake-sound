@@ -81,6 +81,10 @@ const CADENCE_LABELS: Record<BillingCadence, string> = {
   custom: "Custom…",
 };
 
+/** Shared `Input` / textarea styling so admin fields stay readable on light surfaces. */
+const PRICING_FIELD_INPUT_CLASS =
+  "text-foreground placeholder:text-muted-foreground";
+
 function isCadence(value: string): value is BillingCadence {
   return (VALID_CADENCES as readonly string[]).includes(value);
 }
@@ -289,6 +293,7 @@ function PricingForm() {
 
   const { status: autosaveStatus, flush: flushAutosave } = useAutosaveDraft({
     dirty: hasLocalEdits && source !== undefined,
+    debounceResetKey: localDraft,
     pauseWhen: busy !== null,
     saveEffect: () =>
       convexMutationEffect(() =>
@@ -453,6 +458,7 @@ function PricingForm() {
                         updatePackage(pkg.id, { name: e.target.value })
                       }
                       placeholder="Recording — Hourly"
+                      className={PRICING_FIELD_INPUT_CLASS}
                     />
                   </label>
 
@@ -524,7 +530,7 @@ function PricingForm() {
                           }
                           updatePackage(pkg.id, { priceCents: next });
                         }}
-                        className="flex-1"
+                        className={cn(PRICING_FIELD_INPUT_CLASS, "flex-1")}
                       />
                       <Input
                         type="text"
@@ -536,7 +542,7 @@ function PricingForm() {
                             currency: e.target.value.toUpperCase(),
                           })
                         }
-                        className="w-20"
+                        className={cn(PRICING_FIELD_INPUT_CLASS, "w-20")}
                       />
                     </div>
                   </label>
@@ -575,6 +581,7 @@ function PricingForm() {
                         pkg.billingCadence === "custom" &&
                         (pkg.unitLabel ?? "").trim() === ""
                       }
+                      className={PRICING_FIELD_INPUT_CLASS}
                     />
                     {pkg.billingCadence === "custom" &&
                     (pkg.unitLabel ?? "").trim() === "" ? (
@@ -599,7 +606,10 @@ function PricingForm() {
                               : e.target.value,
                         })
                       }
-                      className="block w-full rounded-md border border-input bg-transparent px-3 py-2 text-sm"
+                      className={cn(
+                        PRICING_FIELD_INPUT_CLASS,
+                        "block w-full rounded-md border border-input bg-transparent px-3 py-2 text-sm",
+                      )}
                     />
                   </label>
 
@@ -719,7 +729,7 @@ function FeaturesEditor({ features, onChange }: FeaturesEditorProps) {
                 onChange={(e) => update(idx, e.target.value)}
                 onBlur={commit}
                 placeholder={`Feature ${idx + 1}`}
-                className="flex-1"
+                className={cn(PRICING_FIELD_INPUT_CLASS, "flex-1")}
               />
               <Button
                 type="button"

@@ -2,6 +2,8 @@ import Link from "next/link";
 import { AdminHeader } from "@/components/admin/admin-header";
 import { ADMIN_MANAGE_NAV_ITEMS } from "@/lib/admin-nav";
 
+export const revalidate = 300;
+
 export default function DashboardPage() {
   return (
     <>

@@ -1,7 +1,6 @@
 "use client";
 
 import { useState, useCallback } from "react";
-
 import { AmenitiesNearby } from "@/components/amenities-nearby";
 import { ArtistInquiries } from "@/components/artist-inquiries";
 import { MarketingPricingSection } from "@/components/dynamic-pricing";
@@ -10,7 +9,7 @@ import { FAQ } from "@/components/faq";
 import { Header } from "@/components/header";
 import { Hero } from "@/components/hero";
 import { SiteFooter } from "@/components/site-footer";
-import { TheSpace } from "@/components/the-space";
+import { TheSpace, type GalleryPhoto } from "@/components/the-space";
 import type { PricingFlags } from "@/lib/site-settings";
 
 function calculateLogoScale(scrollY: number): number {
@@ -25,10 +24,17 @@ interface HomepageShellProps {
    * `null` renders the graceful empty state.
    */
   readonly gear: GearPayload | null | undefined;
+  /** Published (or preview) gallery payload. */
+  readonly photos: GalleryPhoto[] | null | undefined;
   readonly banner?: React.ReactNode;
 }
 
-export function HomepageShell({ pricingFlags, gear, banner }: HomepageShellProps) {
+export function HomepageShell({
+  pricingFlags,
+  gear,
+  photos,
+  banner,
+}: HomepageShellProps) {
   const [scrollY, setScrollY] = useState(0);
 
   const containerRef = useCallback((node: HTMLDivElement | null) => {
@@ -81,7 +87,7 @@ export function HomepageShell({ pricingFlags, gear, banner }: HomepageShellProps
       <Hero logoScale={logoScale} />
 
       <main className="relative z-10">
-        <TheSpace />
+        <TheSpace photos={photos} />
         <EquipmentSpecs gear={gear} />
         <MarketingPricingSection pricingFlags={pricingFlags} />
         <AmenitiesNearby />

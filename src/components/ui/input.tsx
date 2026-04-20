@@ -18,8 +18,8 @@ const Input = React.forwardRef<
       type={type}
       data-slot="input"
       className={cn(
-        "h-11 w-full min-w-0 border-0 border-b border-sand/25 bg-transparent px-0 py-2 text-base text-ivory",
-        "transition-colors outline-none placeholder:text-ivory/30",
+        "h-11 w-full min-w-0 border-0 border-b border-sand/25 bg-transparent px-0 py-2 text-base text-foreground",
+        "transition-colors outline-none placeholder:text-muted-foreground",
         "focus-visible:border-sand focus-visible:ring-0",
         "disabled:pointer-events-none disabled:cursor-not-allowed disabled:opacity-50",
         "aria-invalid:border-destructive aria-invalid:text-destructive",
