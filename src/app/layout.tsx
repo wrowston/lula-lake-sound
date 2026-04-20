@@ -13,6 +13,8 @@ import { cn } from "@/lib/utils";
  *
  * - Acumin Variable Concept — display / headlines (“Wide Semibold” via wght 600 + wdth 115 in CSS).
  * - Titillium Web — full static family (extra light through black + italics where provided).
+ *   Preload is off for Titillium so first paint does not issue many high-priority font
+ *   requests; faces load on demand with `display: swap` (Acumin stays preloaded for hero).
  * - Verdana + Arial Bold — guide-approved fallbacks when brand fonts are unavailable.
  */
 const acuminVariableConcept = localFont({
@@ -83,7 +85,7 @@ const titillium = localFont({
   ],
   variable: "--font-titillium",
   display: "swap",
-  preload: true,
+  preload: false,
 });
 
 const verdanaBrand = localFont({
