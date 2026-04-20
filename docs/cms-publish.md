@@ -29,6 +29,8 @@ The shared `CmsPublishToolbar` exposes three actions: **Publish**, **Discard**, 
 
 Publish flushes any pending autosave first, so fast-clicking Publish after an edit is safe and never loses work.
 
+> The studio gallery (`/admin/photos`) follows the same publish/discard UX, but it uses dedicated `galleryPhotoMeta` / `galleryPhotos` tables because image metadata and storage refs are row-based rather than snapshot-based. See `docs/gallery-photos.md`.
+
 ## Mutations (shared pattern)
 
 | Function | Role |

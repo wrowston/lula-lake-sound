@@ -14,7 +14,7 @@ export default async function Home() {
     const preloadedGear =
       gearSettled.status === "fulfilled" ? gearSettled.value : null;
     if (preloadedPricing === null && preloadedGear === null) {
-      return <HomepageShell pricingFlags={null} gear={null} />;
+      return <HomepageShell pricingFlags={null} gear={null} photos={null} />;
     }
     return (
       <HomeClient
@@ -23,6 +23,6 @@ export default async function Home() {
       />
     );
   } catch {
-    return <HomepageShell pricingFlags={null} gear={null} />;
+    return <HomepageShell pricingFlags={null} gear={null} photos={null} />;
   }
 }

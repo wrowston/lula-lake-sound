@@ -16,7 +16,8 @@ function BothPreloaded({
 }) {
   const pricingFlags = usePreloadedQuery(preloadedPricing);
   const gear = usePreloadedQuery(preloadedGear);
-  return <HomepageShell pricingFlags={pricingFlags} gear={gear} />;
+  const photos = useQuery(api.public.getPublishedGalleryPhotos);
+  return <HomepageShell pricingFlags={pricingFlags} gear={gear} photos={photos} />;
 }
 
 function PricingPreloadedGearLive({
@@ -26,7 +27,8 @@ function PricingPreloadedGearLive({
 }) {
   const pricingFlags = usePreloadedQuery(preloadedPricing);
   const gear = useQuery(api.public.getPublishedGear);
-  return <HomepageShell pricingFlags={pricingFlags} gear={gear} />;
+  const photos = useQuery(api.public.getPublishedGalleryPhotos);
+  return <HomepageShell pricingFlags={pricingFlags} gear={gear} photos={photos} />;
 }
 
 function PricingLiveGearPreloaded({
@@ -36,13 +38,15 @@ function PricingLiveGearPreloaded({
 }) {
   const pricingFlags = useQuery(api.public.getPublishedPricingFlags);
   const gear = usePreloadedQuery(preloadedGear);
-  return <HomepageShell pricingFlags={pricingFlags} gear={gear} />;
+  const photos = useQuery(api.public.getPublishedGalleryPhotos);
+  return <HomepageShell pricingFlags={pricingFlags} gear={gear} photos={photos} />;
 }
 
 function BothLive() {
   const pricingFlags = useQuery(api.public.getPublishedPricingFlags);
   const gear = useQuery(api.public.getPublishedGear);
-  return <HomepageShell pricingFlags={pricingFlags} gear={gear} />;
+  const photos = useQuery(api.public.getPublishedGalleryPhotos);
+  return <HomepageShell pricingFlags={pricingFlags} gear={gear} photos={photos} />;
 }
 
 export function HomeClient({

@@ -1,0 +1,483 @@
+import { v } from "convex/values";
+import { mutation, query, type MutationCtx } from "../_generated/server";
+import type { Id } from "../_generated/dataModel";
+import {
+  ALLOWED_GALLERY_IMAGE_TYPES,
+  MAX_GALLERY_IMAGE_BYTES,
+  MAX_GALLERY_PHOTOS,
+  type GalleryPhotoDoc,
+  type GalleryPublishIssue,
+  deleteStorageIfUnreferenced,
+  ensureGalleryMeta,
+  getStorageMetadata,
+  loadGalleryPhotos,
+  materializeGalleryPhotos,
+  patchGalleryMetaAfterDraftChange,
+  replaceGalleryScope,
+} from "../galleryPhotos";
+import { cmsNotFound, cmsPublishValidationFailed, cmsValidationError } from "../errors";
+import { requireCmsOwner } from "../lib/auth";
+
+const MAX_ALT_LENGTH = 240;
+const MAX_CAPTION_LENGTH = 600;
+const MAX_FILENAME_LENGTH = 255;
+const MAX_IMAGE_DIMENSION = 20_000;
+
+function isAllowedGalleryImageType(
+  contentType: string,
+): contentType is (typeof ALLOWED_GALLERY_IMAGE_TYPES)[number] {
+  return (ALLOWED_GALLERY_IMAGE_TYPES as readonly string[]).includes(contentType);
+}
+
+function generatePhotoStableId(): string {
+  return `photo_${Date.now().toString(36)}${Math.random().toString(36).slice(2, 10)}`;
+}
+
+function normalizeAlt(raw: string): string {
+  const value = raw.trim();
+  if (value.length === 0) {
+    cmsValidationError("Alt text is required.", "alt");
+  }
+  if (value.length > MAX_ALT_LENGTH) {
+    cmsValidationError(
+      `Alt text must be at most ${MAX_ALT_LENGTH} characters.`,
+      "alt",
+    );
+  }
+  return value;
+}
+
+function normalizeCaption(raw?: string | null): string | undefined {
+  if (raw === undefined || raw === null) {
+    return undefined;
+  }
+  const value = raw.trim();
+  if (value.length === 0) {
+    return undefined;
+  }
+  if (value.length > MAX_CAPTION_LENGTH) {
+    cmsValidationError(
+      `Caption must be at most ${MAX_CAPTION_LENGTH} characters.`,
+      "caption",
+    );
+  }
+  return value;
+}
+
+function normalizeFileName(raw?: string | null): string | undefined {
+  if (raw === undefined || raw === null) {
+    return undefined;
+  }
+  const value = raw.trim();
+  if (value.length === 0) {
+    return undefined;
+  }
+  if (value.length > MAX_FILENAME_LENGTH) {
+    cmsValidationError(
+      `Filename must be at most ${MAX_FILENAME_LENGTH} characters.`,
+      "originalFileName",
+    );
+  }
+  return value;
+}
+
+function normalizeDimension(
+  value: number | null | undefined,
+  field: "width" | "height",
+): number | undefined {
+  if (value === undefined || value === null) {
+    return undefined;
+  }
+  if (!Number.isInteger(value) || value < 1 || value > MAX_IMAGE_DIMENSION) {
+    cmsValidationError(
+      `${field} must be a whole number between 1 and ${MAX_IMAGE_DIMENSION}.`,
+      field,
+    );
+  }
+  return value;
+}
+
+function validateStorageMetadataOrThrow(
+  storage: Awaited<ReturnType<typeof getStorageMetadata>>,
+): asserts storage is NonNullable<
+  Awaited<ReturnType<typeof getStorageMetadata>>
+> & { contentType: string } {
+  if (!storage) {
+    cmsValidationError("Uploaded file was not found in storage.", "storageId");
+  }
+
+  if (!storage.contentType) {
+    cmsValidationError(
+      "Uploaded image is missing a content type. Upload JPEG, PNG, or WebP files only.",
+      "storageId",
+    );
+  }
+
+  if (!isAllowedGalleryImageType(storage.contentType)) {
+    cmsValidationError(
+      "Only JPEG, PNG, and WebP images are allowed.",
+      "storageId",
+    );
+  }
+
+  if (storage.size > MAX_GALLERY_IMAGE_BYTES) {
+    cmsValidationError(
+      `Images must be ${Math.floor(MAX_GALLERY_IMAGE_BYTES / (1024 * 1024))}MB or smaller.`,
+      "storageId",
+    );
+  }
+}
+
+function collectPhotoIssues(
+  rows: GalleryPhotoDoc[],
+  storageById: Map<Id<"_storage">, Awaited<ReturnType<typeof getStorageMetadata>>>,
+): GalleryPublishIssue[] {
+  const issues: GalleryPublishIssue[] = [];
+  const stableIds = new Set<string>();
+
+  for (let i = 0; i < rows.length; i++) {
+    const row = rows[i];
+    const base = `photos[${i}]`;
+
+    if (row.alt.trim().length === 0) {
+      issues.push({
+        path: `${base}.alt`,
+        message: "Alt text is required.",
+      });
+    }
+    if (row.alt.length > MAX_ALT_LENGTH) {
+      issues.push({
+        path: `${base}.alt`,
+        message: `Alt text must be at most ${MAX_ALT_LENGTH} characters.`,
+      });
+    }
+    if ((row.caption ?? "").length > MAX_CAPTION_LENGTH) {
+      issues.push({
+        path: `${base}.caption`,
+        message: `Caption must be at most ${MAX_CAPTION_LENGTH} characters.`,
+      });
+    }
+    if (
+      row.width !== undefined &&
+      (!Number.isInteger(row.width) || row.width < 1 || row.width > MAX_IMAGE_DIMENSION)
+    ) {
+      issues.push({
+        path: `${base}.width`,
+        message: `Width must be between 1 and ${MAX_IMAGE_DIMENSION}.`,
+      });
+    }
+    if (
+      row.height !== undefined &&
+      (!Number.isInteger(row.height) || row.height < 1 || row.height > MAX_IMAGE_DIMENSION)
+    ) {
+      issues.push({
+        path: `${base}.height`,
+        message: `Height must be between 1 and ${MAX_IMAGE_DIMENSION}.`,
+      });
+    }
+    if (stableIds.has(row.stableId)) {
+      issues.push({
+        path: `${base}.stableId`,
+        message: `Duplicate stableId: ${row.stableId}`,
+      });
+    } else {
+      stableIds.add(row.stableId);
+    }
+
+    const storage = storageById.get(row.storageId) ?? null;
+    if (!storage) {
+      issues.push({
+        path: `${base}.storageId`,
+        message: "Referenced storage blob is missing.",
+      });
+      continue;
+    }
+    if (!storage.contentType) {
+      issues.push({
+        path: `${base}.storageId`,
+        message: "Storage blob is missing a content type.",
+      });
+      continue;
+    }
+    if (!isAllowedGalleryImageType(storage.contentType)) {
+      issues.push({
+        path: `${base}.storageId`,
+        message: `Unsupported content type: ${storage.contentType}`,
+      });
+    }
+    if (storage.size > MAX_GALLERY_IMAGE_BYTES) {
+      issues.push({
+        path: `${base}.storageId`,
+        message: `Image exceeds ${Math.floor(MAX_GALLERY_IMAGE_BYTES / (1024 * 1024))}MB.`,
+      });
+    }
+  }
+
+  return issues;
+}
+
+async function getDraftPhotoByStableId(
+  ctx: MutationCtx,
+  stableId: string,
+): Promise<GalleryPhotoDoc | null> {
+  return await ctx.db
+    .query("galleryPhotos")
+    .withIndex("by_scope_and_stableId", (q) =>
+      q.eq("scope", "draft").eq("stableId", stableId),
+    )
+    .unique();
+}
+
+async function resequenceDraftPhotos(ctx: MutationCtx): Promise<void> {
+  const draft = await loadGalleryPhotos(ctx, "draft");
+  for (let i = 0; i < draft.length; i++) {
+    if (draft[i].sortOrder !== i) {
+      await ctx.db.patch(draft[i]._id, { sortOrder: i });
+    }
+  }
+}
+
+async function validateDraftForPublish(
+  ctx: MutationCtx,
+  rows: GalleryPhotoDoc[],
+): Promise<GalleryPublishIssue[]> {
+  const storageRecords = await Promise.all(
+    Array.from(new Set(rows.map((row) => row.storageId))).map(async (storageId) => [
+      storageId,
+      await getStorageMetadata(ctx, storageId),
+    ] as const),
+  );
+  return collectPhotoIssues(rows, new Map(storageRecords));
+}
+
+export const listDraftPhotos = query({
+  args: {},
+  handler: async (ctx) => {
+    await requireCmsOwner(ctx);
+    const rows = await loadGalleryPhotos(ctx, "draft");
+    const meta = await ctx.db
+      .query("galleryPhotoMeta")
+      .withIndex("by_singleton", (q) => q.eq("singletonKey", "default"))
+      .unique();
+
+    return {
+      photos: await materializeGalleryPhotos(ctx, rows),
+      hasDraftChanges: meta?.hasDraftChanges ?? false,
+      publishedAt: meta?.publishedAt ?? null,
+      publishedBy: meta?.publishedBy ?? null,
+      updatedAt: meta?.updatedAt ?? null,
+      updatedBy: meta?.updatedBy ?? null,
+      limits: {
+        maxPhotos: MAX_GALLERY_PHOTOS,
+        maxImageBytes: MAX_GALLERY_IMAGE_BYTES,
+        acceptedMimeTypes: [...ALLOWED_GALLERY_IMAGE_TYPES],
+      },
+    };
+  },
+});
+
+export const generateUploadUrl = mutation({
+  args: {},
+  handler: async (ctx) => {
+    await requireCmsOwner(ctx);
+    return { uploadUrl: await ctx.storage.generateUploadUrl() };
+  },
+});
+
+export const saveUploadedPhoto = mutation({
+  args: {
+    storageId: v.id("_storage"),
+    alt: v.string(),
+    caption: v.optional(v.union(v.string(), v.null())),
+    width: v.optional(v.union(v.number(), v.null())),
+    height: v.optional(v.union(v.number(), v.null())),
+    originalFileName: v.optional(v.union(v.string(), v.null())),
+  },
+  handler: async (ctx, args) => {
+    const { updatedBy } = await requireCmsOwner(ctx);
+    await ensureGalleryMeta(ctx);
+
+    const draft = await loadGalleryPhotos(ctx, "draft");
+    if (draft.length >= MAX_GALLERY_PHOTOS) {
+      await deleteStorageIfUnreferenced(ctx, args.storageId);
+      cmsValidationError(
+        `Gallery supports up to ${MAX_GALLERY_PHOTOS} photos.`,
+        "storageId",
+      );
+    }
+
+    try {
+      const storage = await getStorageMetadata(ctx, args.storageId);
+      validateStorageMetadataOrThrow(storage);
+      const contentType = storage.contentType;
+
+      const sortOrder =
+        draft.length === 0
+          ? 0
+          : Math.max(...draft.map((row) => row.sortOrder)) + 1;
+
+      await ctx.db.insert("galleryPhotos", {
+        scope: "draft",
+        stableId: generatePhotoStableId(),
+        storageId: args.storageId,
+        alt: normalizeAlt(args.alt),
+        ...(normalizeCaption(args.caption) !== undefined
+          ? { caption: normalizeCaption(args.caption) }
+          : {}),
+        ...(normalizeDimension(args.width, "width") !== undefined
+          ? { width: normalizeDimension(args.width, "width") }
+          : {}),
+        ...(normalizeDimension(args.height, "height") !== undefined
+          ? { height: normalizeDimension(args.height, "height") }
+          : {}),
+        sortOrder,
+        contentType,
+        sizeBytes: storage.size,
+        ...(normalizeFileName(args.originalFileName) !== undefined
+          ? { originalFileName: normalizeFileName(args.originalFileName) }
+          : {}),
+      });
+    } catch (error) {
+      await deleteStorageIfUnreferenced(ctx, args.storageId);
+      throw error;
+    }
+
+    await patchGalleryMetaAfterDraftChange(ctx, updatedBy);
+    return { ok: true as const };
+  },
+});
+
+export const updateDraftPhotoMetadata = mutation({
+  args: {
+    stableId: v.string(),
+    alt: v.string(),
+    caption: v.optional(v.union(v.string(), v.null())),
+  },
+  handler: async (ctx, args) => {
+    const { updatedBy } = await requireCmsOwner(ctx);
+    const row = await getDraftPhotoByStableId(ctx, args.stableId);
+    if (!row) {
+      cmsNotFound("galleryPhoto", args.stableId);
+    }
+
+    await ctx.db.patch(row._id, {
+      alt: normalizeAlt(args.alt),
+      caption: normalizeCaption(args.caption),
+    });
+
+    await patchGalleryMetaAfterDraftChange(ctx, updatedBy);
+    return { ok: true as const };
+  },
+});
+
+export const reorderDraftPhotos = mutation({
+  args: { orderedStableIds: v.array(v.string()) },
+  handler: async (ctx, args) => {
+    const { updatedBy } = await requireCmsOwner(ctx);
+    const draft = await loadGalleryPhotos(ctx, "draft");
+    if (draft.length !== args.orderedStableIds.length) {
+      cmsValidationError(
+        "Reorder payload must include every draft photo exactly once.",
+        "orderedStableIds",
+      );
+    }
+
+    const draftIds = new Set(draft.map((row) => row.stableId));
+    const orderedIds = new Set(args.orderedStableIds);
+    if (
+      orderedIds.size !== args.orderedStableIds.length ||
+      draftIds.size !== orderedIds.size ||
+      args.orderedStableIds.some((stableId) => !draftIds.has(stableId))
+    ) {
+      cmsValidationError(
+        "Reorder payload must include every draft photo exactly once.",
+        "orderedStableIds",
+      );
+    }
+
+    const byStableId = new Map(draft.map((row) => [row.stableId, row]));
+    for (let i = 0; i < args.orderedStableIds.length; i++) {
+      const row = byStableId.get(args.orderedStableIds[i]);
+      if (!row) {
+        cmsNotFound("galleryPhoto", args.orderedStableIds[i]);
+      }
+      if (row.sortOrder !== i) {
+        await ctx.db.patch(row._id, { sortOrder: i });
+      }
+    }
+
+    await patchGalleryMetaAfterDraftChange(ctx, updatedBy);
+    return { ok: true as const };
+  },
+});
+
+export const removeDraftPhoto = mutation({
+  args: { stableId: v.string() },
+  handler: async (ctx, args) => {
+    const { updatedBy } = await requireCmsOwner(ctx);
+    const row = await getDraftPhotoByStableId(ctx, args.stableId);
+    if (!row) {
+      return { ok: true as const, removed: false };
+    }
+
+    await ctx.db.delete(row._id);
+    await resequenceDraftPhotos(ctx);
+    await deleteStorageIfUnreferenced(ctx, row.storageId);
+    await patchGalleryMetaAfterDraftChange(ctx, updatedBy);
+    return { ok: true as const, removed: true };
+  },
+});
+
+export const publishPhotos = mutation({
+  args: {},
+  handler: async (ctx) => {
+    const { userId, updatedBy } = await requireCmsOwner(ctx);
+    const draft = await loadGalleryPhotos(ctx, "draft");
+    const issues = await validateDraftForPublish(ctx, draft);
+    if (issues.length > 0) {
+      cmsPublishValidationFailed(
+        "photos",
+        "Publish validation failed.",
+        issues,
+      );
+    }
+
+    await replaceGalleryScope(ctx, "draft", "published");
+
+    const now = Date.now();
+    const { id: metaId } = await ensureGalleryMeta(ctx);
+    await ctx.db.patch(metaId, {
+      hasDraftChanges: false,
+      publishedAt: now,
+      publishedBy: userId,
+      updatedAt: now,
+      updatedBy,
+    });
+
+    return {
+      ok: true as const,
+      kind: "published" as const,
+      publishedAt: now,
+      publishedBy: userId,
+    };
+  },
+});
+
+export const discardDraftPhotos = mutation({
+  args: {},
+  handler: async (ctx) => {
+    const { updatedBy } = await requireCmsOwner(ctx);
+    await ensureGalleryMeta(ctx);
+    await replaceGalleryScope(ctx, "published", "draft");
+
+    const now = Date.now();
+    const { id: metaId } = await ensureGalleryMeta(ctx);
+    await ctx.db.patch(metaId, {
+      hasDraftChanges: false,
+      updatedAt: now,
+      updatedBy,
+    });
+
+    return { ok: true as const, discarded: true };
+  },
+});

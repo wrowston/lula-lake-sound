@@ -86,4 +86,30 @@ export default defineSchema({
       "sort",
     ])
     .index("by_scope_and_stableId", ["scope", "stableId"]),
+
+  galleryPhotoMeta: defineTable({
+    singletonKey: v.literal("default"),
+    hasDraftChanges: v.boolean(),
+    publishedAt: v.union(v.number(), v.null()),
+    publishedBy: v.optional(v.string()),
+    updatedAt: v.number(),
+    updatedBy: v.optional(v.string()),
+  }).index("by_singleton", ["singletonKey"]),
+
+  galleryPhotos: defineTable({
+    scope: gearScopeValidator,
+    stableId: v.string(),
+    storageId: v.id("_storage"),
+    alt: v.string(),
+    caption: v.optional(v.string()),
+    width: v.optional(v.number()),
+    height: v.optional(v.number()),
+    sortOrder: v.number(),
+    contentType: v.string(),
+    sizeBytes: v.number(),
+    originalFileName: v.optional(v.string()),
+  })
+    .index("by_scope_and_sort", ["scope", "sortOrder"])
+    .index("by_scope_and_stableId", ["scope", "stableId"])
+    .index("by_storageId", ["storageId"]),
 });

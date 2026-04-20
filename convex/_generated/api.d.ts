@@ -9,6 +9,7 @@
  */
 
 import type * as admin_gear from "../admin/gear.js";
+import type * as admin_photos from "../admin/photos.js";
 import type * as admin_pricing from "../admin/pricing.js";
 import type * as admin_publish from "../admin/publish.js";
 import type * as admin_siteSettings from "../admin/siteSettings.js";
@@ -16,6 +17,7 @@ import type * as cms from "../cms.js";
 import type * as cmsPublishHelpers from "../cmsPublishHelpers.js";
 import type * as cmsShared from "../cmsShared.js";
 import type * as errors from "../errors.js";
+import type * as galleryPhotos from "../galleryPhotos.js";
 import type * as gearEquipmentSeed from "../gearEquipmentSeed.js";
 import type * as gearLegacySeed from "../gearLegacySeed.js";
 import type * as gearPreviewDraft from "../gearPreviewDraft.js";
@@ -25,6 +27,7 @@ import type * as lib_auth from "../lib/auth.js";
 import type * as lib_sentryConvex from "../lib/sentryConvex.js";
 import type * as migrations_gearFromEquipmentSpecs from "../migrations/gearFromEquipmentSpecs.js";
 import type * as observability from "../observability.js";
+import type * as photosPreviewDraft from "../photosPreviewDraft.js";
 import type * as pricingPreviewDraft from "../pricingPreviewDraft.js";
 import type * as public_ from "../public.js";
 import type * as publicSettingsSnapshot from "../publicSettingsSnapshot.js";
@@ -40,6 +43,7 @@ import type {
 
 declare const fullApi: ApiFromModules<{
   "admin/gear": typeof admin_gear;
+  "admin/photos": typeof admin_photos;
   "admin/pricing": typeof admin_pricing;
   "admin/publish": typeof admin_publish;
   "admin/siteSettings": typeof admin_siteSettings;
@@ -47,6 +51,7 @@ declare const fullApi: ApiFromModules<{
   cmsPublishHelpers: typeof cmsPublishHelpers;
   cmsShared: typeof cmsShared;
   errors: typeof errors;
+  galleryPhotos: typeof galleryPhotos;
   gearEquipmentSeed: typeof gearEquipmentSeed;
   gearLegacySeed: typeof gearLegacySeed;
   gearPreviewDraft: typeof gearPreviewDraft;
@@ -56,6 +61,7 @@ declare const fullApi: ApiFromModules<{
   "lib/sentryConvex": typeof lib_sentryConvex;
   "migrations/gearFromEquipmentSpecs": typeof migrations_gearFromEquipmentSpecs;
   observability: typeof observability;
+  photosPreviewDraft: typeof photosPreviewDraft;
   pricingPreviewDraft: typeof pricingPreviewDraft;
   public: typeof public_;
   publicSettingsSnapshot: typeof publicSettingsSnapshot;
