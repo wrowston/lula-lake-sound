@@ -15,7 +15,7 @@ import { cn } from "@/lib/utils";
  * - Titillium Web — full static family (extra light through black + italics where provided).
  *   Preload is off for Titillium so first paint does not issue many high-priority font
  *   requests; faces load on demand with `display: swap` (Acumin stays preloaded for hero).
- * - Verdana + Arial Bold — guide-approved fallbacks when brand fonts are unavailable.
+ * - Verdana + Arial — guide-approved system fallbacks (not redistributed).
  */
 const acuminVariableConcept = localFont({
   src: "../fonts/AcuminVariableConcept.otf",
@@ -88,20 +88,6 @@ const titillium = localFont({
   preload: false,
 });
 
-const verdanaBrand = localFont({
-  src: "../fonts/Verdana.ttf",
-  variable: "--font-verdana-brand",
-  weight: "400",
-  display: "swap",
-});
-
-const arialBoldBrand = localFont({
-  src: "../fonts/Arial-Bold.ttf",
-  variable: "--font-arial-bold-brand",
-  weight: "700",
-  display: "swap",
-});
-
 export const metadata: Metadata = {
   title: "Lula Lake Sound | Recording Studio | Chattanooga, TN",
   description:
@@ -125,8 +111,6 @@ export default function RootLayout({
         "font-sans",
         acuminVariableConcept.variable,
         titillium.variable,
-        verdanaBrand.variable,
-        arialBoldBrand.variable,
       )}
       suppressHydrationWarning
     >
