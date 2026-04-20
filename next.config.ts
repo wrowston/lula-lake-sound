@@ -50,6 +50,12 @@ const nextConfig: NextConfig = {
         port: "",
         pathname: "/f/**",
       },
+      /** Convex file storage (`ctx.storage.getUrl`) — required for `next/image` optimization. */
+      {
+        protocol: "https",
+        hostname: "*.convex.cloud",
+        pathname: "/api/storage/**",
+      },
     ],
     // Cache optimized images for 31 days to reduce transformations and cache writes
     minimumCacheTTL: 2678400, // 31 days in seconds

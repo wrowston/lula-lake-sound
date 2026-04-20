@@ -7,7 +7,7 @@ export const ALLOWED_GALLERY_IMAGE_TYPES = [
   "image/webp",
 ] as const;
 
-export const MAX_GALLERY_IMAGE_BYTES = 10 * 1024 * 1024;
+export const MAX_GALLERY_IMAGE_BYTES = 50 * 1024 * 1024;
 export const MAX_GALLERY_PHOTOS = 40;
 const GALLERY_QUERY_LIMIT = 128;
 
