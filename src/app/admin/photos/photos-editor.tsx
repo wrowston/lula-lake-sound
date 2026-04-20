@@ -242,9 +242,8 @@ function PhotosEditorForm() {
 
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const dragDepthRef = useRef(0);
-  const uploadDismissTimerRef = useRef<ReturnType<typeof window.setTimeout> | null>(
-    null,
-  );
+  /** Browser `setTimeout` ids are numeric; avoid `NodeJS.Timeout` from `ReturnType<typeof setTimeout>`. */
+  const uploadDismissTimerRef = useRef<number | null>(null);
 
   const [busy, setBusy] = useState<string | null>(null);
   const [rowBusy, setRowBusy] = useState<RowBusy>({});
