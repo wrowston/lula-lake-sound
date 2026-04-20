@@ -35,6 +35,11 @@ const SIDEBAR_WIDTH_MOBILE = "18rem"
 const SIDEBAR_WIDTH_ICON = "3rem"
 const SIDEBAR_KEYBOARD_SHORTCUT = "b"
 
+/** Default matches `SIDEBAR_WIDTH` at 16px root. */
+const SIDEBAR_WIDTH_DEFAULT_PX = 256
+const SIDEBAR_WIDTH_MIN_PX = 200
+const SIDEBAR_WIDTH_MAX_PX = 480
+
 type SidebarContextProps = {
   state: "expanded" | "collapsed"
   open: boolean
@@ -43,6 +48,9 @@ type SidebarContextProps = {
   setOpenMobile: (open: boolean) => void
   isMobile: boolean
   toggleSidebar: () => void
+  resizableWidth: boolean
+  sidebarWidthPx: number
+  setSidebarWidthPx: (px: number) => void
 }
 
 const SidebarContext = React.createContext<SidebarContextProps | null>(null)
@@ -60,6 +68,8 @@ function SidebarProvider({
   defaultOpen = true,
   open: openProp,
   onOpenChange: setOpenProp,
+  resizableWidth = false,
+  sidebarWidthStorageKey = "sidebar_width_px",
   className,
   style,
   children,
@@ -68,9 +78,52 @@ function SidebarProvider({
   defaultOpen?: boolean
   open?: boolean
   onOpenChange?: (open: boolean) => void
+  /** When true, sidebar width is draggable and persisted to localStorage. */
+  resizableWidth?: boolean
+  sidebarWidthStorageKey?: string
 }) {
   const isMobile = useIsMobile()
   const [openMobile, setOpenMobile] = React.useState(false)
+  const [sidebarWidthPx, setSidebarWidthPxState] = React.useState(
+    SIDEBAR_WIDTH_DEFAULT_PX
+  )
+
+  React.useEffect(() => {
+    if (!resizableWidth || typeof window === "undefined") return
+    try {
+      const raw = window.localStorage.getItem(sidebarWidthStorageKey)
+      if (raw == null) return
+      const n = Number.parseInt(raw, 10)
+      if (Number.isFinite(n)) {
+        setSidebarWidthPxState(
+          Math.min(SIDEBAR_WIDTH_MAX_PX, Math.max(SIDEBAR_WIDTH_MIN_PX, n))
+        )
+      }
+    } catch {
+      /* ignore */
+    }
+  }, [resizableWidth, sidebarWidthStorageKey])
+
+  const setSidebarWidthPx = React.useCallback(
+    (px: number) => {
+      const clamped = Math.min(
+        SIDEBAR_WIDTH_MAX_PX,
+        Math.max(SIDEBAR_WIDTH_MIN_PX, Math.round(px))
+      )
+      setSidebarWidthPxState(clamped)
+      if (resizableWidth && typeof window !== "undefined") {
+        try {
+          window.localStorage.setItem(
+            sidebarWidthStorageKey,
+            String(clamped)
+          )
+        } catch {
+          /* ignore */
+        }
+      }
+    },
+    [resizableWidth, sidebarWidthStorageKey]
+  )
 
   // This is the internal state of the sidebar.
   // We use openProp and setOpenProp for control from outside the component.
@@ -125,9 +178,25 @@ function SidebarProvider({
       openMobile,
       setOpenMobile,
       toggleSidebar,
+      resizableWidth,
+      sidebarWidthPx,
+      setSidebarWidthPx,
     }),
-    [state, open, setOpen, isMobile, openMobile, setOpenMobile, toggleSidebar]
+    [
+      state,
+      open,
+      setOpen,
+      isMobile,
+      openMobile,
+      setOpenMobile,
+      toggleSidebar,
+      resizableWidth,
+      sidebarWidthPx,
+      setSidebarWidthPx,
+    ]
   )
+
+  const widthCss = resizableWidth ? `${sidebarWidthPx}px` : SIDEBAR_WIDTH
 
   return (
     <SidebarContext.Provider value={contextValue}>
@@ -135,7 +204,7 @@ function SidebarProvider({
         data-slot="sidebar-wrapper"
         style={
           {
-            "--sidebar-width": SIDEBAR_WIDTH,
+            "--sidebar-width": widthCss,
             "--sidebar-width-icon": SIDEBAR_WIDTH_ICON,
             ...style,
           } as React.CSSProperties
@@ -152,10 +221,89 @@ function SidebarProvider({
   )
 }
 
+function SidebarResizeHandle({
+  side = "left",
+  className,
+  ...props
+}: React.ComponentProps<"div"> & { side?: "left" | "right" }) {
+  const { isMobile, state, resizableWidth, sidebarWidthPx, setSidebarWidthPx } =
+    useSidebar()
+  const draggingRef = React.useRef(false)
+
+  if (!resizableWidth || isMobile || state === "collapsed") {
+    return null
+  }
+
+  return (
+    <div
+      role="separator"
+      aria-orientation="vertical"
+      aria-valuenow={sidebarWidthPx}
+      aria-valuemin={SIDEBAR_WIDTH_MIN_PX}
+      aria-valuemax={SIDEBAR_WIDTH_MAX_PX}
+      tabIndex={0}
+      data-slot="sidebar-resize-handle"
+      className={cn(
+        "absolute inset-y-0 z-30 w-1 cursor-col-resize touch-none select-none",
+        "border-r border-transparent",
+        "hover:border-sidebar-border/80 hover:bg-sidebar-border/15",
+        "focus-visible:border-sidebar-border focus-visible:bg-sidebar-border/20 focus-visible:outline-none",
+        side === "left" ? "right-0" : "left-0",
+        className
+      )}
+      onPointerDown={(e) => {
+        if (e.button !== 0) return
+        e.preventDefault()
+        const el = e.currentTarget
+        el.setPointerCapture(e.pointerId)
+        draggingRef.current = true
+        const startX = e.clientX
+        const startWidth = sidebarWidthPx
+        const onMove = (ev: PointerEvent) => {
+          if (!draggingRef.current) return
+          const delta =
+            side === "left" ? ev.clientX - startX : startX - ev.clientX
+          setSidebarWidthPx(startWidth + delta)
+        }
+        const onUp = (ev: PointerEvent) => {
+          draggingRef.current = false
+          try {
+            el.releasePointerCapture(ev.pointerId)
+          } catch {
+            /* already released */
+          }
+          window.removeEventListener("pointermove", onMove)
+          window.removeEventListener("pointerup", onUp)
+          window.removeEventListener("pointercancel", onUp)
+        }
+        window.addEventListener("pointermove", onMove)
+        window.addEventListener("pointerup", onUp)
+        window.addEventListener("pointercancel", onUp)
+      }}
+      onKeyDown={(e) => {
+        const step = e.shiftKey ? 16 : 4
+        if (e.key === "ArrowLeft") {
+          e.preventDefault()
+          setSidebarWidthPx(
+            sidebarWidthPx + (side === "left" ? -step : step)
+          )
+        } else if (e.key === "ArrowRight") {
+          e.preventDefault()
+          setSidebarWidthPx(
+            sidebarWidthPx + (side === "left" ? step : -step)
+          )
+        }
+      }}
+      {...props}
+    />
+  )
+}
+
 function Sidebar({
   side = "left",
   variant = "sidebar",
   collapsible = "offcanvas",
+  showResizeHandle = false,
   className,
   children,
   dir,
@@ -164,6 +312,7 @@ function Sidebar({
   side?: "left" | "right"
   variant?: "sidebar" | "floating" | "inset"
   collapsible?: "offcanvas" | "icon" | "none"
+  showResizeHandle?: boolean
 }) {
   const { isMobile, state, openMobile, setOpenMobile } = useSidebar()
 
@@ -249,6 +398,7 @@ function Sidebar({
         >
           {children}
         </div>
+        {showResizeHandle ? <SidebarResizeHandle side={side} /> : null}
       </div>
     </div>
   )
@@ -720,6 +870,7 @@ export {
   SidebarMenuSubItem,
   SidebarProvider,
   SidebarRail,
+  SidebarResizeHandle,
   SidebarSeparator,
   SidebarTrigger,
   useSidebar,
