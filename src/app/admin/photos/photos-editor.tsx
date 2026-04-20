@@ -979,7 +979,7 @@ function PhotosEditorForm() {
           </p>
         </div>
       ) : (
-        <div className="space-y-4">
+        <div className="grid grid-cols-1 gap-3 md:grid-cols-2 lg:grid-cols-3">
           {photos.map((photo, index) => {
             const fields = getEditableFields(photo);
             const isDirty = edits[photo.stableId] !== undefined;
@@ -998,7 +998,7 @@ function PhotosEditorForm() {
                 key={photo.stableId}
                 data-stable-id={photo.stableId}
                 className={cn(
-                  "relative grid gap-4 p-4 transition lg:grid-cols-[240px_minmax(0,1fr)]",
+                  "relative flex min-w-0 flex-col gap-2 p-2.5 transition",
                   isDraggingThis && "opacity-60",
                   dropHint === "before" &&
                     "shadow-[0_-2px_0_0_var(--color-primary)]",
@@ -1014,17 +1014,57 @@ function PhotosEditorForm() {
                 onDrop={(event) => void handleRowDrop(event, photo.stableId)}
                 onDragEnd={handleRowDragEnd}
               >
-                {/* Drag handle (also functions as an ARIA handle cue) */}
-                <div
-                  className="pointer-events-none absolute left-1 top-1/2 hidden -translate-y-1/2 text-muted-foreground/60 lg:block"
-                  aria-hidden
-                >
-                  <GripVertical className="size-4" />
-                </div>
-
-                <div className="overflow-hidden rounded-lg border border-border bg-muted/30">
+                <div className="relative overflow-hidden rounded-lg border border-border bg-muted/30">
+                  <div
+                    className="pointer-events-none absolute left-1.5 top-1.5 z-10 text-muted-foreground/70"
+                    aria-hidden
+                  >
+                    <GripVertical className="size-4" />
+                  </div>
+                  <div className="absolute right-1 top-1 z-10 flex gap-0.5 rounded-md border border-border/60 bg-background/85 p-0.5 shadow-sm backdrop-blur-sm dark:bg-background/80">
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="icon-sm"
+                      className="bg-transparent"
+                      aria-label="Move photo up"
+                      disabled={index === 0 || busy !== null || isRowBusy}
+                      onClick={() => void movePhoto(photo.stableId, -1)}
+                    >
+                      <ArrowUp className="size-3.5" aria-hidden />
+                    </Button>
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="icon-sm"
+                      className="bg-transparent"
+                      aria-label="Move photo down"
+                      disabled={
+                        index === photos.length - 1 ||
+                        busy !== null ||
+                        isRowBusy
+                      }
+                      onClick={() => void movePhoto(photo.stableId, 1)}
+                    >
+                      <ArrowDown className="size-3.5" aria-hidden />
+                    </Button>
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="icon-sm"
+                      className="bg-transparent"
+                      aria-label="Delete photo"
+                      disabled={busy !== null || isRowBusy}
+                      onClick={() => setDeleteStableId(photo.stableId)}
+                    >
+                      <Trash2
+                        className="size-3.5 text-destructive"
+                        aria-hidden
+                      />
+                    </Button>
+                  </div>
                   {photo.url ? (
-                    <div className="relative aspect-[4/3]">
+                    <div className="relative aspect-[4/3] w-full">
                       <Image
                         src={photo.url}
                         alt={photo.alt}
@@ -1032,89 +1072,50 @@ function PhotosEditorForm() {
                         unoptimized
                         draggable={false}
                         className="select-none object-cover"
-                        sizes="240px"
+                        sizes="(max-width: 768px) 100vw, (max-width: 1024px) 50vw, 33vw"
                       />
                     </div>
                   ) : (
-                    <div className="flex aspect-[4/3] items-center justify-center text-sm text-muted-foreground">
+                    <div className="flex aspect-[4/3] items-center justify-center px-2 text-center text-xs text-muted-foreground">
                       Image unavailable
                     </div>
                   )}
                 </div>
 
-                <div className="space-y-4">
-                  <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-                    <div className="space-y-1">
-                      <p className="text-[10px] font-semibold uppercase tracking-wider text-foreground/55">
-                        Photo #{index + 1}
-                      </p>
-                      <p className="body-text-small text-foreground/80">
+                <div className="min-w-0 space-y-1.5">
+                  <div className="min-w-0 space-y-0">
+                    <p className="truncate text-[10px] font-semibold uppercase tracking-wider text-foreground/55">
+                      <span className="mr-1.5">Photo #{index + 1}</span>
+                      <span className="font-normal normal-case text-foreground/80">
                         {photo.originalFileName ?? "Untitled image"}
+                      </span>
+                    </p>
+                    <p className="truncate text-[11px] leading-tight text-muted-foreground">
+                      {photo.width && photo.height
+                        ? `${photo.width} × ${photo.height}`
+                        : "Dimensions unavailable"}
+                      {" · "}
+                      {photo.contentType}
+                      {" · "}
+                      {formatBytes(photo.sizeBytes)}
+                    </p>
+                    {rowAction === "saving" && (
+                      <p className="inline-flex items-center gap-1 text-xs text-muted-foreground">
+                        <Loader2 className="size-3 animate-spin" aria-hidden />
+                        Saving…
                       </p>
-                      <p className="body-text-small text-muted-foreground">
-                        {photo.width && photo.height
-                          ? `${photo.width} × ${photo.height}`
-                          : "Dimensions unavailable"}
-                        {" · "}
-                        {photo.contentType}
-                        {" · "}
-                        {formatBytes(photo.sizeBytes)}
+                    )}
+                    {rowAction === "deleting" && (
+                      <p className="inline-flex items-center gap-1 text-xs text-muted-foreground">
+                        <Loader2 className="size-3 animate-spin" aria-hidden />
+                        Deleting…
                       </p>
-                      {rowAction === "saving" && (
-                        <p className="inline-flex items-center gap-1 text-xs text-muted-foreground">
-                          <Loader2 className="size-3 animate-spin" aria-hidden />
-                          Saving…
-                        </p>
-                      )}
-                      {rowAction === "deleting" && (
-                        <p className="inline-flex items-center gap-1 text-xs text-muted-foreground">
-                          <Loader2 className="size-3 animate-spin" aria-hidden />
-                          Deleting…
-                        </p>
-                      )}
-                    </div>
-
-                    <div className="flex flex-wrap items-center gap-1">
-                      <Button
-                        type="button"
-                        variant="ghost"
-                        size="icon"
-                        aria-label="Move photo up"
-                        disabled={index === 0 || busy !== null || isRowBusy}
-                        onClick={() => void movePhoto(photo.stableId, -1)}
-                      >
-                        <ArrowUp className="size-4" aria-hidden />
-                      </Button>
-                      <Button
-                        type="button"
-                        variant="ghost"
-                        size="icon"
-                        aria-label="Move photo down"
-                        disabled={
-                          index === photos.length - 1 ||
-                          busy !== null ||
-                          isRowBusy
-                        }
-                        onClick={() => void movePhoto(photo.stableId, 1)}
-                      >
-                        <ArrowDown className="size-4" aria-hidden />
-                      </Button>
-                      <Button
-                        type="button"
-                        variant="ghost"
-                        size="icon"
-                        aria-label="Delete photo"
-                        disabled={busy !== null || isRowBusy}
-                        onClick={() => setDeleteStableId(photo.stableId)}
-                      >
-                        <Trash2 className="size-4 text-destructive" aria-hidden />
-                      </Button>
-                    </div>
+                    )}
                   </div>
 
-                  <div className="grid gap-4">
-                    <label className="space-y-1">
-                      <span className="body-text-small text-muted-foreground">
+                  <div className="grid gap-1.5">
+                    <label className="min-w-0 space-y-0.5">
+                      <span className="text-[11px] leading-none text-muted-foreground">
                         Alt text
                         <span
                           className="ml-1 text-destructive"
@@ -1133,6 +1134,7 @@ function PhotosEditorForm() {
                           updatePhotoEdit(photo, { alt: event.target.value })
                         }
                         maxLength={MAX_ALT_LENGTH}
+                        className="h-7 py-1 text-sm"
                       />
                       {altInvalid && (
                         <span
@@ -1144,8 +1146,8 @@ function PhotosEditorForm() {
                       )}
                     </label>
 
-                    <label className="space-y-1">
-                      <span className="body-text-small text-muted-foreground">
+                    <label className="min-w-0 space-y-0.5">
+                      <span className="text-[11px] leading-none text-muted-foreground">
                         Caption
                       </span>
                       <Textarea
@@ -1154,13 +1156,14 @@ function PhotosEditorForm() {
                           updatePhotoEdit(photo, { caption: event.target.value })
                         }
                         maxLength={MAX_CAPTION_LENGTH}
-                        rows={3}
+                        rows={2}
+                        className="min-h-[2.5rem] max-h-24 resize-y py-1.5 text-sm [field-sizing:fixed]"
                       />
                     </label>
                   </div>
 
-                  <div className="flex items-center justify-between gap-3">
-                    <p className="body-text-small text-muted-foreground">
+                  <div className="flex items-center justify-between gap-2 border-t border-border/60 pt-1.5">
+                    <p className="text-[11px] leading-tight text-muted-foreground">
                       {isDirty
                         ? "Unsaved metadata changes."
                         : "Metadata saved to draft."}
@@ -1168,18 +1171,20 @@ function PhotosEditorForm() {
                     <Button
                       type="button"
                       variant="outline"
+                      size="sm"
+                      aria-label="Save photo details"
                       disabled={!isDirty || busy !== null || isRowBusy}
                       onClick={() => void savePhotoDetails(photo)}
                     >
                       {rowAction === "saving" ? (
                         <Loader2
-                          className="mr-1 size-4 animate-spin"
+                          className="mr-1 size-3.5 animate-spin"
                           aria-hidden
                         />
                       ) : (
-                        <Save className="mr-1 size-4" aria-hidden />
+                        <Save className="mr-1 size-3.5" aria-hidden />
                       )}
-                      Save details
+                      Save
                     </Button>
                   </div>
                 </div>
