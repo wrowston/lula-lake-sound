@@ -13,12 +13,14 @@ import { cmsSectionValidator } from "../schema.shared";
 import type { Doc } from "../_generated/dataModel";
 import { requireCmsOwner } from "../lib/auth";
 import { cmsPublishValidationFailed } from "../errors";
+import { loadGalleryPhotos } from "../galleryPhotos";
 import {
   collectAllPublishIssues,
   ensureSectionRow,
   publishSectionCore,
   rowsWithPublishableDraft,
 } from "../cmsPublishHelpers";
+import { publishGalleryDraftCore, validateDraftForPublish } from "./photos";
 
 export const publish = mutation({
   args: { section: cmsSectionValidator },
@@ -45,7 +47,13 @@ export const publishSite = mutation({
     const rows = await ctx.db.query("cmsSections").take(50);
     const targets = rowsWithPublishableDraft(rows);
 
-    if (targets.length === 0) {
+    const galleryMeta = await ctx.db
+      .query("galleryPhotoMeta")
+      .withIndex("by_singleton", (q) => q.eq("singletonKey", "default"))
+      .unique();
+    const galleryPending = galleryMeta?.hasDraftChanges ?? false;
+
+    if (targets.length === 0 && !galleryPending) {
       return {
         ok: true as const,
         kind: "nothing_to_publish" as const,
@@ -54,6 +62,16 @@ export const publishSite = mutation({
     }
 
     const issues = collectAllPublishIssues(targets);
+    if (galleryPending) {
+      const draft = await loadGalleryPhotos(ctx, "draft");
+      const photoIssues = await validateDraftForPublish(ctx, draft);
+      for (const issue of photoIssues) {
+        issues.push({
+          path: `photos.${issue.path}`,
+          message: issue.message,
+        });
+      }
+    }
     if (issues.length > 0) {
       cmsPublishValidationFailed(
         "site",
@@ -75,11 +93,16 @@ export const publishSite = mutation({
       results.push(r);
     }
 
+    const galleryResult = galleryPending
+      ? await publishGalleryDraftCore(ctx, { userId, updatedBy })
+      : undefined;
+
     return {
       ok: true as const,
       kind: "published" as const,
       publishedSections: targets.map((t) => t.section),
       results,
+      ...(galleryResult !== undefined ? { gallery: galleryResult } : {}),
     };
   },
 });

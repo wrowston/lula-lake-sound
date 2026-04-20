@@ -11,8 +11,13 @@ function PreviewContent() {
     api.pricingPreviewDraft.getPreviewPricingFlags,
   );
   const gearPreview = useQuery(api.gearPreviewDraft.getPreviewGear);
+  const photoPreview = useQuery(api.photosPreviewDraft.getPreviewGalleryPhotos);
 
-  if (pricingFlags === undefined || gearPreview === undefined) {
+  if (
+    pricingFlags === undefined ||
+    gearPreview === undefined ||
+    photoPreview === undefined
+  ) {
     return (
       <div className="flex min-h-screen items-center justify-center bg-washed-black">
         <p className="text-ivory/60">Loading preview…</p>
@@ -20,7 +25,11 @@ function PreviewContent() {
     );
   }
 
-  if (pricingFlags === null || gearPreview === null) {
+  if (
+    pricingFlags === null ||
+    gearPreview === null ||
+    photoPreview === null
+  ) {
     return (
       <div className="flex min-h-screen items-center justify-center bg-washed-black">
         <p className="text-ivory/60">
@@ -31,7 +40,9 @@ function PreviewContent() {
   }
 
   const hasDraftChanges =
-    pricingFlags.hasDraftChanges || gearPreview.hasDraftChanges;
+    pricingFlags.hasDraftChanges ||
+    gearPreview.hasDraftChanges ||
+    photoPreview.hasDraftChanges;
 
   return (
     <HomepageShell
@@ -40,6 +51,7 @@ function PreviewContent() {
         packages: pricingFlags.packages,
       }}
       gear={{ categories: gearPreview.categories }}
+      photos={photoPreview.photos}
       banner={<PreviewBanner hasDraftChanges={hasDraftChanges} />}
     />
   );

@@ -19,7 +19,7 @@
 | `settings` | `{ metadata?: { title, description } }` | `/admin/settings` |
 | `pricing`  | `{ flags: { priceTabEnabled } }`         | `/admin/pricing` |
 
-Each section has its own `cmsSections` row and therefore its own independent draft / publish lifecycle. Publishing one section never publishes another (except via `api.admin.publish.publishSite`, which explicitly iterates all sections with pending drafts).
+Each section has its own `cmsSections` row and therefore its own independent draft / publish lifecycle. Publishing one section never publishes another (except via `api.admin.publish.publishSite`, which explicitly iterates all `cmsSections` rows with pending drafts **and** the studio gallery when `galleryPhotoMeta.hasDraftChanges` is true).
 
 > Legacy rows whose `settings.publishedSnapshot` still contains `flags` remain schema-valid thanks to an optional `flags` field on `settingsContentValidator`. Public / preview pricing queries fall back to that legacy location when the `pricing` row hasn’t been written yet, so no migration is required before deploy.
 
@@ -29,6 +29,8 @@ The shared `CmsPublishToolbar` exposes three actions: **Publish**, **Discard**, 
 
 Publish flushes any pending autosave first, so fast-clicking Publish after an edit is safe and never loses work.
 
+> The studio gallery (`/admin/photos`) follows the same publish/discard UX, but it uses dedicated `galleryPhotoMeta` / `galleryPhotos` tables because image metadata and storage refs are row-based rather than snapshot-based. See `docs/gallery-photos.md`.
+
 ## Mutations (shared pattern)
 
 | Function | Role |
@@ -36,7 +38,7 @@ Publish flushes any pending autosave first, so fast-clicking Publish after an ed
 | `api.cms.saveDraft` | Writes `draftSnapshot`, updates `hasDraftChanges` vs `publishedSnapshot`. Called by the editor's autosave hook on each debounced change. |
 | `api.cms.publishSection` | Validates, then copies `draftSnapshot` → `publishedSnapshot`, sets `publishedAt` + `publishedBy` (Clerk user id), clears draft in **one** transaction. Idempotent when there is nothing to publish. |
 | `api.admin.publish.publish` | Same as `publishSection` (owner-gated; see `convex/admin/publish.ts`). |
-| `api.admin.publish.publishSite` | Validates **all** sections with pending drafts first; if any fail, **no** section is published. Otherwise publishes each in the same transaction. |
+| `api.admin.publish.publishSite` | Validates **all** `cmsSections` rows with pending drafts **and** the gallery draft (when the gallery has pending changes) first; if any fail, **nothing** is published. Otherwise publishes every pending section **and** the gallery (when applicable) in the same transaction. |
 | `api.cms.validatePublishSection` | Read-only preflight validation for the effective draft snapshot. |
 | `api.cms.discardDraft` | Clears `draftSnapshot` and `hasDraftChanges` with `patch` (optional field removed). No-op if there was nothing to discard. `publishedSnapshot`, `publishedAt`, and `publishedBy` are unchanged. |
 

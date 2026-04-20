@@ -3,7 +3,7 @@
 import { useState, useCallback } from "react";
 import { Header } from "@/components/header";
 import { Hero } from "@/components/hero";
-import { TheSpace } from "@/components/the-space";
+import { TheSpace, type GalleryPhoto } from "@/components/the-space";
 import { EquipmentSpecs, type GearPayload } from "@/components/equipment-specs";
 import { AmenitiesNearby } from "@/components/amenities-nearby";
 import { FAQ } from "@/components/faq";
@@ -23,10 +23,17 @@ interface HomepageShellProps {
    * `null` renders the graceful empty state.
    */
   readonly gear: GearPayload | null | undefined;
+  /** Published (or preview) gallery payload. */
+  readonly photos: GalleryPhoto[] | null | undefined;
   readonly banner?: React.ReactNode;
 }
 
-export function HomepageShell({ pricingFlags, gear, banner }: HomepageShellProps) {
+export function HomepageShell({
+  pricingFlags,
+  gear,
+  photos,
+  banner,
+}: HomepageShellProps) {
   const [scrollY, setScrollY] = useState(0);
 
   const containerRef = useCallback((node: HTMLDivElement | null) => {
@@ -76,7 +83,7 @@ export function HomepageShell({ pricingFlags, gear, banner }: HomepageShellProps
       <Hero logoScale={logoScale} />
 
       <div className="relative z-10">
-        <TheSpace />
+        <TheSpace photos={photos} />
         <EquipmentSpecs gear={gear} />
         <MarketingPricingSection pricingFlags={pricingFlags} />
         <AmenitiesNearby />

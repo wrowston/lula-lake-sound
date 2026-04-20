@@ -5,6 +5,7 @@ import {
 } from "./publicSettingsSnapshot";
 import { loadGearDocs, mapSortedGearTree } from "./gearTree";
 import type { Doc } from "./_generated/dataModel";
+import { loadGalleryPhotos, materializeGalleryPhotos } from "./galleryPhotos";
 
 /**
  * **Public (anonymous) site reads** — published snapshot only.
@@ -82,5 +83,17 @@ export const getPublishedGear = query({
         ...(i.url !== undefined ? { url: i.url } : {}),
       })),
     };
+  },
+});
+
+/**
+ * Published studio gallery photos only. Anonymous; reads `scope === "published"`.
+ */
+export const getPublishedGalleryPhotos = query({
+  args: {},
+  handler: async (ctx) => {
+    const rows = await loadGalleryPhotos(ctx, "published");
+    const photos = await materializeGalleryPhotos(ctx, rows);
+    return photos.filter((photo) => photo.url !== null);
   },
 });
