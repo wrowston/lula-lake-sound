@@ -657,7 +657,8 @@ function PricingForm() {
           const publishOnce = convexMutationEffect(() => publish({}));
           void (async () => {
             if (hasLocalEdits) {
-              await flushAutosave();
+              const flushed = await flushAutosave();
+              if (!flushed) return;
             }
             await runAction("Publishing…", publishOnce);
           })();

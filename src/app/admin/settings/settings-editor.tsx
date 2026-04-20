@@ -213,7 +213,8 @@ function SettingsForm() {
           );
           void (async () => {
             if (hasLocalEdits) {
-              await flushAutosave();
+              const flushed = await flushAutosave();
+              if (!flushed) return;
             }
             await runAction("Publishing…", publishOnce);
           })();

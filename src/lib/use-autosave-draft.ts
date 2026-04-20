@@ -41,9 +41,10 @@ export interface UseAutosaveDraftResult {
   /**
    * Force-flush the pending autosave immediately (used e.g. by Publish so
    * any in-flight debounce doesn't get skipped). Resolves when the save
-   * completes (or immediately if nothing to save).
+   * completes (or immediately if nothing to save). Returns `false` if a save
+   * was required or in flight and did not complete successfully.
    */
-  readonly flush: () => Promise<void>;
+  readonly flush: () => Promise<boolean>;
 }
 
 /**
@@ -85,23 +86,24 @@ export function useAutosaveDraft({
     }
   };
 
-  const runSave = useCallback(async () => {
-    if (inFlightRef.current) return;
+  const runSave = useCallback(async (): Promise<boolean> => {
+    if (inFlightRef.current) return true;
     inFlightRef.current = true;
     clearLinger();
     setStatus("saving");
     const outcome = await runAdminEffect(saveEffectRef.current());
     inFlightRef.current = false;
-    if (!mountedRef.current) return;
+    if (!mountedRef.current) return false;
     if (outcome === undefined) {
       setStatus("error");
-      return;
+      return false;
     }
     onSavedRef.current?.();
     setStatus("saved");
     lingerTimerRef.current = setTimeout(() => {
       if (mountedRef.current) setStatus("idle");
     }, savedLingerMs);
+    return true;
   }, [savedLingerMs]);
 
   useEffect(() => {
@@ -130,16 +132,17 @@ export function useAutosaveDraft({
     };
   }, []);
 
-  const flush = useCallback(async () => {
+  const flush = useCallback(async (): Promise<boolean> => {
     clearTimer();
-    if (!dirty && !inFlightRef.current) return;
+    if (!dirty && !inFlightRef.current) return true;
     if (inFlightRef.current) {
       while (inFlightRef.current) {
         await new Promise((r) => setTimeout(r, 50));
       }
-      return;
+      if (!mountedRef.current) return false;
+      if (!dirty) return true;
     }
-    await runSave();
+    return await runSave();
   }, [dirty, runSave]);
 
   return { status, flush };
