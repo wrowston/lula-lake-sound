@@ -21,10 +21,20 @@ import {
 } from "react";
 import { Effect, pipe } from "effect";
 import { toast } from "sonner";
-import { ArrowDown, ArrowUp, ImagePlus, Loader2, Save, Trash2, Upload } from "lucide-react";
+import {
+  ArrowDown,
+  ArrowUp,
+  GripVertical,
+  ImagePlus,
+  Loader2,
+  Save,
+  Trash2,
+  Upload,
+} from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
+import { Card } from "@/components/ui/card";
 import {
   AlertDialog,
   AlertDialogCancel,
@@ -41,6 +51,13 @@ import { cn } from "@/lib/utils";
 
 const MAX_ALT_LENGTH = 240;
 const MAX_CAPTION_LENGTH = 600;
+/**
+ * Custom drag MIME used for photo reordering. Using a namespaced string lets us
+ * distinguish a reorder drag from a browser file drag (which surfaces "Files"
+ * in dataTransfer.types) so the upload dropzone and the row reorder target
+ * don't fight each other.
+ */
+const REORDER_MIME = "application/x-lls-photo-reorder";
 
 type PhotoItem = {
   stableId: string;
@@ -63,6 +80,20 @@ type PhotoEdits = Record<
     caption: string;
   }
 >;
+
+/** Per-row action state — lets us show a spinner on just the affected row. */
+type RowAction = "saving" | "deleting";
+type RowBusy = Record<string, RowAction | undefined>;
+
+/** Per-file upload progress entry shown in the upload tray. */
+type UploadProgressEntry = {
+  readonly id: string;
+  readonly name: string;
+  /** Fraction 0..1 of bytes uploaded to Convex storage. */
+  readonly progress: number;
+  readonly status: "uploading" | "saving" | "done" | "error";
+  readonly error?: string;
+};
 
 function defaultAltFromFileName(fileName: string): string {
   const withoutExtension = fileName.replace(/\.[^.]+$/, "");
@@ -129,6 +160,53 @@ async function readImageDimensions(
   }
 }
 
+/**
+ * Upload a single file to a Convex upload URL with progress reporting.
+ * Returns the resulting storageId on success; throws a readable Error otherwise.
+ */
+async function uploadFileWithProgress(
+  uploadUrl: string,
+  file: File,
+  onProgress: (fraction: number) => void,
+): Promise<Id<"_storage">> {
+  return await new Promise<Id<"_storage">>((resolve, reject) => {
+    const xhr = new XMLHttpRequest();
+    xhr.open("POST", uploadUrl);
+    xhr.setRequestHeader("Content-Type", file.type);
+    xhr.upload.addEventListener("progress", (event) => {
+      if (event.lengthComputable && event.total > 0) {
+        onProgress(Math.min(1, event.loaded / event.total));
+      }
+    });
+    xhr.addEventListener("load", () => {
+      if (xhr.status >= 200 && xhr.status < 300) {
+        try {
+          const parsed = JSON.parse(xhr.responseText) as {
+            storageId: Id<"_storage">;
+          };
+          onProgress(1);
+          resolve(parsed.storageId);
+        } catch {
+          reject(new Error("Upload succeeded but response was malformed."));
+        }
+      } else {
+        reject(
+          new Error(
+            `Upload failed (${xhr.status} ${xhr.statusText || "unknown"}).`,
+          ),
+        );
+      }
+    });
+    xhr.addEventListener("error", () =>
+      reject(new Error("Network error during upload.")),
+    );
+    xhr.addEventListener("abort", () =>
+      reject(new Error("Upload was aborted.")),
+    );
+    xhr.send(file);
+  });
+}
+
 export function PhotosEditor() {
   return (
     <>
@@ -166,14 +244,38 @@ function PhotosEditorForm() {
   const dragDepthRef = useRef(0);
 
   const [busy, setBusy] = useState<string | null>(null);
+  const [rowBusy, setRowBusy] = useState<RowBusy>({});
   const [inlineError, setInlineError] = useState<string | null>(null);
   const [edits, setEdits] = useState<PhotoEdits>({});
   const [deleteStableId, setDeleteStableId] = useState<string | null>(null);
   const [isDraggingOver, setIsDraggingOver] = useState(false);
+  const [uploadQueue, setUploadQueue] = useState<UploadProgressEntry[]>([]);
+
+  // Drag-reorder state
+  const [draggingStableId, setDraggingStableId] = useState<string | null>(null);
+  const [reorderTarget, setReorderTarget] = useState<{
+    stableId: string;
+    position: "before" | "after";
+  } | null>(null);
 
   const photos = useMemo(
     () => (data?.photos ?? []) as PhotoItem[],
     [data],
+  );
+
+  const setRowAction = useCallback(
+    (stableId: string, action: RowAction | undefined) => {
+      setRowBusy((prev) => {
+        const next = { ...prev };
+        if (action === undefined) {
+          delete next[stableId];
+        } else {
+          next[stableId] = action;
+        }
+        return next;
+      });
+    },
+    [],
   );
 
   const runAction = useCallback(
@@ -246,16 +348,21 @@ function PhotosEditorForm() {
         return false;
       }
 
-      const outcome = await runAction(
-        "Saving…",
+      setInlineError(null);
+      setRowAction(photo.stableId, "saving");
+      const outcome = await runAdminEffect(
         convexMutationEffect(() =>
           updateDraftPhotoMetadata({
             stableId: photo.stableId,
             alt: fields.alt.trim(),
-            caption: fields.caption.trim().length > 0 ? fields.caption.trim() : null,
+            caption:
+              fields.caption.trim().length > 0 ? fields.caption.trim() : null,
           }),
         ),
+        { onErrorMessage: setInlineError },
       );
+      setRowAction(photo.stableId, undefined);
+
       if (outcome === undefined) {
         return false;
       }
@@ -264,7 +371,12 @@ function PhotosEditorForm() {
       toast.success("Photo details saved.");
       return true;
     },
-    [clearPhotoEdit, getEditableFields, runAction, updateDraftPhotoMetadata],
+    [
+      clearPhotoEdit,
+      getEditableFields,
+      setRowAction,
+      updateDraftPhotoMetadata,
+    ],
   );
 
   const savePendingEdits = useCallback(async (): Promise<boolean> => {
@@ -278,7 +390,9 @@ function PhotosEditorForm() {
       const validationError = validatePhotoFields(fields.alt, fields.caption);
       if (validationError) {
         setInlineError(validationError);
-        toast.error(validationError);
+        toast.error(
+          `${photo.originalFileName ?? "Photo"}: ${validationError}`,
+        );
         return false;
       }
     }
@@ -303,6 +417,20 @@ function PhotosEditorForm() {
     return true;
   }, [edits, getEditableFields, photos, runAction, updateDraftPhotoMetadata]);
 
+  /** Persist the given order to the draft; used by both arrow buttons and DnD. */
+  const persistOrder = useCallback(
+    async (orderedStableIds: string[]): Promise<boolean> => {
+      const outcome = await runAction(
+        "Reordering…",
+        convexMutationEffect(() =>
+          reorderDraftPhotos({ orderedStableIds }),
+        ),
+      );
+      return outcome !== undefined;
+    },
+    [reorderDraftPhotos, runAction],
+  );
+
   const movePhoto = useCallback(
     async (stableId: string, direction: -1 | 1) => {
       const index = photos.findIndex((photo) => photo.stableId === stableId);
@@ -314,19 +442,117 @@ function PhotosEditorForm() {
       const [moved] = reordered.splice(index, 1);
       reordered.splice(target, 0, moved);
 
-      const outcome = await runAction(
-        "Reordering…",
-        convexMutationEffect(() =>
-          reorderDraftPhotos({
-            orderedStableIds: reordered.map((photo) => photo.stableId),
-          }),
-        ),
-      );
-      if (outcome !== undefined) {
+      const ok = await persistOrder(reordered.map((photo) => photo.stableId));
+      if (ok) {
         toast.success("Photo order updated.");
       }
     },
-    [photos, reorderDraftPhotos, runAction],
+    [persistOrder, photos],
+  );
+
+  // --- Drag-reorder handlers (native HTML5) -------------------------------
+
+  const handleRowDragStart = useCallback(
+    (event: ReactDragEvent<HTMLDivElement>, stableId: string) => {
+      // Don't allow reorder while another action is in flight.
+      if (busy !== null) {
+        event.preventDefault();
+        return;
+      }
+      event.dataTransfer.effectAllowed = "move";
+      event.dataTransfer.setData(REORDER_MIME, stableId);
+      // Set a benign text payload too — some platforms require one.
+      event.dataTransfer.setData("text/plain", stableId);
+      setDraggingStableId(stableId);
+    },
+    [busy],
+  );
+
+  const handleRowDragOver = useCallback(
+    (event: ReactDragEvent<HTMLDivElement>, overStableId: string) => {
+      if (!event.dataTransfer.types.includes(REORDER_MIME)) return;
+      event.preventDefault();
+      event.stopPropagation();
+      event.dataTransfer.dropEffect = "move";
+
+      const rect = event.currentTarget.getBoundingClientRect();
+      const midpoint = rect.top + rect.height / 2;
+      const position = event.clientY < midpoint ? "before" : "after";
+      setReorderTarget((prev) =>
+        prev?.stableId === overStableId && prev.position === position
+          ? prev
+          : { stableId: overStableId, position },
+      );
+    },
+    [],
+  );
+
+  const handleRowDrop = useCallback(
+    async (
+      event: ReactDragEvent<HTMLDivElement>,
+      overStableId: string,
+    ) => {
+      if (!event.dataTransfer.types.includes(REORDER_MIME)) return;
+      event.preventDefault();
+      event.stopPropagation();
+
+      const sourceId = event.dataTransfer.getData(REORDER_MIME);
+      const position =
+        reorderTarget?.stableId === overStableId
+          ? reorderTarget.position
+          : "after";
+      setDraggingStableId(null);
+      setReorderTarget(null);
+
+      if (!sourceId || sourceId === overStableId) return;
+
+      const sourceIndex = photos.findIndex((p) => p.stableId === sourceId);
+      const targetIndex = photos.findIndex((p) => p.stableId === overStableId);
+      if (sourceIndex === -1 || targetIndex === -1) return;
+
+      const reordered = [...photos];
+      const [moved] = reordered.splice(sourceIndex, 1);
+      // Recompute the target index after removal.
+      const adjustedTarget = photos.findIndex((p) => p.stableId === overStableId);
+      const insertAt =
+        position === "before"
+          ? adjustedTarget > sourceIndex
+            ? adjustedTarget - 1
+            : adjustedTarget
+          : adjustedTarget > sourceIndex
+            ? adjustedTarget
+            : adjustedTarget + 1;
+      reordered.splice(insertAt, 0, moved);
+
+      const orderedIds = reordered.map((p) => p.stableId);
+      // No-op if order didn't actually change.
+      const unchanged = orderedIds.every(
+        (id, idx) => photos[idx]?.stableId === id,
+      );
+      if (unchanged) return;
+
+      const ok = await persistOrder(orderedIds);
+      if (ok) {
+        toast.success("Photo order updated.");
+      }
+    },
+    [persistOrder, photos, reorderTarget],
+  );
+
+  const handleRowDragEnd = useCallback(() => {
+    setDraggingStableId(null);
+    setReorderTarget(null);
+  }, []);
+
+  // --- Upload handling (with progress) ------------------------------------
+
+  const updateUploadEntry = useCallback(
+    (id: string, patch: Partial<UploadProgressEntry>) => {
+      setUploadQueue((prev) =>
+        prev.map((entry) => (entry.id === id ? { ...entry, ...patch } : entry)),
+      );
+    },
+    [],
   );
 
   const processFiles = useCallback(
@@ -362,20 +588,38 @@ function PhotosEditorForm() {
 
       let successCount = 0;
       for (const file of filesToUpload) {
+        const entryId =
+          typeof crypto !== "undefined" && "randomUUID" in crypto
+            ? crypto.randomUUID()
+            : `${Date.now()}-${Math.random().toString(36).slice(2)}`;
+
+        // Create the queue entry up-front so the tray appears immediately.
+        setUploadQueue((prev) => [
+          ...prev,
+          {
+            id: entryId,
+            name: file.name,
+            progress: 0,
+            status: "uploading",
+          },
+        ]);
+
         if (
           !(data.limits.acceptedMimeTypes as readonly string[]).includes(
             file.type,
           )
         ) {
-          toast.error(`${file.name}: only JPEG, PNG, and WebP are allowed.`);
+          const msg = `${file.name}: only JPEG, PNG, and WebP are allowed.`;
+          toast.error(msg);
+          updateUploadEntry(entryId, { status: "error", error: msg });
           continue;
         }
         if (file.size > data.limits.maxImageBytes) {
-          toast.error(
-            `${file.name}: image must be ${Math.floor(
-              data.limits.maxImageBytes / (1024 * 1024),
-            )}MB or smaller.`,
-          );
+          const msg = `${file.name}: image must be ${Math.floor(
+            data.limits.maxImageBytes / (1024 * 1024),
+          )}MB or smaller.`;
+          toast.error(msg);
+          updateUploadEntry(entryId, { status: "error", error: msg });
           continue;
         }
 
@@ -384,25 +628,31 @@ function PhotosEditorForm() {
           { onErrorMessage: setInlineError },
         );
         if (!upload) {
+          updateUploadEntry(entryId, {
+            status: "error",
+            error: "Could not get upload URL.",
+          });
           break;
         }
 
-        const uploadResponse = await fetch(upload.uploadUrl, {
-          method: "POST",
-          headers: {
-            "Content-Type": file.type,
-          },
-          body: file,
-        });
-
-        if (!uploadResponse.ok) {
-          toast.error(`${file.name}: upload failed.`);
+        let storageId: Id<"_storage"> | undefined;
+        try {
+          storageId = await uploadFileWithProgress(
+            upload.uploadUrl,
+            file,
+            (fraction) => updateUploadEntry(entryId, { progress: fraction }),
+          );
+        } catch (error) {
+          const msg =
+            error instanceof Error
+              ? `${file.name}: ${error.message}`
+              : `${file.name}: upload failed.`;
+          toast.error(msg);
+          updateUploadEntry(entryId, { status: "error", error: msg });
           continue;
         }
 
-        const { storageId } = (await uploadResponse.json()) as {
-          storageId: Id<"_storage">;
-        };
+        updateUploadEntry(entryId, { status: "saving", progress: 1 });
         const dimensions = await readImageDimensions(file);
 
         const saved = await runAdminEffect(
@@ -421,6 +671,12 @@ function PhotosEditorForm() {
 
         if (saved !== undefined) {
           successCount += 1;
+          updateUploadEntry(entryId, { status: "done" });
+        } else {
+          updateUploadEntry(entryId, {
+            status: "error",
+            error: `${file.name}: could not save photo.`,
+          });
         }
       }
 
@@ -432,8 +688,13 @@ function PhotosEditorForm() {
             : `${successCount} photos uploaded.`,
         );
       }
+
+      // Auto-dismiss successful entries a moment later; keep errors pinned.
+      window.setTimeout(() => {
+        setUploadQueue((prev) => prev.filter((entry) => entry.status === "error"));
+      }, 2500);
     },
-    [data, generateUploadUrl, photos.length, saveUploadedPhoto],
+    [data, generateUploadUrl, photos.length, saveUploadedPhoto, updateUploadEntry],
   );
 
   const handleFileSelection = useCallback(
@@ -512,16 +773,19 @@ function PhotosEditorForm() {
 
   const handleDeleteConfirm = useCallback(async () => {
     if (!deleteStableId) return;
-    const outcome = await runAction(
-      "Deleting…",
+    setInlineError(null);
+    setRowAction(deleteStableId, "deleting");
+    const outcome = await runAdminEffect(
       convexMutationEffect(() => removeDraftPhoto({ stableId: deleteStableId })),
+      { onErrorMessage: setInlineError },
     );
+    setRowAction(deleteStableId, undefined);
     setDeleteStableId(null);
     if (outcome !== undefined) {
       clearPhotoEdit(deleteStableId);
       toast.success("Photo removed.");
     }
-  }, [clearPhotoEdit, deleteStableId, removeDraftPhoto, runAction]);
+  }, [clearPhotoEdit, deleteStableId, removeDraftPhoto, setRowAction]);
 
   const handleDiscardConfirm = useCallback(async (): Promise<boolean> => {
     setInlineError(null);
@@ -563,6 +827,10 @@ function PhotosEditorForm() {
     return <p className="body-text text-foreground/80">Loading photos…</p>;
   }
 
+  const anyUploading = uploadQueue.some(
+    (entry) => entry.status === "uploading" || entry.status === "saving",
+  );
+
   return (
     <div
       className={cn(
@@ -601,8 +869,9 @@ function PhotosEditorForm() {
             </h2>
             <p className="body-text-small max-w-2xl text-foreground/85">
               Upload and arrange the photos shown in the “The Space” section.
-              Drag and drop images onto this page, or use the Upload button.
-              Uploads land in draft first; publish makes the new order and metadata live.
+              Drag and drop images onto this page to upload, or drag a card by
+              its handle to reorder. Uploads land in draft first; publish makes
+              the new order and metadata live.
             </p>
           </div>
 
@@ -638,6 +907,70 @@ function PhotosEditorForm() {
         </div>
       </div>
 
+      {/* Upload progress tray — shown per-file while uploading and for any errors after. */}
+      {uploadQueue.length > 0 && (
+        <div
+          className="space-y-2 rounded-xl border border-border bg-muted/30 p-4"
+          aria-live="polite"
+          aria-busy={anyUploading}
+        >
+          <p className="body-text-small font-medium text-foreground/85">
+            {anyUploading ? "Uploading photos…" : "Upload results"}
+          </p>
+          <ul className="space-y-2">
+            {uploadQueue.map((entry) => (
+              <li key={entry.id} className="space-y-1">
+                <div className="flex items-center justify-between gap-3 text-sm">
+                  <span className="truncate text-foreground/85" title={entry.name}>
+                    {entry.name}
+                  </span>
+                  <span
+                    className={cn(
+                      "shrink-0 text-xs",
+                      entry.status === "error"
+                        ? "text-destructive"
+                        : "text-muted-foreground",
+                    )}
+                  >
+                    {entry.status === "uploading" &&
+                      `${Math.round(entry.progress * 100)}%`}
+                    {entry.status === "saving" && "Saving…"}
+                    {entry.status === "done" && "Done"}
+                    {entry.status === "error" && "Failed"}
+                  </span>
+                </div>
+                <div
+                  className={cn(
+                    "h-1.5 overflow-hidden rounded-full bg-border/70",
+                    entry.status === "error" && "bg-destructive/20",
+                  )}
+                >
+                  <div
+                    className={cn(
+                      "h-full rounded-full transition-all",
+                      entry.status === "error"
+                        ? "bg-destructive"
+                        : entry.status === "done"
+                          ? "bg-emerald-500"
+                          : "bg-primary",
+                    )}
+                    style={{
+                      width:
+                        entry.status === "error"
+                          ? "100%"
+                          : `${Math.round(entry.progress * 100)}%`,
+                    }}
+                  />
+                </div>
+                {entry.error && (
+                  <p className="text-xs text-destructive">{entry.error}</p>
+                )}
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
+
       {photos.length === 0 ? (
         <div className="rounded-xl border border-dashed border-border bg-muted/20 px-6 py-10 text-center">
           <p className="body-text text-foreground/80">
@@ -650,11 +983,45 @@ function PhotosEditorForm() {
           {photos.map((photo, index) => {
             const fields = getEditableFields(photo);
             const isDirty = edits[photo.stableId] !== undefined;
+            const rowAction = rowBusy[photo.stableId];
+            const isRowBusy = rowAction !== undefined;
+            const isDraggingThis = draggingStableId === photo.stableId;
+            const dropHint =
+              reorderTarget?.stableId === photo.stableId &&
+              draggingStableId !== null &&
+              draggingStableId !== photo.stableId
+                ? reorderTarget.position
+                : null;
+            const altInvalid = fields.alt.trim().length === 0;
             return (
-              <article
+              <Card
                 key={photo.stableId}
-                className="grid gap-4 rounded-xl border border-border bg-card p-4 shadow-sm lg:grid-cols-[240px_minmax(0,1fr)]"
+                data-stable-id={photo.stableId}
+                className={cn(
+                  "relative grid gap-4 p-4 transition lg:grid-cols-[240px_minmax(0,1fr)]",
+                  isDraggingThis && "opacity-60",
+                  dropHint === "before" &&
+                    "shadow-[0_-2px_0_0_var(--color-primary)]",
+                  dropHint === "after" &&
+                    "shadow-[0_2px_0_0_var(--color-primary)]",
+                  isRowBusy && "pointer-events-none",
+                )}
+                draggable={busy === null}
+                onDragStart={(event) =>
+                  handleRowDragStart(event, photo.stableId)
+                }
+                onDragOver={(event) => handleRowDragOver(event, photo.stableId)}
+                onDrop={(event) => void handleRowDrop(event, photo.stableId)}
+                onDragEnd={handleRowDragEnd}
               >
+                {/* Drag handle (also functions as an ARIA handle cue) */}
+                <div
+                  className="pointer-events-none absolute left-1 top-1/2 hidden -translate-y-1/2 text-muted-foreground/60 lg:block"
+                  aria-hidden
+                >
+                  <GripVertical className="size-4" />
+                </div>
+
                 <div className="overflow-hidden rounded-lg border border-border bg-muted/30">
                   {photo.url ? (
                     <div className="relative aspect-[4/3]">
@@ -663,7 +1030,8 @@ function PhotosEditorForm() {
                         alt={photo.alt}
                         fill
                         unoptimized
-                        className="object-cover"
+                        draggable={false}
+                        className="select-none object-cover"
                         sizes="240px"
                       />
                     </div>
@@ -692,6 +1060,18 @@ function PhotosEditorForm() {
                         {" · "}
                         {formatBytes(photo.sizeBytes)}
                       </p>
+                      {rowAction === "saving" && (
+                        <p className="inline-flex items-center gap-1 text-xs text-muted-foreground">
+                          <Loader2 className="size-3 animate-spin" aria-hidden />
+                          Saving…
+                        </p>
+                      )}
+                      {rowAction === "deleting" && (
+                        <p className="inline-flex items-center gap-1 text-xs text-muted-foreground">
+                          <Loader2 className="size-3 animate-spin" aria-hidden />
+                          Deleting…
+                        </p>
+                      )}
                     </div>
 
                     <div className="flex flex-wrap items-center gap-1">
@@ -700,7 +1080,7 @@ function PhotosEditorForm() {
                         variant="ghost"
                         size="icon"
                         aria-label="Move photo up"
-                        disabled={index === 0 || busy !== null}
+                        disabled={index === 0 || busy !== null || isRowBusy}
                         onClick={() => void movePhoto(photo.stableId, -1)}
                       >
                         <ArrowUp className="size-4" aria-hidden />
@@ -710,7 +1090,11 @@ function PhotosEditorForm() {
                         variant="ghost"
                         size="icon"
                         aria-label="Move photo down"
-                        disabled={index === photos.length - 1 || busy !== null}
+                        disabled={
+                          index === photos.length - 1 ||
+                          busy !== null ||
+                          isRowBusy
+                        }
                         onClick={() => void movePhoto(photo.stableId, 1)}
                       >
                         <ArrowDown className="size-4" aria-hidden />
@@ -720,7 +1104,7 @@ function PhotosEditorForm() {
                         variant="ghost"
                         size="icon"
                         aria-label="Delete photo"
-                        disabled={busy !== null}
+                        disabled={busy !== null || isRowBusy}
                         onClick={() => setDeleteStableId(photo.stableId)}
                       >
                         <Trash2 className="size-4 text-destructive" aria-hidden />
@@ -732,14 +1116,32 @@ function PhotosEditorForm() {
                     <label className="space-y-1">
                       <span className="body-text-small text-muted-foreground">
                         Alt text
+                        <span
+                          className="ml-1 text-destructive"
+                          aria-hidden
+                        >
+                          *
+                        </span>
                       </span>
                       <Input
                         value={fields.alt}
+                        aria-invalid={altInvalid || undefined}
+                        aria-describedby={
+                          altInvalid ? `alt-hint-${photo.stableId}` : undefined
+                        }
                         onChange={(event) =>
                           updatePhotoEdit(photo, { alt: event.target.value })
                         }
                         maxLength={MAX_ALT_LENGTH}
                       />
+                      {altInvalid && (
+                        <span
+                          id={`alt-hint-${photo.stableId}`}
+                          className="block text-xs text-amber-600 dark:text-amber-400"
+                        >
+                          Alt text is required before publish.
+                        </span>
+                      )}
                     </label>
 
                     <label className="space-y-1">
@@ -759,20 +1161,29 @@ function PhotosEditorForm() {
 
                   <div className="flex items-center justify-between gap-3">
                     <p className="body-text-small text-muted-foreground">
-                      {isDirty ? "Unsaved metadata changes." : "Metadata saved to draft."}
+                      {isDirty
+                        ? "Unsaved metadata changes."
+                        : "Metadata saved to draft."}
                     </p>
                     <Button
                       type="button"
                       variant="outline"
-                      disabled={!isDirty || busy !== null}
+                      disabled={!isDirty || busy !== null || isRowBusy}
                       onClick={() => void savePhotoDetails(photo)}
                     >
-                      <Save className="mr-1 size-4" aria-hidden />
+                      {rowAction === "saving" ? (
+                        <Loader2
+                          className="mr-1 size-4 animate-spin"
+                          aria-hidden
+                        />
+                      ) : (
+                        <Save className="mr-1 size-4" aria-hidden />
+                      )}
                       Save details
                     </Button>
                   </div>
                 </div>
-              </article>
+              </Card>
             );
           })}
         </div>
@@ -807,14 +1218,33 @@ function PhotosEditorForm() {
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel disabled={busy !== null}>Cancel</AlertDialogCancel>
+            <AlertDialogCancel
+              disabled={
+                deleteStableId
+                  ? rowBusy[deleteStableId] === "deleting"
+                  : busy !== null
+              }
+            >
+              Cancel
+            </AlertDialogCancel>
             <Button
               type="button"
               variant="destructive"
-              disabled={busy !== null}
+              disabled={
+                deleteStableId
+                  ? rowBusy[deleteStableId] === "deleting"
+                  : busy !== null
+              }
               onClick={() => void handleDeleteConfirm()}
             >
-              Delete photo
+              {deleteStableId && rowBusy[deleteStableId] === "deleting" ? (
+                <>
+                  <Loader2 className="mr-1 size-4 animate-spin" aria-hidden />
+                  Deleting…
+                </>
+              ) : (
+                "Delete photo"
+              )}
             </Button>
           </AlertDialogFooter>
         </AlertDialogContent>
