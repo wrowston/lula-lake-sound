@@ -6,9 +6,12 @@ import { HomepageShell } from "@/components/homepage-shell";
 
 export function HomeClient({
   preloadedPricing,
+  preloadedGear,
 }: {
   preloadedPricing: Preloaded<typeof api.public.getPublishedPricingFlags>;
+  preloadedGear: Preloaded<typeof api.public.getPublishedGear>;
 }) {
   const pricingFlags = usePreloadedQuery(preloadedPricing);
-  return <HomepageShell pricingFlags={pricingFlags} />;
+  const gear = usePreloadedQuery(preloadedGear);
+  return <HomepageShell pricingFlags={pricingFlags} gear={gear} />;
 }

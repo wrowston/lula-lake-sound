@@ -29,8 +29,12 @@ export default async function AdminLayout({
 
   return (
     <TooltipProvider>
-      <Toaster richColors closeButton />
-      <SidebarProvider defaultOpen={defaultOpen}>
+      <Toaster richColors closeButton position="top-right" />
+      <SidebarProvider
+        defaultOpen={defaultOpen}
+        resizableWidth
+        sidebarWidthStorageKey="admin_sidebar_width_px"
+      >
         <AdminSidebar />
         <SidebarInset className="text-foreground">
           {children}

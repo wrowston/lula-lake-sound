@@ -5,11 +5,17 @@ import { HomepageShell } from "@/components/homepage-shell";
 
 export default async function Home() {
   try {
-    const preloadedPricing = await preloadQuery(
-      api.public.getPublishedPricingFlags,
+    const [preloadedPricing, preloadedGear] = await Promise.all([
+      preloadQuery(api.public.getPublishedPricingFlags),
+      preloadQuery(api.public.getPublishedGear),
+    ]);
+    return (
+      <HomeClient
+        preloadedPricing={preloadedPricing}
+        preloadedGear={preloadedGear}
+      />
     );
-    return <HomeClient preloadedPricing={preloadedPricing} />;
   } catch {
-    return <HomepageShell pricingFlags={null} />;
+    return <HomepageShell pricingFlags={null} gear={null} />;
   }
 }

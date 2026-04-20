@@ -736,7 +736,7 @@ function GearEditorForm() {
         publishedByLabel={publishedByLabel}
         busy={busy}
         inlineError={inlineError}
-        previewHref="/#equipment-specs"
+        previewHref="/preview#equipment-specs"
         onPublish={() => {
           void (async () => {
             const ok = await runAction("Publishing…", publishProgram);
