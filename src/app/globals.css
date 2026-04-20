@@ -1,8 +1,8 @@
 /*
  * Lula Lake Sound — global stylesheet.
  *
- * Tokens here mirror `src/lib/theme.ts`. When editing a brand token update
- * both files together. Design direction: quiet luxury recording studio in
+ * Custom properties below are the design tokens for the marketing site.
+ * Design direction: quiet luxury recording studio in
  * nature — editorial, earthy, generous whitespace, minimal rounding, no
  * glassmorphism, subtle natural textures.
  *
