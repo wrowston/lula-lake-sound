@@ -1,6 +1,13 @@
 "use client";
 
-import { useState } from "react";
+import Image from "next/image";
+
+import {
+  Accordion,
+  AccordionItem,
+  AccordionPanel,
+  AccordionTrigger,
+} from "@/components/ui/accordion";
 import { Button, buttonVariants } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 
@@ -48,113 +55,88 @@ const FAQ_CATEGORIES = [
 ] as const;
 
 export function FAQ() {
-  const [openQuestions, setOpenQuestions] = useState<number[]>([]);
-
-  const toggleQuestion = (questionId: number) => {
-    setOpenQuestions((prev) =>
-      prev.includes(questionId)
-        ? prev.filter((id) => id !== questionId)
-        : [...prev, questionId]
-    );
-  };
-
   return (
-    <section id="faq" className="py-24 md:py-32 px-6 bg-washed-black relative">
-      <div className="absolute inset-0 opacity-20 bg-texture-stone" />
+    <section
+      id="faq"
+      className="relative overflow-hidden bg-charcoal px-6 py-28 md:py-40"
+    >
+      {/* Seafoam ink-wash gives the FAQ its "quieter room" temperature. */}
+      <div className="absolute inset-0 bg-texture-seafoam opacity-[0.04]" />
+      <div className="absolute inset-0 bg-texture-stone opacity-20" />
+      {/* Chladni 3 soft-pulse at the right edge — used as rhythm per
+       * brand guide §5.2. */}
+      <div aria-hidden className="absolute inset-0 bg-chladni-3" />
 
-      <div className="relative z-10 max-w-3xl mx-auto">
-        {/* Section header */}
-        <div className="text-center mb-16 reveal">
-          <p className="label-text text-sand/60 mb-4">Support</p>
-          <h2 className="headline-primary text-3xl md:text-4xl lg:text-5xl text-warm-white mb-6">
-            Frequently Asked Questions
+      <div className="relative z-10 mx-auto max-w-3xl">
+        <div className="reveal mb-20 flex w-full flex-col items-center text-center">
+          <Image
+            src="/Logos/Graphic/LLS_Logo_Graphic_Sand.png"
+            alt=""
+            width={200}
+            height={200}
+            aria-hidden
+            className="mb-10 h-12 w-auto opacity-80 md:h-14"
+          />
+          <p className="eyebrow mb-6 text-sand/60">Support</p>
+          <h2 className="headline-primary mb-8 text-[2.25rem] text-warm-white md:text-[3rem] lg:text-[3.5rem]">
+            Frequently Asked
           </h2>
-          <div className="section-rule max-w-xs mx-auto mb-8" />
-          <p className="body-text text-lg text-ivory/60 max-w-2xl mx-auto">
+          <div className="section-rule mx-auto mb-10 max-w-[9rem]" />
+          <p className="editorial-lede mx-auto max-w-2xl">
             Everything you need to know about recording at Lula Lake Sound.
             Don&apos;t see your question? Just ask.
           </p>
         </div>
 
-        {/* FAQ sections */}
-        <div className="space-y-12 reveal reveal-delay-2">
-          {FAQ_CATEGORIES.map((category, categoryIndex) => (
-            <div key={categoryIndex}>
-              <h3 className="label-text text-sand mb-6 pb-3 border-b border-sand/10">
+        <div className="reveal reveal-delay-2 space-y-16">
+          {FAQ_CATEGORIES.map((category) => (
+            <div key={category.category}>
+              <h3 className="eyebrow mb-8 border-b border-sand/15 pb-4 text-sand">
                 {category.category}
               </h3>
 
-              <div className="space-y-px">
-                {category.questions.map((faq) => {
-                  const isOpen = openQuestions.includes(faq.id);
-                  return (
-                    <div key={faq.id} className="border-b border-sand/8">
-                      <button
-                        onClick={() => toggleQuestion(faq.id)}
-                        className="w-full py-5 text-left flex items-start justify-between gap-4 group"
-                      >
-                        <span className="body-text text-ivory/80 group-hover:text-warm-white transition-colors">
-                          {faq.question}
-                        </span>
-                        <svg
-                          className={`w-4 h-4 text-sand/40 shrink-0 mt-1 transition-transform duration-300 ${
-                            isOpen ? "rotate-45" : ""
-                          }`}
-                          fill="none"
-                          stroke="currentColor"
-                          viewBox="0 0 24 24"
-                        >
-                          <path
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
-                            strokeWidth={1.5}
-                            d="M12 4v16m8-8H4"
-                          />
-                        </svg>
-                      </button>
-
-                      <div
-                        className={`overflow-hidden transition-all duration-500 ease-out ${
-                          isOpen ? "max-h-96 opacity-100 pb-6" : "max-h-0 opacity-0"
-                        }`}
-                      >
-                        <p className="body-text text-ivory/50 pl-0 leading-relaxed">
-                          {faq.answer}
-                        </p>
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
+              <Accordion multiple>
+                {category.questions.map((faq) => (
+                  <AccordionItem key={faq.id} value={String(faq.id)}>
+                    <AccordionTrigger>
+                      <span className="body-text text-base text-ivory/85">
+                        {faq.question}
+                      </span>
+                    </AccordionTrigger>
+                    <AccordionPanel>
+                      <p className="body-text text-ivory/55">{faq.answer}</p>
+                    </AccordionPanel>
+                  </AccordionItem>
+                ))}
+              </Accordion>
             </div>
           ))}
         </div>
 
-        {/* Contact CTA */}
-        <div className="mt-16 text-center reveal reveal-delay-3 pt-12 border-t border-sand/10">
-          <h3 className="headline-secondary text-2xl text-sand mb-4">
+        <div className="reveal reveal-delay-3 mt-24 border-t border-sand/10 pt-16 text-center">
+          <p className="eyebrow mb-5 text-sand/55">Contact</p>
+          <h3 className="headline-secondary mb-6 text-2xl text-sand md:text-[1.75rem]">
             Still Have Questions?
           </h3>
-          <p className="body-text text-ivory/50 mb-8 max-w-xl mx-auto">
+          <p className="body-text mx-auto mb-10 max-w-xl text-ivory/55">
             We&apos;re here to help make your recording experience perfect.
-            Reach out with any questions about our studio, services, or your project needs.
+            Reach out with any questions about our studio, services, or your
+            project needs.
           </p>
-          <div className="flex flex-col sm:flex-row gap-4 justify-center">
+          <div className="flex flex-col items-center justify-center gap-4 sm:flex-row">
             <a
               href="mailto:info@lulalakesound.com"
-              className={cn(
-                buttonVariants({ variant: "default", size: "lg" }),
-                "h-10 px-6",
-              )}
+              className={cn(buttonVariants({ variant: "default", size: "lg" }))}
             >
               Email Us
             </a>
             <Button
-              variant="outline"
+              variant="ghost"
               size="lg"
-              className="h-10 px-6"
               onClick={() =>
-                document.getElementById("artist-inquiries")?.scrollIntoView({ behavior: "smooth" })
+                document
+                  .getElementById("artist-inquiries")
+                  ?.scrollIntoView({ behavior: "smooth" })
               }
             >
               Send Inquiry

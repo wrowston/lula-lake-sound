@@ -1,8 +1,15 @@
-import { Button } from "@/components/ui/button";
 import Image from "next/image";
 import { useEffect, useState } from "react";
+
+import { Button } from "@/components/ui/button";
 import { getStudioImages, type StudioImage } from "@/lib/storage";
 
+/**
+ * The Space — editorial studio gallery.
+ *
+ * Full-bleed image with thin sand index rule instead of rounded/glass chrome.
+ * Arrows are plain text glyphs, not blurred pills. No drop shadows.
+ */
 function StudioGallery() {
   const [isHovered, setIsHovered] = useState(false);
   const [currentIndex, setCurrentIndex] = useState(0);
@@ -27,7 +34,7 @@ function StudioGallery() {
     if (isHovered || images.length === 0) return;
     const interval = setInterval(() => {
       setCurrentIndex((prev) => (prev + 1) % images.length);
-    }, 4000);
+    }, 5500);
     return () => clearInterval(interval);
   }, [isHovered, images.length]);
 
@@ -39,89 +46,90 @@ function StudioGallery() {
 
   return (
     <div className="reveal reveal-delay-2">
-      {/* Gallery container */}
       <div
-        className="relative group"
+        className="relative"
         onMouseEnter={() => setIsHovered(true)}
         onMouseLeave={() => setIsHovered(false)}
       >
-        <div className="relative w-full max-w-5xl mx-auto">
-          <div className="relative overflow-hidden bg-washed-black border border-sand/10">
-            <div className="relative w-full h-[55vh] md:h-[65vh] flex items-center justify-center">
+        <div className="relative mx-auto w-full max-w-5xl">
+          <div className="relative">
+            <div className="relative flex h-[60vh] w-full items-center justify-center overflow-hidden md:h-[72vh]">
               {loading ? (
-                <div className="flex items-center justify-center h-full">
-                  <div className="body-text-small text-ivory/40">Loading gallery...</div>
+                <div className="body-text-small text-ivory/35">
+                  Loading gallery…
                 </div>
               ) : images.length > 0 ? (
                 <Image
                   src={images[currentIndex]?.url}
-                  alt={`Studio image ${currentIndex + 1}`}
+                  alt={`Studio, frame ${currentIndex + 1}`}
                   fill
-                  className="object-contain transition-opacity duration-700"
                   sizes="(max-width: 768px) 100vw, (max-width: 1200px) 90vw, 1200px"
+                  className="object-contain transition-opacity duration-1000 ease-[cubic-bezier(0.16,1,0.3,1)]"
                   priority={currentIndex === 0}
-                  quality={80}
+                  quality={82}
                 />
               ) : (
-                <div className="flex items-center justify-center h-full">
-                  <div className="body-text-small text-ivory/40">No images available</div>
+                <div className="body-text-small text-ivory/35">
+                  No images available
                 </div>
               )}
             </div>
-
-            {/* Image counter */}
-            {!loading && images.length > 0 && (
-              <div className="absolute bottom-4 right-4 label-text text-ivory/40 text-[10px] bg-washed-black/60 backdrop-blur-sm px-3 py-1.5">
-                {currentIndex + 1} / {images.length}
-              </div>
-            )}
           </div>
         </div>
 
-        {/* Navigation dots */}
         {!loading && images.length > 0 && (
-          <div className="flex justify-center mt-6 gap-1.5">
-            {images.map((_, index) => (
-              <button
-                key={index}
-                onClick={() => goToImage(index)}
-                className={`h-1 rounded-full transition-all duration-500 ${
-                  index === currentIndex
-                    ? "bg-sand w-6"
-                    : "bg-ivory/15 w-1 hover:bg-ivory/30"
-                }`}
-              />
-            ))}
-          </div>
-        )}
+          <div className="mt-8 flex items-center justify-between px-2">
+            <div className="label-text text-[10px] text-ivory/35">
+              <span className="text-sand">
+                {String(currentIndex + 1).padStart(2, "0")}
+              </span>
+              <span className="mx-2 text-ivory/25">/</span>
+              <span>{String(images.length).padStart(2, "0")}</span>
+            </div>
 
-        {/* Navigation arrows */}
-        {!loading && images.length > 1 && (
-          <>
-            <button
-              onClick={goToPrevious}
-              className="absolute left-3 top-1/2 -translate-y-1/2 bg-washed-black/60 backdrop-blur-sm hover:bg-washed-black/80 text-ivory/60 hover:text-sand p-2.5 rounded-full transition-all duration-300 opacity-0 group-hover:opacity-100 border border-sand/10"
-            >
-              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M15 19l-7-7 7-7" />
-              </svg>
-            </button>
-            <button
-              onClick={goToNext}
-              className="absolute right-3 top-1/2 -translate-y-1/2 bg-washed-black/60 backdrop-blur-sm hover:bg-washed-black/80 text-ivory/60 hover:text-sand p-2.5 rounded-full transition-all duration-300 opacity-0 group-hover:opacity-100 border border-sand/10"
-            >
-              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 5l7 7-7 7" />
-              </svg>
-            </button>
-          </>
+            <div className="flex items-center gap-1.5">
+              {images.map((_, index) => (
+                <button
+                  key={index}
+                  onClick={() => goToImage(index)}
+                  aria-label={`View image ${index + 1}`}
+                  className={`h-px transition-all duration-500 ease-[cubic-bezier(0.16,1,0.3,1)] ${
+                    index === currentIndex
+                      ? "w-8 bg-sand"
+                      : "w-4 bg-ivory/15 hover:bg-ivory/30"
+                  }`}
+                />
+              ))}
+            </div>
+
+            {images.length > 1 ? (
+              <div className="flex items-center gap-4 text-ivory/40">
+                <button
+                  onClick={goToPrevious}
+                  aria-label="Previous image"
+                  className="label-text transition-colors duration-500 hover:text-sand"
+                >
+                  ← Prev
+                </button>
+                <button
+                  onClick={goToNext}
+                  aria-label="Next image"
+                  className="label-text transition-colors duration-500 hover:text-sand"
+                >
+                  Next →
+                </button>
+              </div>
+            ) : (
+              <span className="w-20" aria-hidden />
+            )}
+          </div>
         )}
       </div>
 
-      {/* Gallery description */}
-      <div className="mt-8 flex w-full flex-col items-center text-center">
+      <div className="mt-10 flex w-full flex-col items-center text-center">
         <p className="body-text-small w-full max-w-xl text-ivory/50">
-          Carefully designed and acoustically treated to capture the perfect sound for your musical vision.
+          Carefully designed and acoustically treated to capture the perfect
+          sound for your musical vision.
         </p>
       </div>
     </div>
@@ -130,53 +138,69 @@ function StudioGallery() {
 
 export function TheSpace() {
   return (
-    <section id="the-space" className="py-24 md:py-32 px-6 bg-washed-black relative overflow-hidden">
-      <div className="absolute inset-0 opacity-30 bg-texture-stone" />
+    <section
+      id="the-space"
+      className="relative overflow-hidden bg-washed-black px-6 py-28 md:py-40"
+    >
+      <div className="absolute inset-0 bg-texture-stone opacity-40" />
+      {/* Chladni 1.2 resonance plate anchored to the bottom-right. Brand
+       * guide pg 26: "Chladni 1.2 Overlayed on Washed Black Canvas." */}
+      <div aria-hidden className="absolute inset-0 bg-chladni-1-2" />
 
-      <div className="relative z-10 max-w-6xl mx-auto">
-        {/* Section header — flex centers the max-width copy block on all viewports */}
-        <div className="mb-16 flex w-full flex-col items-center text-center reveal">
-          <p className="label-text mb-4 text-sand/60">Explore</p>
-          <h2 className="headline-primary mb-6 text-3xl text-warm-white md:text-4xl lg:text-5xl">
+      <div className="relative z-10 mx-auto max-w-6xl">
+        <div className="reveal mb-20 flex w-full flex-col items-center text-center">
+          <Image
+            src="/Logos/Graphic/LLS_Logo_Graphic_Sand.png"
+            alt=""
+            width={200}
+            height={200}
+            aria-hidden
+            className="mb-10 h-12 w-auto opacity-80 md:h-14"
+          />
+          <p className="eyebrow mb-6 text-sand/60">Explore</p>
+          <h2 className="headline-primary mb-8 text-[2.25rem] text-warm-white md:text-[3rem] lg:text-[3.5rem]">
             The Space
           </h2>
-          <div className="section-rule mb-8 w-full max-w-xs" />
-          <p className="body-text w-full max-w-2xl text-lg text-ivory/60">
-            Step inside our carefully designed recording facility where world-class equipment
-            meets natural inspiration. Every room is optimized for capturing the perfect
-            sound while maintaining the comfort that fuels creativity.
+          <div className="section-rule mb-10 w-full max-w-[9rem]" />
+          <p className="editorial-lede w-full max-w-2xl">
+            Step inside our carefully designed recording facility where
+            world-class equipment meets natural inspiration. Every room is
+            optimized for capturing the perfect sound while maintaining the
+            comfort that fuels creativity.
           </p>
         </div>
 
-        {/* Studio Gallery */}
         <StudioGallery />
 
-        {/* CTA */}
-        <div className="mt-16 flex w-full flex-col items-center border-t border-b border-sand/10 py-12 text-center reveal reveal-delay-3">
-          <h3 className="headline-secondary mb-4 text-2xl text-sand">
+        <div className="reveal reveal-delay-3 mt-24 flex w-full flex-col items-center border-y border-sand/10 py-16 text-center">
+          <p className="eyebrow mb-5 text-sand/55">Visit</p>
+          <h3 className="headline-secondary mb-6 text-2xl text-sand md:text-[1.75rem]">
             Experience the Studio
           </h3>
-          <p className="body-text mb-8 w-full max-w-xl text-ivory/50">
+          <p className="body-text mx-auto mb-10 w-full max-w-xl text-ivory/55">
             Schedule a studio tour or start planning your recording session.
-            We&apos;d love to show you around and discuss how our space can serve your vision.
+            We&apos;d love to show you around and discuss how our space can
+            serve your vision.
           </p>
           <div className="flex w-full flex-col items-center gap-4 sm:w-auto sm:flex-row sm:justify-center">
             <Button
               variant="default"
               size="lg"
-              className="h-10 px-6"
               onClick={() =>
-                document.getElementById("artist-inquiries")?.scrollIntoView({ behavior: "smooth" })
+                document
+                  .getElementById("artist-inquiries")
+                  ?.scrollIntoView({ behavior: "smooth" })
               }
             >
               Book Your Session
             </Button>
             <Button
-              variant="outline"
+              variant="ghost"
               size="lg"
-              className="h-10 px-6"
               onClick={() =>
-                document.getElementById("equipment-specs")?.scrollIntoView({ behavior: "smooth" })
+                document
+                  .getElementById("equipment-specs")
+                  ?.scrollIntoView({ behavior: "smooth" })
               }
             >
               View Equipment

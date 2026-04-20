@@ -1,18 +1,20 @@
 "use client";
 
 import { useState, useCallback } from "react";
-import { Header } from "@/components/header";
-import { Hero } from "@/components/hero";
-import { TheSpace } from "@/components/the-space";
-import { EquipmentSpecs, type GearPayload } from "@/components/equipment-specs";
+
 import { AmenitiesNearby } from "@/components/amenities-nearby";
-import { FAQ } from "@/components/faq";
 import { ArtistInquiries } from "@/components/artist-inquiries";
 import { MarketingPricingSection } from "@/components/dynamic-pricing";
+import { EquipmentSpecs, type GearPayload } from "@/components/equipment-specs";
+import { FAQ } from "@/components/faq";
+import { Header } from "@/components/header";
+import { Hero } from "@/components/hero";
+import { SiteFooter } from "@/components/site-footer";
+import { TheSpace } from "@/components/the-space";
 import type { PricingFlags } from "@/lib/site-settings";
 
 function calculateLogoScale(scrollY: number): number {
-  return Math.max(0.7, 1 - scrollY * 0.0008);
+  return Math.max(0.7, 1 - scrollY * 0.0006);
 }
 
 interface HomepageShellProps {
@@ -70,19 +72,24 @@ export function HomepageShell({ pricingFlags, gear, banner }: HomepageShellProps
     (pricingFlags !== null && pricingFlags.flags.priceTabEnabled === true);
 
   return (
-    <div ref={containerRef} className="dark min-h-screen bg-washed-black relative grain-overlay">
+    <div
+      ref={containerRef}
+      className="dark relative min-h-screen bg-washed-black text-ivory grain-overlay"
+    >
       {banner}
       <Header scrollY={scrollY} showPricing={showPricing} />
       <Hero logoScale={logoScale} />
 
-      <div className="relative z-10">
+      <main className="relative z-10">
         <TheSpace />
         <EquipmentSpecs gear={gear} />
         <MarketingPricingSection pricingFlags={pricingFlags} />
         <AmenitiesNearby />
         <FAQ />
         <ArtistInquiries />
-      </div>
+      </main>
+
+      <SiteFooter />
     </div>
   );
 }

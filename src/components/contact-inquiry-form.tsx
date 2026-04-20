@@ -21,8 +21,12 @@ import {
   type ContactInquiryValues,
 } from "@/lib/contact-inquiry-schema"
 
-/** Slightly taller than default `h-8` inputs for touch / form readability. */
-const fieldClassName = "h-10 px-3 text-base md:text-sm"
+/**
+ * Editorial form field — paired with the underline `Input` primitive so the
+ * form reads like filling in a printed brief rather than a SaaS dashboard.
+ */
+const fieldClassName = "h-11 text-base md:text-sm"
+const labelClassName = "eyebrow text-sand/70"
 
 export function ContactInquiryForm() {
   const [showSuccess, setShowSuccess] = useState(false)
@@ -107,7 +111,7 @@ export function ContactInquiryForm() {
     <Form {...form}>
       <form
         onSubmit={form.handleSubmit(onSubmit)}
-        className="relative space-y-8"
+        className="relative space-y-10"
       >
         {showSuccess ? (
           <Alert className="border-sand/20 bg-sand/5 text-left" role="status">
@@ -137,13 +141,13 @@ export function ContactInquiryForm() {
           </Alert>
         ) : null}
 
-        <div className="grid grid-cols-1 gap-8 md:grid-cols-2">
+        <div className="grid grid-cols-1 gap-10 md:grid-cols-2">
           <FormField
             control={form.control}
             name="artistName"
             render={({ field }) => (
               <FormItem>
-                <FormLabel className="text-sand/90">
+                <FormLabel className={labelClassName}>
                   Artist / Band Name *
                 </FormLabel>
                 <FormControl>
@@ -163,7 +167,7 @@ export function ContactInquiryForm() {
             name="contactName"
             render={({ field }) => (
               <FormItem>
-                <FormLabel className="text-sand/90">
+                <FormLabel className={labelClassName}>
                   Contact Name *
                 </FormLabel>
                 <FormControl>
@@ -180,13 +184,13 @@ export function ContactInquiryForm() {
           />
         </div>
 
-        <div className="grid grid-cols-1 gap-8 md:grid-cols-2">
+        <div className="grid grid-cols-1 gap-10 md:grid-cols-2">
           <FormField
             control={form.control}
             name="email"
             render={({ field }) => (
               <FormItem>
-                <FormLabel className="text-sand/90">
+                <FormLabel className={labelClassName}>
                   Email Address *
                 </FormLabel>
                 <FormControl>
@@ -207,7 +211,7 @@ export function ContactInquiryForm() {
             name="phone"
             render={({ field }) => (
               <FormItem>
-                <FormLabel className="text-sand/90">
+                <FormLabel className={labelClassName}>
                   Phone Number
                 </FormLabel>
                 <FormControl>
@@ -251,14 +255,14 @@ export function ContactInquiryForm() {
           name="message"
           render={({ field }) => (
             <FormItem>
-              <FormLabel className="text-sand/90">
+              <FormLabel className={labelClassName}>
                 Tell Us About Your Project *
               </FormLabel>
               <FormControl>
                 <Textarea
                   rows={6}
                   placeholder="Describe your musical style, project goals, what you're looking for from the studio experience..."
-                  className="min-h-[10rem] resize-y px-3 py-2.5 text-base md:text-sm"
+                  className="min-h-[10rem] resize-y text-base md:text-sm"
                   {...field}
                 />
               </FormControl>
@@ -271,8 +275,7 @@ export function ContactInquiryForm() {
           <Button
             type="submit"
             variant="default"
-            size="lg"
-            className="h-10 px-8"
+            size="xl"
             disabled={form.formState.isSubmitting}
           >
             {form.formState.isSubmitting ? "Sending…" : "Send Inquiry"}

@@ -4,6 +4,7 @@ import {
   formatPrice,
   type PricingPackage,
 } from "@/lib/site-settings";
+import { cn } from "@/lib/utils";
 
 interface ServicesAndPricingProps {
   readonly packages: readonly PricingPackage[];
@@ -23,13 +24,13 @@ function sortedActivePackages(
 
 function SectionHeader() {
   return (
-    <div className="text-center mb-16 reveal">
-      <p className="label-text text-sand/60 mb-4">Rates</p>
-      <h2 className="headline-primary text-3xl md:text-4xl lg:text-5xl text-warm-white mb-6">
+    <div className="reveal mb-20 text-center">
+      <p className="eyebrow mb-6 text-sand/60">Rates</p>
+      <h2 className="headline-primary mb-8 text-[2.25rem] text-warm-white md:text-[3rem] lg:text-[3.5rem]">
         Services &amp; Pricing
       </h2>
-      <div className="section-rule max-w-xs mx-auto mb-8" />
-      <p className="body-text text-lg text-ivory/60 max-w-2xl mx-auto">
+      <div className="section-rule mx-auto mb-10 max-w-[9rem]" />
+      <p className="editorial-lede mx-auto max-w-2xl">
         Transparent pricing for professional recording services. Every package
         includes our full attention to your artistic vision and access to our
         complete facility.
@@ -38,42 +39,42 @@ function SectionHeader() {
   );
 }
 
-export function ServicesAndPricingSkeleton() {
+function SectionShell({ children }: { children: React.ReactNode }) {
   return (
     <section
       id="services-pricing"
-      className="py-24 md:py-32 px-6 bg-washed-black relative"
+      className="relative overflow-hidden bg-washed-black px-6 py-28 md:py-40"
     >
-      <div className="absolute inset-0 opacity-20 bg-texture-stone" />
-
-      <div className="relative z-10 max-w-6xl mx-auto">
+      {/* News-pulp ink-wash ground — echoes the brand guide's "Sunset Ink
+       * Wash" treatment (§5.1) without competing with the pricing table. */}
+      <div className="absolute inset-0 bg-texture-ink-wash opacity-55" />
+      <div className="absolute inset-0 bg-texture-stone opacity-20" />
+      <div className="relative z-10 mx-auto max-w-6xl">
         <SectionHeader />
-
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-          {[0, 1, 2].map((i) => (
-            <div
-              key={i}
-              className="relative flex flex-col p-8 border border-sand/8 bg-washed-black/40 animate-pulse"
-            >
-              <div className="mb-6">
-                <div className="h-6 w-1/2 bg-sand/10 mb-3" />
-                <div className="h-4 bg-sand/10 mb-2" />
-                <div className="h-4 w-4/5 bg-sand/10" />
-              </div>
-              <div className="space-y-3 mb-8">
-                {[0, 1, 2].map((j) => (
-                  <div key={j} className="h-3 bg-sand/10" />
-                ))}
-              </div>
-              <div className="mt-auto border-t border-sand/10 pt-6 mb-6">
-                <div className="h-8 bg-sand/10" />
-              </div>
-              <div className="h-11 bg-sand/10" />
-            </div>
-          ))}
-        </div>
+        {children}
       </div>
     </section>
+  );
+}
+
+export function ServicesAndPricingSkeleton() {
+  return (
+    <SectionShell>
+      <div className="grid grid-cols-1 border-y border-sand/10 md:grid-cols-3 md:divide-x md:divide-sand/10">
+        {[0, 1, 2].map((i) => (
+          <div
+            key={i}
+            className="flex animate-pulse flex-col gap-6 p-10"
+          >
+            <div className="h-6 w-1/2 bg-sand/10" />
+            <div className="h-4 bg-sand/10" />
+            <div className="h-4 w-4/5 bg-sand/10" />
+            <div className="h-px w-full bg-sand/10" />
+            <div className="h-8 w-3/4 bg-sand/10" />
+          </div>
+        ))}
+      </div>
+    </SectionShell>
   );
 }
 
@@ -81,101 +82,82 @@ export function ServicesAndPricing({ packages }: ServicesAndPricingProps) {
   const rows = sortedActivePackages(packages);
 
   return (
-    <section
-      id="services-pricing"
-      className="py-24 md:py-32 px-6 bg-washed-black relative"
-    >
-      <div className="absolute inset-0 opacity-20 bg-texture-stone" />
+    <SectionShell>
+      {rows.length === 0 ? (
+        <p className="body-text text-center text-ivory/55">
+          Pricing is being updated &mdash; please reach out for a custom quote.
+        </p>
+      ) : (
+        <div
+          className={cn(
+            "reveal reveal-delay-2 grid grid-cols-1 border-y border-sand/10",
+            rows.length >= 3
+              ? "md:grid-cols-3 md:divide-x md:divide-sand/10"
+              : rows.length === 2
+                ? "mx-auto max-w-4xl md:grid-cols-2 md:divide-x md:divide-sand/10"
+                : "mx-auto max-w-xl",
+          )}
+        >
+          {rows.map((pkg) => {
+            const unit =
+              pkg.unitLabel ?? billingCadenceLabel(pkg.billingCadence);
+            return (
+              <div
+                key={pkg.id}
+                className={cn(
+                  "relative flex flex-col gap-8 p-10 md:p-12",
+                  pkg.highlight && "bg-sand/[0.025]",
+                )}
+              >
+                {pkg.highlight && (
+                  <span className="eyebrow absolute left-10 top-10 text-gold">
+                    · Recommended
+                  </span>
+                )}
 
-      <div className="relative z-10 max-w-6xl mx-auto">
-        <SectionHeader />
-
-        {rows.length === 0 ? (
-          <p className="text-center body-text text-ivory/50">
-            Pricing is being updated &mdash; please reach out for a custom
-            quote.
-          </p>
-        ) : (
-          <div
-            className={
-              rows.length >= 3
-                ? "grid grid-cols-1 md:grid-cols-3 gap-6 reveal reveal-delay-2"
-                : rows.length === 2
-                  ? "grid grid-cols-1 md:grid-cols-2 gap-6 reveal reveal-delay-2"
-                  : "grid grid-cols-1 gap-6 max-w-xl mx-auto reveal reveal-delay-2"
-            }
-          >
-            {rows.map((pkg) => {
-              const unit =
-                pkg.unitLabel ?? billingCadenceLabel(pkg.billingCadence);
-              return (
-                <div
-                  key={pkg.id}
-                  className={`relative flex flex-col p-8 border transition-all duration-500 ${
-                    pkg.highlight
-                      ? "bg-washed-black/60 border-sand/30 hover:border-sand/50"
-                      : "bg-washed-black/40 border-sand/8 hover:border-sand/20"
-                  }`}
-                >
-                  {pkg.highlight && (
-                    <div className="absolute -top-3 left-1/2 -translate-x-1/2">
-                      <span className="label-text bg-sand text-washed-black px-3 py-1 text-[10px]">
-                        Recommended
-                      </span>
-                    </div>
-                  )}
-
-                  <div className="mb-6">
-                    <h3 className="headline-secondary text-sand text-xl mb-3">
-                      {pkg.name}
-                    </h3>
-                    {pkg.description ? (
-                      <p className="body-text-small text-ivory/50 leading-relaxed">
-                        {pkg.description}
-                      </p>
-                    ) : null}
-                  </div>
-
-                  {pkg.features && pkg.features.length > 0 ? (
-                    <ul className="space-y-3 mb-8">
-                      {pkg.features.map((feature, index) => (
-                        <li
-                          key={`${pkg.id}-f-${index}`}
-                          className="flex items-start gap-3"
-                        >
-                          <svg
-                            className="w-4 h-4 text-sand/60 mt-0.5 flex-shrink-0"
-                            fill="none"
-                            stroke="currentColor"
-                            viewBox="0 0 24 24"
-                          >
-                            <path
-                              strokeLinecap="round"
-                              strokeLinejoin="round"
-                              strokeWidth={1.5}
-                              d="M5 13l4 4L19 7"
-                            />
-                          </svg>
-                          <span className="body-text-small text-ivory/70">
-                            {feature}
-                          </span>
-                        </li>
-                      ))}
-                    </ul>
+                <div className={pkg.highlight ? "pt-6" : ""}>
+                  <h3 className="headline-secondary mb-4 text-[1.375rem] text-sand">
+                    {pkg.name}
+                  </h3>
+                  <div className="h-px w-10 bg-sand/40" />
+                  {pkg.description ? (
+                    <p className="body-text-small mt-5 leading-relaxed text-ivory/55">
+                      {pkg.description}
+                    </p>
                   ) : null}
+                </div>
 
-                  <div className="mt-auto border-t border-sand/10 pt-6 mb-6">
-                    <div className="flex items-baseline justify-between gap-2">
-                      <span className="label-text text-ivory/40">{unit}</span>
-                      <span className="headline-secondary text-sand text-2xl">
-                        {formatPrice(pkg.priceCents, pkg.currency)}
-                      </span>
-                    </div>
+                {pkg.features && pkg.features.length > 0 ? (
+                  <ul className="space-y-3">
+                    {pkg.features.map((feature, index) => (
+                      <li
+                        key={`${pkg.id}-f-${index}`}
+                        className="flex items-baseline gap-3"
+                      >
+                        <span
+                          aria-hidden
+                          className="mt-2 size-1 shrink-0 bg-sand/70"
+                        />
+                        <span className="body-text-small text-ivory/70">
+                          {feature}
+                        </span>
+                      </li>
+                    ))}
+                  </ul>
+                ) : null}
+
+                <div className="mt-auto space-y-6">
+                  <div className="flex items-baseline justify-between gap-2 border-t border-sand/12 pt-6">
+                    <span className="label-text text-ivory/40">{unit}</span>
+                    <span className="headline-secondary text-2xl text-sand md:text-[1.625rem]">
+                      {formatPrice(pkg.priceCents, pkg.currency)}
+                    </span>
                   </div>
 
                   <Button
-                    variant={pkg.highlight ? "default" : "outline"}
-                    className="w-full h-10"
+                    variant={pkg.highlight ? "accent-gold" : "outline"}
+                    size="lg"
+                    className="w-full"
                     onClick={() =>
                       document
                         .getElementById("artist-inquiries")
@@ -185,34 +167,34 @@ export function ServicesAndPricing({ packages }: ServicesAndPricingProps) {
                     Book Your Session
                   </Button>
                 </div>
-              );
-            })}
-          </div>
-        )}
-
-        <div className="text-center mt-16 reveal reveal-delay-3 pt-12 border-t border-sand/10">
-          <h3 className="headline-secondary text-2xl text-sand mb-4">
-            Need Something Different?
-          </h3>
-          <p className="body-text text-ivory/50 mb-8 max-w-xl mx-auto">
-            Have questions about pricing or need a custom package tailored to
-            your project? We&apos;re happy to design something that fits your
-            vision and timeline.
-          </p>
-          <Button
-            variant="outline"
-            size="lg"
-            className="h-10 px-6"
-            onClick={() =>
-              document
-                .getElementById("artist-inquiries")
-                ?.scrollIntoView({ behavior: "smooth" })
-            }
-          >
-            Get Custom Quote
-          </Button>
+              </div>
+            );
+          })}
         </div>
+      )}
+
+      <div className="reveal reveal-delay-3 mt-24 border-t border-sand/10 pt-16 text-center">
+        <p className="eyebrow mb-5 text-sand/55">Custom</p>
+        <h3 className="headline-secondary mb-6 text-2xl text-sand md:text-[1.75rem]">
+          Need Something Different?
+        </h3>
+        <p className="body-text mx-auto mb-10 max-w-xl text-ivory/55">
+          Have questions about pricing or need a custom package tailored to
+          your project? We&apos;re happy to design something that fits your
+          vision and timeline.
+        </p>
+        <Button
+          variant="ghost"
+          size="lg"
+          onClick={() =>
+            document
+              .getElementById("artist-inquiries")
+              ?.scrollIntoView({ behavior: "smooth" })
+          }
+        >
+          Get Custom Quote
+        </Button>
       </div>
-    </section>
+    </SectionShell>
   );
 }
