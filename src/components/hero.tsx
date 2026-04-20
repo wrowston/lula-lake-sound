@@ -12,7 +12,7 @@ interface HeroProps {
  * Brand kit: primary full lockup in **Ivory** on the dark wash (guide palette —
  * no CSS invert). Background uses the Emerald textured field from
  * `public/Textured Backgrounds/`. Chladni is CSS + raster clean plate layered
- * faintly via `bg-texture-chladni`.
+ * faintly via `bg-chladni-1`.
  */
 export function Hero({ logoScale }: HeroProps) {
   return (

@@ -511,33 +511,6 @@ html.light {
   opacity: 0.15;
 }
 
-/* Legacy alias — keep older callers working while the codebase converges
- * on the explicit `.bg-chladni-*` names. */
-.bg-texture-chladni {
-  background-image:
-    url("/Chladni/CHLADNI_clean.png"),
-    repeating-radial-gradient(
-      circle at 20% 30%,
-      rgba(198, 189, 160, 0.04) 0px,
-      rgba(198, 189, 160, 0.04) 1px,
-      transparent 1px,
-      transparent 18px
-    ),
-    repeating-radial-gradient(
-      circle at 80% 70%,
-      rgba(163, 130, 46, 0.035) 0px,
-      rgba(163, 130, 46, 0.035) 1px,
-      transparent 1px,
-      transparent 24px
-    );
-  background-size:
-    cover,
-    auto,
-    auto;
-  background-position: center, center, center;
-  background-repeat: no-repeat, no-repeat, no-repeat;
-}
-
 /* ————————————————————————————————
  * Textured backgrounds
  *
