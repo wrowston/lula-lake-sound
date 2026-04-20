@@ -417,6 +417,15 @@ html.light {
   background-repeat: repeat, no-repeat, no-repeat;
 }
 
+.bg-the-space-atmosphere {
+  background-color: #14150f;
+  background-image:
+    radial-gradient(circle at 18% 18%, rgba(85, 101, 106, 0.16) 0%, transparent 34%),
+    radial-gradient(circle at 84% 14%, rgba(84, 52, 13, 0.22) 0%, transparent 30%),
+    radial-gradient(circle at 50% 82%, rgba(28, 30, 21, 0.3) 0%, transparent 42%),
+    linear-gradient(180deg, #1a1b15 0%, #12130f 52%, #18140f 100%);
+}
+
 /* Film grain overlay — rendered via pseudo-element so it can sit above the
  * texture but below any content. Opacity is deliberately subdued. */
 .grain-overlay::after {

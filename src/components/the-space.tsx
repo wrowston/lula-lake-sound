@@ -172,9 +172,9 @@ export function TheSpace({
   return (
     <section
       id="the-space"
-      className="relative overflow-hidden bg-washed-black px-6 py-28 md:py-40"
+      className="bg-the-space-atmosphere relative overflow-hidden px-6 py-28 md:py-40"
     >
-      <div className="absolute inset-0 bg-texture-stone opacity-40" />
+      <div className="absolute inset-0 bg-texture-canvas opacity-18" />
       {/* Chladni 1.2 resonance plate anchored to the bottom-right. Brand
        * guide pg 26: "Chladni 1.2 Overlayed on Washed Black Canvas." */}
       <div aria-hidden className="absolute inset-0 bg-chladni-1-2" />
