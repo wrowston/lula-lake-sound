@@ -42,7 +42,7 @@ export interface CmsPublishToolbarProps {
 }
 
 const actionButtonClass =
-  "w-full min-w-0 justify-center sm:w-auto sm:min-w-[9rem]";
+  "w-full min-w-0 justify-center sm:w-auto";
 
 /**
  * Shared draft/publish actions and status for CMS admin sections.
@@ -87,7 +87,7 @@ export function CmsPublishToolbar({
       data-cms-section={section}
     >
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-        <div className="flex min-w-0 flex-wrap items-center gap-x-3 gap-y-1">
+        <div className="flex min-w-0 flex-1 flex-wrap items-center gap-x-3 gap-y-1">
           <DraftStatusBadge
             hasDraftOnServer={hasDraftOnServer}
             hasLocalEdits={hasLocalEdits}
@@ -97,7 +97,7 @@ export function CmsPublishToolbar({
           <AutosaveIndicator status={autosaveStatus} />
         </div>
 
-        <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:gap-3">
+        <div className="flex flex-col gap-2 sm:flex-row sm:flex-nowrap sm:gap-2 sm:shrink-0">
           <Tooltip>
             <TooltipTrigger
               delay={400}
