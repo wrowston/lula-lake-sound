@@ -93,15 +93,16 @@ export const publishSite = mutation({
       results.push(r);
     }
 
-    if (galleryPending) {
-      await publishGalleryDraftCore(ctx, { userId, updatedBy });
-    }
+    const galleryResult = galleryPending
+      ? await publishGalleryDraftCore(ctx, { userId, updatedBy })
+      : undefined;
 
     return {
       ok: true as const,
       kind: "published" as const,
       publishedSections: targets.map((t) => t.section),
       results,
+      ...(galleryResult !== undefined ? { gallery: galleryResult } : {}),
     };
   },
 });
