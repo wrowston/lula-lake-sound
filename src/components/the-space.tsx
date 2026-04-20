@@ -180,7 +180,14 @@ export function TheSpace({
           </p>
         </div>
 
-        <StudioGallery photos={photos} />
+        <StudioGallery
+          key={
+            photos === undefined
+              ? "__pending__"
+              : (photos ?? []).map((p) => p.stableId).join("|")
+          }
+          photos={photos}
+        />
 
         <div className="reveal reveal-delay-3 mt-16 flex w-full flex-col items-center border-t border-b border-sand/10 py-12 text-center">
           <h3 className="headline-secondary mb-4 text-2xl text-sand">

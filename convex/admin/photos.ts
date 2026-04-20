@@ -237,7 +237,7 @@ async function resequenceDraftPhotos(ctx: MutationCtx): Promise<void> {
   }
 }
 
-async function validateDraftForPublish(
+export async function validateDraftForPublish(
   ctx: MutationCtx,
   rows: GalleryPhotoDoc[],
 ): Promise<GalleryPublishIssue[]> {
@@ -311,6 +311,11 @@ export const saveUploadedPhoto = mutation({
       validateStorageMetadataOrThrow(storage);
       const contentType = storage.contentType;
 
+      const caption = normalizeCaption(args.caption);
+      const width = normalizeDimension(args.width, "width");
+      const height = normalizeDimension(args.height, "height");
+      const originalFileName = normalizeFileName(args.originalFileName);
+
       const sortOrder =
         draft.length === 0
           ? 0
@@ -321,21 +326,13 @@ export const saveUploadedPhoto = mutation({
         stableId: generatePhotoStableId(),
         storageId: args.storageId,
         alt: normalizeAlt(args.alt),
-        ...(normalizeCaption(args.caption) !== undefined
-          ? { caption: normalizeCaption(args.caption) }
-          : {}),
-        ...(normalizeDimension(args.width, "width") !== undefined
-          ? { width: normalizeDimension(args.width, "width") }
-          : {}),
-        ...(normalizeDimension(args.height, "height") !== undefined
-          ? { height: normalizeDimension(args.height, "height") }
-          : {}),
+        ...(caption !== undefined ? { caption } : {}),
+        ...(width !== undefined ? { width } : {}),
+        ...(height !== undefined ? { height } : {}),
         sortOrder,
         contentType,
         sizeBytes: storage.size,
-        ...(normalizeFileName(args.originalFileName) !== undefined
-          ? { originalFileName: normalizeFileName(args.originalFileName) }
-          : {}),
+        ...(originalFileName !== undefined ? { originalFileName } : {}),
       });
     } catch (error) {
       await deleteStorageIfUnreferenced(ctx, args.storageId);
@@ -428,38 +425,52 @@ export const removeDraftPhoto = mutation({
   },
 });
 
+/** Shared draft → published promote for gallery (used by `publishPhotos` and `publishSite`). */
+export async function publishGalleryDraftCore(
+  ctx: MutationCtx,
+  args: { userId: string; updatedBy: string },
+): Promise<{
+  ok: true;
+  kind: "published";
+  publishedAt: number;
+  publishedBy: string;
+}> {
+  const { userId, updatedBy } = args;
+  const draft = await loadGalleryPhotos(ctx, "draft");
+  const issues = await validateDraftForPublish(ctx, draft);
+  if (issues.length > 0) {
+    cmsPublishValidationFailed(
+      "photos",
+      "Publish validation failed.",
+      issues,
+    );
+  }
+
+  await replaceGalleryScope(ctx, "draft", "published");
+
+  const now = Date.now();
+  const { id: metaId } = await ensureGalleryMeta(ctx);
+  await ctx.db.patch(metaId, {
+    hasDraftChanges: false,
+    publishedAt: now,
+    publishedBy: userId,
+    updatedAt: now,
+    updatedBy,
+  });
+
+  return {
+    ok: true as const,
+    kind: "published" as const,
+    publishedAt: now,
+    publishedBy: userId,
+  };
+}
+
 export const publishPhotos = mutation({
   args: {},
   handler: async (ctx) => {
     const { userId, updatedBy } = await requireCmsOwner(ctx);
-    const draft = await loadGalleryPhotos(ctx, "draft");
-    const issues = await validateDraftForPublish(ctx, draft);
-    if (issues.length > 0) {
-      cmsPublishValidationFailed(
-        "photos",
-        "Publish validation failed.",
-        issues,
-      );
-    }
-
-    await replaceGalleryScope(ctx, "draft", "published");
-
-    const now = Date.now();
-    const { id: metaId } = await ensureGalleryMeta(ctx);
-    await ctx.db.patch(metaId, {
-      hasDraftChanges: false,
-      publishedAt: now,
-      publishedBy: userId,
-      updatedAt: now,
-      updatedBy,
-    });
-
-    return {
-      ok: true as const,
-      kind: "published" as const,
-      publishedAt: now,
-      publishedBy: userId,
-    };
+    return await publishGalleryDraftCore(ctx, { userId, updatedBy });
   },
 });
 
