@@ -10,7 +10,7 @@ import {
 import { useUser } from "@clerk/nextjs";
 import { api } from "../../../../convex/_generated/api";
 import { useCallback, useMemo, useState } from "react";
-import { Effect, pipe } from "effect";
+import { Effect } from "effect";
 import { toast } from "sonner";
 import {
   ArrowDown,
@@ -28,6 +28,7 @@ import { cn } from "@/lib/utils";
 import { convexMutationEffect, type CmsAppError } from "@/lib/effect-errors";
 import { runAdminEffect } from "@/lib/admin-run-effect";
 import { CmsPublishToolbar } from "@/components/admin/cms-publish-toolbar";
+import { useAutosaveDraft } from "@/lib/use-autosave-draft";
 
 type BillingCadence =
   | "hourly"
@@ -284,6 +285,20 @@ function PricingForm() {
   );
 
   const hasDraftOnServer = pricing?.hasDraftChanges ?? false;
+  const hasLocalEdits = localDraft !== null;
+
+  const { status: autosaveStatus, flush: flushAutosave } = useAutosaveDraft({
+    dirty: hasLocalEdits && source !== undefined,
+    pauseWhen: busy !== null,
+    saveEffect: () =>
+      convexMutationEffect(() =>
+        saveDraft({
+          flags: source?.flags ?? { priceTabEnabled: false },
+          packages: source?.packages ?? [],
+        }),
+      ),
+    onSaved: () => setLocalDraft(null),
+  });
 
   const handleDiscardConfirm = useCallback(async (): Promise<boolean> => {
     setInlineError(null);
@@ -319,19 +334,11 @@ function PricingForm() {
     );
   }
 
-  const hasLocalEdits = localDraft !== null;
   const publishedByLabel =
     pricing.publishedBy && user?.id === pricing.publishedBy ? "You" : undefined;
 
-  const saveDraftProgram = convexMutationEffect(() =>
-    saveDraft({
-      flags: source.flags,
-      packages: source.packages,
-    }),
-  );
-
   return (
-    <div className="space-y-10">
+    <div className="space-y-10 pb-24">
       <fieldset className="space-y-3">
         <legend className="label-text text-muted-foreground">Visibility</legend>
         <div className="flex items-start gap-3">
@@ -644,14 +651,17 @@ function PricingForm() {
         publishedByLabel={publishedByLabel}
         busy={busy}
         inlineError={inlineError}
+        autosaveStatus={autosaveStatus}
         previewHref="/preview#services-pricing"
-        onSaveDraft={() => void runAction("Saving…", saveDraftProgram)}
         onPublish={() => {
           const publishOnce = convexMutationEffect(() => publish({}));
-          const program = hasLocalEdits
-            ? pipe(saveDraftProgram, Effect.flatMap(() => publishOnce))
-            : publishOnce;
-          return void runAction("Publishing…", program);
+          void (async () => {
+            if (hasLocalEdits) {
+              const flushed = await flushAutosave();
+              if (!flushed) return;
+            }
+            await runAction("Publishing…", publishOnce);
+          })();
         }}
         onDiscardConfirm={handleDiscardConfirm}
       />

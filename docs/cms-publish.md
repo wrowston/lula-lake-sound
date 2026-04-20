@@ -23,11 +23,17 @@ Each section has its own `cmsSections` row and therefore its own independent dra
 
 > Legacy rows whose `settings.publishedSnapshot` still contains `flags` remain schema-valid thanks to an optional `flags` field on `settingsContentValidator`. Public / preview pricing queries fall back to that legacy location when the `pricing` row hasn’t been written yet, so no migration is required before deploy.
 
+## Admin UI (Settings, Pricing, Gear)
+
+The shared `CmsPublishToolbar` exposes three actions: **Publish**, **Discard**, and **Preview site**. There is **no explicit "Save draft" button** — editors auto-save local edits via a debounced `useAutosaveDraft` hook (`src/lib/use-autosave-draft.ts`, default 1000ms) that calls the same `api.cms.saveDraft` mutation under the hood. The toolbar renders sticky at the bottom of the admin viewport and shows a subtle `Saving… / Saved / Save failed — retrying` indicator alongside the "Unpublished changes" badge.
+
+Publish flushes any pending autosave first, so fast-clicking Publish after an edit is safe and never loses work.
+
 ## Mutations (shared pattern)
 
 | Function | Role |
 |----------|------|
-| `api.cms.saveDraft` | Writes `draftSnapshot`, updates `hasDraftChanges` vs `publishedSnapshot`. |
+| `api.cms.saveDraft` | Writes `draftSnapshot`, updates `hasDraftChanges` vs `publishedSnapshot`. Called by the editor's autosave hook on each debounced change. |
 | `api.cms.publishSection` | Validates, then copies `draftSnapshot` → `publishedSnapshot`, sets `publishedAt` + `publishedBy` (Clerk user id), clears draft in **one** transaction. Idempotent when there is nothing to publish. |
 | `api.admin.publish.publish` | Same as `publishSection` (owner-gated; see `convex/admin/publish.ts`). |
 | `api.admin.publish.publishSite` | Validates **all** sections with pending drafts first; if any fail, **no** section is published. Otherwise publishes each in the same transaction. |
@@ -41,8 +47,8 @@ If `publishedAt` is `null`, discarding still only clears the draft; **live site 
 ## First-time publish
 
 1. **Empty environment:** run `internal.seed.seedSiteSettingsDefaults` or call `saveDraft` once (both create a row with defaults in `publishedSnapshot` and `publishedAt` set).
-2. **Editor saves:** `saveDraft` fills `draftSnapshot`; `hasDraftChanges` is true when draft ≠ published.
-3. **Publish:** Save a draft first. `publishSection` validates required fields, then promotes `draftSnapshot` → `publishedSnapshot`. If there is no draft and `hasDraftChanges` is false, publish is a **no-op** (safe double-click). Set **`CMS_OWNER_TOKEN_IDENTIFIERS`** on the Convex deployment (comma-separated `tokenIdentifier` values) to restrict publish to the studio owner.
+2. **Editor saves:** autosave debounces edits and calls `saveDraft`, which fills `draftSnapshot`; `hasDraftChanges` is true when draft ≠ published.
+3. **Publish:** the toolbar's Publish action flushes any pending autosave first, then calls `publishSection`, which validates required fields and promotes `draftSnapshot` → `publishedSnapshot`. If there is no draft and `hasDraftChanges` is false, publish is a **no-op** (safe double-click). Set **`CMS_OWNER_TOKEN_IDENTIFIERS`** on the Convex deployment (comma-separated `tokenIdentifier` values) to restrict publish to the studio owner.
 
 ## Adding a new content type (new section)
 

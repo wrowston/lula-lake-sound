@@ -32,7 +32,9 @@ export default async function AdminLayout({
       <Toaster richColors closeButton />
       <SidebarProvider defaultOpen={defaultOpen}>
         <AdminSidebar />
-        <SidebarInset>{children}</SidebarInset>
+        <SidebarInset className="text-foreground">
+          {children}
+        </SidebarInset>
       </SidebarProvider>
     </TooltipProvider>
   );
