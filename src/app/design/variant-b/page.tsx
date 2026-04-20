@@ -7,8 +7,8 @@ const pages = [
   {
     slug: "about",
     title: "About",
-    lede: "Sticky full-bleed panels, alternating image / text, Chladni wayfinder rail.",
-    tag: "01 · Unfolds",
+    lede: "Hero lede, two founder portraits, essay sections (history · why).",
+    tag: "01 · Essay",
   },
   {
     slug: "gallery",
@@ -45,11 +45,12 @@ export default function VariantBSummary() {
               <p className="editorial-lede">
                 Resonance is the most cinematic of the three directions.
                 Chladni plates and textured fields become structural — not
-                decorative. The About page unfolds as sticky full-bleed
-                panels; the Gallery drifts horizontally on desktop and
-                becomes a vertical river on mobile; each recording is its
-                own full-viewport hero with a waveform overlaid on the
-                session&apos;s textured backdrop.
+                decorative. About uses the same essay structure as the other
+                variants—hero, two founder portraits, brief history and why we
+                built it—with full-bleed texture and type. The Gallery drifts
+                horizontally on desktop and becomes a vertical river on
+                mobile; each recording is its own full-viewport hero with a
+                waveform overlaid on the session&apos;s textured backdrop.
               </p>
               <p className="body-text mt-6 text-ivory/65">
                 This variant leans hardest into the refreshed brand kit and

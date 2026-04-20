@@ -6,8 +6,8 @@ const pages = [
   {
     slug: "about",
     title: "About",
-    lede: "Founder voice, drop-cap essay, margin annotations.",
-    note: "01 · Origin, ethos, the room",
+    lede: "Markdown essay: two founder portraits, brief history, why we built it.",
+    note: "01 · Essay",
   },
   {
     slug: "gallery",
@@ -49,13 +49,12 @@ export default function VariantASummary() {
               <div className="section-rule my-10 max-w-[9rem]" />
               <p className="editorial-lede">
                 Field Notes treats the marketing site like a leather-bound
-                journal kept by a studio in the woods. Drop caps anchor
-                long-form About prose; hand-annotated margins point at the
-                specifics — the mic choice, the weather, the take that
-                finally landed. The gallery is a single framed print with a
-                filmstrip of indexed contacts below. Recordings read as
-                stacked session entries, each with its own margin of credits
-                and gear.
+                journal. About is a markdown-style essay with two founder
+                portraits and section headings for a brief history and why
+                they built the studio. The gallery is a single framed print
+                with a filmstrip of indexed contacts below. Recordings read
+                as stacked session entries, each with its own margin of
+                credits and gear.
               </p>
               <p className="body-text mt-6 text-ivory/65">
                 The variant is deliberately the lowest-risk of the three:

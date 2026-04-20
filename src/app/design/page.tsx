@@ -20,7 +20,7 @@ const variants = [
     accent: "text-sand",
     dot: "bg-sand",
     summary:
-      "An editorial field journal. Drop caps anchor long-form About prose; pull quotes and margin annotations point to specifics in the imagery. The Gallery is a single full-frame stage with a filmstrip of indexed contacts beneath, each with a small captioned field note. Recordings read like session notes in a leather-bound log: title, tracking date, key gear in the margin, inline player where credits fall.",
+      "An editorial field journal. About is a markdown-style essay: lede, two founder portraits, then “A brief history” and “Why we built it” as section headings with body copy. The Gallery is a single full-frame stage with a filmstrip of indexed contacts beneath, each with a small captioned field note. Recordings read like session notes in a leather-bound log: title, tracking date, key gear in the margin, inline player where credits fall.",
   },
   {
     id: "B",
@@ -30,7 +30,7 @@ const variants = [
     accent: "text-gold",
     dot: "bg-gold",
     summary:
-      "Chladni plates, textured fields, and sticky layered panels set the tempo. The About page unfolds as alternating full-bleed image / text rhythm with a persistent sand hairline that never lets the eye drift. The Gallery scrolls horizontally on desktop and stacks into a vertical river on mobile, images floating against textured grounds like prints on a studio wall. Recordings become self-contained full-bleed hero panels with overlaid waveform strips — the most cinematic of the three.",
+      "Chladni plates, textured fields, and layered atmosphere set the tempo. About uses the same essay structure as the other variants—hero lede, two founder portraits, then history and why we built it—with Resonance’s full-bleed texture and type treatment. The Gallery scrolls horizontally on desktop and stacks into a vertical river on mobile, images floating against textured grounds like prints on a studio wall. Recordings become self-contained full-bleed hero panels with overlaid waveform strips — the most cinematic of the three.",
   },
   {
     id: "C",
@@ -40,7 +40,7 @@ const variants = [
     accent: "text-ivory",
     dot: "bg-ivory",
     summary:
-      "A structured archive. About reads as a three-chapter dossier with Roman-numeral section heads and a persistent data rail (est., elevation, room count, isolation). The Gallery is a taut contact sheet with indexed frames and a category filter (Rooms · Gear · Grounds · Sessions) that never stops looking like a proof sheet. Recordings are a tabular session log with sortable columns and a hover-expandable waveform row — the easiest to scan for A&R and engineers.",
+      "A structured archive. About uses the same markdown essay (founders, brief history, why we built it) with a facts rail beside the column instead of a dossier Q&A. The Gallery is a taut contact sheet with indexed frames and a category filter (Rooms · Gear · Grounds · Sessions) that never stops looking like a proof sheet. Recordings are a tabular session log with sortable columns and a hover-expandable waveform row — the easiest to scan for A&R and engineers.",
   },
 ] as const;
 
@@ -53,9 +53,9 @@ const comparisonRows = [
   },
   {
     dimension: "About approach",
-    a: "Drop-cap essay, margin annotations, polaroid inset, 3-beat timeline",
-    b: "Full-bleed sticky panels, alternating image/text, Chladni wayfinder rail",
-    c: "Roman-numeral chapters, data rail, inline pull stats, founder Q&A",
+    a: "Markdown essay — lede, two founder photos, history + why (h2 sections)",
+    b: "Same essay content; hero + textured bands, founder grid, essay sections",
+    c: "Same essay content; essay column + sticky facts rail (no Q&A dossier)",
   },
   {
     dimension: "Gallery style",

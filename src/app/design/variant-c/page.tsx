@@ -6,8 +6,8 @@ const pages = [
   {
     slug: "about",
     title: "About",
-    lede: "Roman-numeral dossier, data rail, founder Q&A.",
-    tag: "§ I · Dossier",
+    lede: "Markdown essay + facts rail; two founder portraits.",
+    tag: "§ I · Essay",
   },
   {
     slug: "gallery",
@@ -62,12 +62,12 @@ export default function VariantCSummary() {
                 <div className="section-rule my-10 max-w-[9rem]" />
                 <p className="editorial-lede max-w-2xl">
                   Archive treats the marketing site like a reference
-                  document. Roman-numeral chapters, a persistent data rail,
-                  and a tabular session log replace the narrative-first
-                  motions of the other two directions. The tone stays on
-                  brand — Acumin Wide Semibold, Sand on Washed Black,
-                  editorial rules — but the information architecture is
-                  optimised for fast legibility over atmosphere.
+                  document. About is still a markdown-style essay—two founder
+                  portraits, brief history, why we built it—with a facts rail
+                  for quick scanning. Gallery and Recordings stay tabular and
+                  systematic. The tone stays on brand — Acumin Wide Semibold,
+                  Sand on Washed Black, editorial rules — with information
+                  architecture tuned for legibility.
                 </p>
                 <p className="body-text mt-6 text-ivory/60">
                   Best for labels, engineers, and A&R — anyone who arrives
