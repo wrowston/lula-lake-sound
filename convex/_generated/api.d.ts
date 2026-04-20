@@ -18,6 +18,7 @@ import type * as cmsShared from "../cmsShared.js";
 import type * as errors from "../errors.js";
 import type * as gearEquipmentSeed from "../gearEquipmentSeed.js";
 import type * as gearLegacySeed from "../gearLegacySeed.js";
+import type * as gearPreviewDraft from "../gearPreviewDraft.js";
 import type * as gearTree from "../gearTree.js";
 import type * as inquiries from "../inquiries.js";
 import type * as lib_auth from "../lib/auth.js";
@@ -48,6 +49,7 @@ declare const fullApi: ApiFromModules<{
   errors: typeof errors;
   gearEquipmentSeed: typeof gearEquipmentSeed;
   gearLegacySeed: typeof gearLegacySeed;
+  gearPreviewDraft: typeof gearPreviewDraft;
   gearTree: typeof gearTree;
   inquiries: typeof inquiries;
   "lib/auth": typeof lib_auth;

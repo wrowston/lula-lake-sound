@@ -63,7 +63,11 @@ export function AdminSidebar() {
   const pathname = usePathname();
 
   return (
-    <Sidebar collapsible="icon" className="group-data-[side=left]:border-r-0">
+    <Sidebar
+      collapsible="icon"
+      showResizeHandle
+      className="group-data-[side=left]:border-r-0"
+    >
       <SidebarHeader className="p-4 group-data-[collapsible=icon]:p-2">
         <Link
           href="/admin"

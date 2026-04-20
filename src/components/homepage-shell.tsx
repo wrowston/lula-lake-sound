@@ -4,7 +4,7 @@ import { useState, useCallback } from "react";
 import { Header } from "@/components/header";
 import { Hero } from "@/components/hero";
 import { TheSpace } from "@/components/the-space";
-import { EquipmentSpecs } from "@/components/equipment-specs";
+import { EquipmentSpecs, type GearPayload } from "@/components/equipment-specs";
 import { AmenitiesNearby } from "@/components/amenities-nearby";
 import { FAQ } from "@/components/faq";
 import { ArtistInquiries } from "@/components/artist-inquiries";
@@ -18,10 +18,15 @@ function calculateLogoScale(scrollY: number): number {
 interface HomepageShellProps {
   /** `undefined` while the client is still subscribing (preview only if not preloaded). */
   readonly pricingFlags: PricingFlags | null | undefined;
+  /**
+   * Published (or preview) gear payload. `undefined` renders the skeleton;
+   * `null` renders the graceful empty state.
+   */
+  readonly gear: GearPayload | null | undefined;
   readonly banner?: React.ReactNode;
 }
 
-export function HomepageShell({ pricingFlags, banner }: HomepageShellProps) {
+export function HomepageShell({ pricingFlags, gear, banner }: HomepageShellProps) {
   const [scrollY, setScrollY] = useState(0);
 
   const containerRef = useCallback((node: HTMLDivElement | null) => {
@@ -72,7 +77,7 @@ export function HomepageShell({ pricingFlags, banner }: HomepageShellProps) {
 
       <div className="relative z-10">
         <TheSpace />
-        <EquipmentSpecs />
+        <EquipmentSpecs gear={gear} />
         <MarketingPricingSection pricingFlags={pricingFlags} />
         <AmenitiesNearby />
         <FAQ />
