@@ -5,14 +5,17 @@ import { HomepageShell } from "@/components/homepage-shell";
 
 export default async function Home() {
   try {
-    const [pricingSettled, gearSettled] = await Promise.allSettled([
+    const [pricingSettled, gearSettled, photosSettled] = await Promise.allSettled([
       preloadQuery(api.public.getPublishedPricingFlags),
       preloadQuery(api.public.getPublishedGear),
+      preloadQuery(api.public.getPublishedGalleryPhotos),
     ]);
     const preloadedPricing =
       pricingSettled.status === "fulfilled" ? pricingSettled.value : null;
     const preloadedGear =
       gearSettled.status === "fulfilled" ? gearSettled.value : null;
+    const preloadedPhotos =
+      photosSettled.status === "fulfilled" ? photosSettled.value : null;
     if (preloadedPricing === null && preloadedGear === null) {
       return <HomepageShell pricingFlags={null} gear={null} photos={null} />;
     }
@@ -20,6 +23,7 @@ export default async function Home() {
       <HomeClient
         preloadedPricing={preloadedPricing}
         preloadedGear={preloadedGear}
+        preloadedPhotos={preloadedPhotos}
       />
     );
   } catch {

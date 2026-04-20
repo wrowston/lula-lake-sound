@@ -17,6 +17,49 @@ export type GalleryPhoto = {
   originalFileName: string | null;
 };
 
+function galleryImageAlt(alt: string): string {
+  const t = alt.trim();
+  return t.length > 0 ? t : "Lula Lake Sound studio gallery photo";
+}
+
+function GallerySkeleton() {
+  return (
+    <div className="reveal reveal-delay-2">
+      <div className="group relative">
+        <div className="relative mx-auto w-full max-w-5xl">
+          <div className="relative overflow-hidden border border-sand/10 bg-washed-black">
+            <div className="relative flex h-[55vh] w-full items-center justify-center md:h-[65vh]">
+              <div className="absolute inset-0 bg-gradient-to-br from-ivory/[0.04] via-transparent to-ivory/[0.02]" />
+              <div className="relative grid w-[min(100%,24rem)] grid-cols-3 gap-2 px-4 sm:w-[min(100%,28rem)] sm:gap-2.5 md:gap-3">
+                {Array.from({ length: 6 }, (_, i) => (
+                  <div
+                    key={i}
+                    className="aspect-[4/3] animate-pulse rounded-sm bg-ivory/[0.07]"
+                    style={{ animationDelay: `${i * 70}ms` }}
+                  />
+                ))}
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div className="mt-6 flex justify-center gap-1.5" aria-hidden>
+        {Array.from({ length: 6 }, (_, i) => (
+          <div
+            key={i}
+            className="h-1 w-1 animate-pulse rounded-full bg-ivory/12"
+            style={{ animationDelay: `${i * 50}ms` }}
+          />
+        ))}
+      </div>
+      <div className="mt-8 flex w-full flex-col items-center gap-2 text-center" aria-hidden>
+        <div className="h-3.5 w-full max-w-lg animate-pulse rounded bg-ivory/[0.06]" />
+        <div className="h-3.5 w-full max-w-md animate-pulse rounded bg-ivory/[0.05]" />
+      </div>
+    </div>
+  );
+}
+
 function StudioGallery({
   photos,
 }: {
@@ -25,13 +68,7 @@ function StudioGallery({
   const [currentIndex, setCurrentIndex] = useState(0);
 
   if (photos === undefined) {
-    return (
-      <div className="relative overflow-hidden border border-sand/10 bg-washed-black">
-        <div className="flex h-[55vh] items-center justify-center md:h-[65vh]">
-          <div className="body-text-small text-ivory/40">Loading gallery...</div>
-        </div>
-      </div>
-    );
+    return <GallerySkeleton />;
   }
 
   const availablePhotos = photos ?? [];
@@ -64,11 +101,13 @@ function StudioGallery({
               {currentPhoto.url ? (
                 <Image
                   src={currentPhoto.url}
-                  alt={currentPhoto.alt}
+                  alt={galleryImageAlt(currentPhoto.alt)}
                   fill
-                  unoptimized
                   className="object-contain"
-                  sizes="(max-width: 768px) 100vw, 1200px"
+                  sizes="(max-width: 768px) 100vw, min(1200px, 100vw)"
+                  quality={75}
+                  loading="lazy"
+                  fetchPriority="low"
                 />
               ) : (
                 <div className="body-text-small text-ivory/40">
