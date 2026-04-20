@@ -520,7 +520,7 @@ function GearEditorForm() {
   }
 
   return (
-    <div className="space-y-8">
+    <div className="space-y-8 pb-24">
       <div className="space-y-6">
         <div className="space-y-2">
           <h2 className="text-xl font-semibold tracking-tight text-foreground">
@@ -727,29 +727,26 @@ function GearEditorForm() {
         </div>
       )}
 
-      <div className="border-t border-border/70 pt-8">
-        <CmsPublishToolbar
-          section="gear"
-          sectionLabel="gear"
-          hasDraftOnServer={hasDraftOnServer}
-          hasLocalEdits={hasLocalEdits}
-          publishedAt={data.publishedAt ?? null}
-          publishedByLabel={publishedByLabel}
-          busy={busy}
-          inlineError={inlineError}
-          previewHref="/#equipment-specs"
-          onSaveDraft={() => {}}
-          onPublish={() => {
-            void (async () => {
-              const ok = await runAction("Publishing…", publishProgram);
-              if (ok !== undefined) {
-                toast.success("Gear published.");
-              }
-            })();
-          }}
-          onDiscardConfirm={handleDiscardConfirm}
-        />
-      </div>
+      <CmsPublishToolbar
+        section="gear"
+        sectionLabel="gear"
+        hasDraftOnServer={hasDraftOnServer}
+        hasLocalEdits={hasLocalEdits}
+        publishedAt={data.publishedAt ?? null}
+        publishedByLabel={publishedByLabel}
+        busy={busy}
+        inlineError={inlineError}
+        previewHref="/#equipment-specs"
+        onPublish={() => {
+          void (async () => {
+            const ok = await runAction("Publishing…", publishProgram);
+            if (ok !== undefined) {
+              toast.success("Gear published.");
+            }
+          })();
+        }}
+        onDiscardConfirm={handleDiscardConfirm}
+      />
 
       <Sheet
         open={categorySheet !== null}

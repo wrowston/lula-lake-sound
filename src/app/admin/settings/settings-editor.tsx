@@ -10,11 +10,12 @@ import {
 import { useUser } from "@clerk/nextjs";
 import { api } from "../../../../convex/_generated/api";
 import { useCallback, useState } from "react";
-import { Effect, pipe } from "effect";
+import { Effect } from "effect";
 import { toast } from "sonner";
 import { convexMutationEffect, type CmsAppError } from "@/lib/effect-errors";
 import { runAdminEffect } from "@/lib/admin-run-effect";
 import { CmsPublishToolbar } from "@/components/admin/cms-publish-toolbar";
+import { useAutosaveDraft } from "@/lib/use-autosave-draft";
 
 type SettingsContent = {
   metadata?: { title?: string; description?: string };
@@ -112,6 +113,20 @@ function SettingsForm() {
   );
 
   const hasDraftOnServer = section?.hasDraftChanges ?? false;
+  const hasLocalEdits = localDraft !== null;
+
+  const { status: autosaveStatus, flush: flushAutosave } = useAutosaveDraft({
+    dirty: hasLocalEdits && source !== undefined,
+    pauseWhen: busy !== null,
+    saveEffect: () =>
+      convexMutationEffect(() =>
+        saveDraft({
+          section: "settings",
+          content: source ?? {},
+        }),
+      ),
+    onSaved: () => setLocalDraft(null),
+  });
 
   const handleDiscardConfirm = useCallback(async (): Promise<boolean> => {
     setInlineError(null);
@@ -145,13 +160,11 @@ function SettingsForm() {
     );
   }
 
-  const hasLocalEdits = localDraft !== null;
-
   const publishedByLabel =
     section.publishedBy && user?.id === section.publishedBy ? "You" : undefined;
 
   return (
-    <div className="space-y-8">
+    <div className="space-y-8 pb-24">
       <fieldset className="space-y-3">
         <legend className="label-text text-muted-foreground">Site Metadata</legend>
         <label className="block space-y-1">
@@ -193,33 +206,17 @@ function SettingsForm() {
         publishedByLabel={publishedByLabel}
         busy={busy}
         inlineError={inlineError}
-        onSaveDraft={() =>
-          void runAction(
-            "Saving…",
-            convexMutationEffect(() =>
-              saveDraft({
-                section: "settings",
-                content: source,
-              }),
-            ),
-          )
-        }
+        autosaveStatus={autosaveStatus}
         onPublish={() => {
           const publishOnce = convexMutationEffect(() =>
             publish({ section: "settings" }),
           );
-          const program = hasLocalEdits
-            ? pipe(
-                convexMutationEffect(() =>
-                  saveDraft({
-                    section: "settings",
-                    content: source,
-                  }),
-                ),
-                Effect.flatMap(() => publishOnce),
-              )
-            : publishOnce;
-          return void runAction("Publishing…", program);
+          void (async () => {
+            if (hasLocalEdits) {
+              await flushAutosave();
+            }
+            await runAction("Publishing…", publishOnce);
+          })();
         }}
         onDiscardConfirm={handleDiscardConfirm}
       />

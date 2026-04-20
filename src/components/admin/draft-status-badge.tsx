@@ -9,19 +9,23 @@ import {
 
 export interface DraftStatusBadgeProps {
   readonly hasDraftOnServer: boolean;
-  readonly hasLocalEdits: boolean;
+  /**
+   * Retained for API compatibility; local edits are auto-saved so we no
+   * longer render a dedicated badge for them (the autosave indicator
+   * rendered alongside this component communicates save progress).
+   */
+  readonly hasLocalEdits?: boolean;
   readonly publishedAt: number | null;
   /** Short label for who published (e.g. “You”) when known. */
   readonly publishedByLabel?: string;
 }
 
 /**
- * Draft vs published indicators for CMS sections: unpublished changes, local edits,
- * and last published time with an optional “by” line.
+ * Draft vs published indicators for CMS sections: unpublished changes and
+ * last published time with an optional “by” line.
  */
 export function DraftStatusBadge({
   hasDraftOnServer,
-  hasLocalEdits,
   publishedAt,
   publishedByLabel,
 }: DraftStatusBadgeProps) {
@@ -37,9 +41,6 @@ export function DraftStatusBadge({
     <div className="flex min-w-0 flex-wrap items-center gap-2 text-xs text-muted-foreground">
       {hasDraftOnServer && (
         <Badge variant="draft">Unpublished changes</Badge>
-      )}
-      {hasLocalEdits && (
-        <Badge variant="muted">Unsaved local edits</Badge>
       )}
       {publishedAt !== null && (
         <Tooltip>
