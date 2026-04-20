@@ -30,7 +30,7 @@ That keeps uploads cheap while still allowing the draft order and metadata to di
 2. client `POST`s the file to Convex storage
 3. `api.admin.photos.saveUploadedPhoto`
    - validates content type: JPEG / PNG / WebP only
-   - validates max size: 10 MB
+   - validates max size: 50 MB
    - stores metadata on the draft row
    - updates draft/published change tracking
 

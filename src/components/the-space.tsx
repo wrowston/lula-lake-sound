@@ -18,12 +18,30 @@ export type GalleryPhoto = {
   originalFileName: string | null;
 };
 
-/**
- * The Space — editorial studio gallery.
- *
- * Full-bleed image with thin sand index rule instead of rounded/glass chrome.
- * Arrows are plain text glyphs, not blurred pills. No drop shadows.
- */
+function galleryImageAlt(alt: string): string {
+  const trimmed = alt.trim();
+  return trimmed.length > 0 ? trimmed : "Lula Lake Sound studio gallery photo";
+}
+
+function GallerySkeleton() {
+  return (
+    <div className="reveal reveal-delay-2">
+      <div className="relative">
+        <div className="relative mx-auto w-full max-w-5xl">
+          <div className="relative">
+            <div className="relative flex h-[60vh] w-full items-center justify-center overflow-hidden md:h-[72vh]">
+              <div className="body-text-small text-ivory/35">Loading gallery...</div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div className="mt-10 flex w-full flex-col items-center text-center" aria-hidden>
+        <div className="h-3.5 w-full max-w-xl animate-pulse rounded bg-ivory/[0.06]" />
+      </div>
+    </div>
+  );
+}
+
 function StudioGallery({
   photos,
 }: {
@@ -31,22 +49,20 @@ function StudioGallery({
 }) {
   const [currentIndex, setCurrentIndex] = useState(0);
 
-  if (photos === undefined) {
-    return (
-      <div className="relative overflow-hidden border border-sand/10 bg-washed-black">
-        <div className="flex h-[55vh] items-center justify-center md:h-[65vh]">
-          <div className="body-text-small text-ivory/40">Loading gallery...</div>
-        </div>
-      </div>
-    );
+  const isLoading = photos === undefined;
+  const availablePhotos = photos ?? [];
+
+  if (isLoading) {
+    return <GallerySkeleton />;
   }
 
-  const availablePhotos = photos ?? [];
   if (availablePhotos.length === 0) {
     return (
-      <div className="relative overflow-hidden border border-sand/10 bg-washed-black">
-        <div className="flex h-[55vh] items-center justify-center md:h-[65vh]">
-          <div className="body-text-small text-ivory/35">No images available</div>
+      <div className="reveal reveal-delay-2">
+        <div className="relative mx-auto w-full max-w-5xl">
+          <div className="relative flex h-[60vh] w-full items-center justify-center overflow-hidden border border-sand/10 bg-washed-black md:h-[72vh]">
+            <div className="body-text-small text-ivory/35">No images available</div>
+          </div>
         </div>
       </div>
     );
@@ -55,13 +71,13 @@ function StudioGallery({
   const safeIndex = Math.min(currentIndex, availablePhotos.length - 1);
   const currentPhoto = availablePhotos[safeIndex];
 
+  const goToImage = (index: number) => setCurrentIndex(index);
   const goToPrevious = () =>
     setCurrentIndex((prev) =>
       prev === 0 ? availablePhotos.length - 1 : prev - 1,
     );
   const goToNext = () =>
     setCurrentIndex((prev) => (prev + 1) % availablePhotos.length);
-  const goToImage = (index: number) => setCurrentIndex(index);
 
   return (
     <div className="reveal reveal-delay-2">
@@ -71,10 +87,10 @@ function StudioGallery({
             <div className="relative flex h-[60vh] w-full items-center justify-center overflow-hidden md:h-[72vh]">
               {currentPhoto.url ? (
                 <Image
+                  key={currentPhoto.stableId}
                   src={currentPhoto.url}
-                  alt={currentPhoto.alt}
+                  alt={galleryImageAlt(currentPhoto.alt)}
                   fill
-                  unoptimized
                   sizes="(max-width: 768px) 100vw, (max-width: 1200px) 90vw, 1200px"
                   className="object-contain transition-opacity duration-1000 ease-[cubic-bezier(0.16,1,0.3,1)]"
                   priority={safeIndex === 0}
@@ -190,7 +206,7 @@ export function TheSpace({
           key={
             photos === undefined
               ? "__pending__"
-              : (photos ?? []).map((p) => p.stableId).join("|")
+              : (photos ?? []).map((photo) => photo.stableId).join("|")
           }
           photos={photos}
         />
