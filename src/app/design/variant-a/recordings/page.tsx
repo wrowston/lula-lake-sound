@@ -70,7 +70,7 @@ const SESSIONS: readonly Session[] = [
 function Player({ sessionId }: { readonly sessionId: string }) {
   const [playing, setPlaying] = useState(false);
   return (
-    <div className="flex items-center gap-4 border border-sand/15 bg-washed-black/60 px-4 py-3">
+    <div className="flex items-center gap-4 border border-sand/15 bg-charcoal/80 px-4 py-3">
       <button
         type="button"
         onClick={() => setPlaying((p) => !p)}
@@ -116,9 +116,7 @@ export default function VariantARecordings() {
   return (
     <>
       <VariantNav variant="a" active="recordings" />
-      <main className="relative isolate overflow-hidden">
-        <div aria-hidden className="pointer-events-none absolute inset-0 bg-texture-stone opacity-55" />
-
+      <main className="relative isolate overflow-hidden bg-washed-black">
         <header className="relative px-6 pt-14 pb-10 md:px-10 md:pt-20 md:pb-14">
           <div className="mx-auto flex w-full max-w-5xl flex-col gap-6 border-b border-sand/15 pb-8 md:flex-row md:items-end md:justify-between">
             <div>

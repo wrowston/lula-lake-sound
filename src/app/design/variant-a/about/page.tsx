@@ -14,9 +14,7 @@ export default function VariantAAbout() {
   return (
     <>
       <VariantNav variant="a" active="about" />
-      <main className="relative isolate overflow-hidden">
-        <div aria-hidden className="pointer-events-none absolute inset-0 bg-texture-stone opacity-55" />
-
+      <main className="relative isolate overflow-hidden bg-washed-black">
         <header className="relative px-6 pt-16 pb-10 md:px-10 md:pt-24 md:pb-16">
           <div className="mx-auto flex w-full max-w-3xl flex-col gap-6 border-b border-sand/15 pb-10">
             <div className="flex items-center justify-between">
@@ -38,7 +36,7 @@ export default function VariantAAbout() {
             <p className="eyebrow mb-6 text-sand/55">The founders</p>
             <div className="grid grid-cols-1 gap-8 sm:grid-cols-2 sm:gap-6">
               {ABOUT_ESSAY.founders.map((f) => (
-                <figure key={f.id} className="border border-sand/15 bg-washed-black/50 p-3">
+                <figure key={f.id} className="border border-sand/15 bg-washed-black p-3">
                   <div className="rotate-[-1deg]">
                     <PlaceholderFrame
                       texture={f.texture}

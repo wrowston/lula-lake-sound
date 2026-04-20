@@ -27,12 +27,7 @@ export default function VariantASummary() {
   return (
     <>
       <VariantNav variant="a" active="index" />
-      <main className="relative isolate overflow-hidden">
-        <div
-          aria-hidden
-          className="pointer-events-none absolute inset-0 bg-texture-stone opacity-50"
-        />
-
+      <main className="relative isolate overflow-hidden bg-washed-black">
         <section className="relative px-6 pt-16 pb-10 md:px-10 md:pt-24 md:pb-14">
           <div className="mx-auto grid w-full max-w-6xl grid-cols-1 gap-10 md:grid-cols-[auto_1fr] md:gap-16">
             <div className="md:pt-4">
@@ -74,7 +69,7 @@ export default function VariantASummary() {
               <Link
                 key={p.slug}
                 href={`/design/variant-a/${p.slug}`}
-                className="group/page relative flex flex-col justify-between border border-sand/15 bg-washed-black/55 p-7 transition-colors duration-500 hover:border-sand/40"
+                className="group/page relative flex flex-col justify-between border border-sand/15 bg-washed-black p-7 transition-colors duration-500 hover:border-sand/40"
               >
                 <div>
                   <p className="eyebrow mb-6 text-sand/55">{p.note}</p>
