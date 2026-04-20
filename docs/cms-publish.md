@@ -25,7 +25,7 @@ Each section has its own `cmsSections` row and therefore its own independent dra
 
 ## Admin UI (Settings, Pricing, Gear)
 
-The shared `CmsPublishToolbar` exposes three actions: **Publish**, **Discard**, and **Preview site**. There is **no explicit "Save draft" button** — editors auto-save local edits via a debounced `useAutosaveDraft` hook (`src/lib/use-autosave-draft.ts`, default 1000ms) that calls the same `api.cms.saveDraft` mutation under the hood. The toolbar renders sticky at the bottom of the admin viewport and shows a subtle `Saving… / Saved / Save failed — retrying` indicator alongside the "Unpublished changes" badge.
+The shared `CmsPublishToolbar` exposes three actions: **Publish**, **Discard**, and **Preview site**. There is **no explicit "Save draft" button** — editors auto-save local edits via a debounced `useAutosaveDraft` hook (`src/lib/use-autosave-draft.ts`, default 1000ms) that calls the same `api.cms.saveDraft` mutation under the hood. The debounce resets on each edit (idle window from the last keystroke), not only when the editor first becomes dirty. The toolbar renders sticky at the bottom of the admin viewport and shows a subtle `Saving… / Saved / Save failed — retrying` indicator alongside the "Unpublished changes" badge.
 
 Publish flushes any pending autosave first, so fast-clicking Publish after an edit is safe and never loses work.
 
