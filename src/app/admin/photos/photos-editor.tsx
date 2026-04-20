@@ -242,6 +242,9 @@ function PhotosEditorForm() {
 
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const dragDepthRef = useRef(0);
+  const uploadDismissTimerRef = useRef<ReturnType<typeof window.setTimeout> | null>(
+    null,
+  );
 
   const [busy, setBusy] = useState<string | null>(null);
   const [rowBusy, setRowBusy] = useState<RowBusy>({});
@@ -512,16 +515,14 @@ function PhotosEditorForm() {
 
       const reordered = [...photos];
       const [moved] = reordered.splice(sourceIndex, 1);
-      // Recompute the target index after removal.
-      const adjustedTarget = photos.findIndex((p) => p.stableId === overStableId);
+      const targetIndexInReordered = reordered.findIndex(
+        (p) => p.stableId === overStableId,
+      );
+      if (targetIndexInReordered === -1) return;
       const insertAt =
         position === "before"
-          ? adjustedTarget > sourceIndex
-            ? adjustedTarget - 1
-            : adjustedTarget
-          : adjustedTarget > sourceIndex
-            ? adjustedTarget
-            : adjustedTarget + 1;
+          ? targetIndexInReordered
+          : targetIndexInReordered + 1;
       reordered.splice(insertAt, 0, moved);
 
       const orderedIds = reordered.map((p) => p.stableId);
@@ -586,12 +587,19 @@ function PhotosEditorForm() {
 
       setBusy("Uploading…");
 
+      if (uploadDismissTimerRef.current !== null) {
+        window.clearTimeout(uploadDismissTimerRef.current);
+        uploadDismissTimerRef.current = null;
+      }
+
+      const batchEntryIds: string[] = [];
       let successCount = 0;
       for (const file of filesToUpload) {
         const entryId =
           typeof crypto !== "undefined" && "randomUUID" in crypto
             ? crypto.randomUUID()
             : `${Date.now()}-${Math.random().toString(36).slice(2)}`;
+        batchEntryIds.push(entryId);
 
         // Create the queue entry up-front so the tray appears immediately.
         setUploadQueue((prev) => [
@@ -689,9 +697,15 @@ function PhotosEditorForm() {
         );
       }
 
-      // Auto-dismiss successful entries a moment later; keep errors pinned.
-      window.setTimeout(() => {
-        setUploadQueue((prev) => prev.filter((entry) => entry.status === "error"));
+      // Auto-dismiss this batch's non-error entries; keep errors pinned.
+      uploadDismissTimerRef.current = window.setTimeout(() => {
+        uploadDismissTimerRef.current = null;
+        setUploadQueue((prev) =>
+          prev.filter(
+            (entry) =>
+              entry.status === "error" || !batchEntryIds.includes(entry.id),
+          ),
+        );
       }, 2500);
     },
     [data, generateUploadUrl, photos.length, saveUploadedPhoto, updateUploadEntry],
