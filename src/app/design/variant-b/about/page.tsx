@@ -16,6 +16,8 @@ export default function VariantBAbout() {
       <VariantNav variant="b" active="about" />
       <main className="relative isolate">
         <section className="relative flex min-h-[72vh] flex-col items-center justify-center overflow-hidden px-6 py-24 md:min-h-[80vh] md:px-10">
+          {/* Same stack as `components/hero.tsx`: Emerald + wash + Chladni 1 only.
+              Chladni 2 (sunburst) at high opacity reads as heavy olive loops — avoid. */}
           <div className="absolute inset-0 z-0">
             <Image
               src="/Textured Backgrounds/LLS_Texture_Emerald.jpg"
@@ -23,10 +25,13 @@ export default function VariantBAbout() {
               fill
               className="object-cover object-center"
               priority
-              quality={82}
+              quality={85}
             />
-            <div className="absolute inset-0 bg-washed-black/60" />
-            <div aria-hidden className="absolute inset-0 bg-chladni-2 opacity-60" />
+            <div className="absolute inset-0 bg-washed-black/55" />
+            <div
+              aria-hidden
+              className="absolute inset-0 bg-chladni-1 opacity-45 mix-blend-overlay"
+            />
             <div className="absolute inset-x-0 bottom-0 h-40 bg-gradient-to-b from-transparent to-washed-black" />
           </div>
           <div className="relative z-10 mx-auto flex w-full max-w-4xl flex-col items-start gap-8">
@@ -41,10 +46,13 @@ export default function VariantBAbout() {
           </div>
         </section>
 
-        {/* Founders */}
-        <section className="relative border-t border-sand/10 px-6 py-20 md:px-10 md:py-28">
-          <div aria-hidden className="pointer-events-none absolute inset-0 bg-chladni-1 opacity-20" />
-          <div className="relative mx-auto w-full max-w-6xl">
+        {/* Founders — quiet paper grain, no extra Chladni layer */}
+        <section className="relative border-t border-sand/10 bg-washed-black px-6 py-20 md:px-10 md:py-28">
+          <div
+            aria-hidden
+            className="pointer-events-none absolute inset-0 bg-texture-canvas opacity-[0.14]"
+          />
+          <div className="relative z-10 mx-auto w-full max-w-6xl">
             <p className="eyebrow mb-10 text-gold/75">The founders</p>
             <div className="grid grid-cols-1 gap-10 md:grid-cols-2 md:gap-8">
               {ABOUT_ESSAY.founders.map((f) => (
@@ -108,16 +116,15 @@ export default function VariantBAbout() {
         </section>
 
         <section className="relative overflow-hidden px-6 py-28 md:px-10 md:py-36">
-          <div className="absolute inset-0 z-0">
-            <Image
-              src="/Textured Backgrounds/LLS_Texture_Starburst.jpg"
-              alt=""
-              fill
-              className="object-cover object-center"
-            />
-            <div className="absolute inset-0 bg-washed-black/75" />
-            <div aria-hidden className="absolute inset-0 bg-chladni-3 opacity-65" />
-          </div>
+          <div className="absolute inset-0 z-0 bg-the-space-atmosphere" />
+          <div
+            aria-hidden
+            className="absolute inset-0 bg-texture-canvas opacity-18"
+          />
+          <div
+            aria-hidden
+            className="absolute inset-0 bg-chladni-1-2"
+          />
           <div className="relative z-10 mx-auto flex max-w-3xl flex-col items-center text-center">
             <Image
               src="/Logos/Graphic/LLS_Logo_Graphic_Sage.png"
