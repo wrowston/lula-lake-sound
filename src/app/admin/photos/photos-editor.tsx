@@ -1182,6 +1182,7 @@ function PhotosEditorForm() {
                       type="button"
                       variant="outline"
                       size="sm"
+                      className="border-border text-foreground hover:bg-muted hover:text-foreground"
                       aria-label="Save photo details"
                       disabled={!isDirty || busy !== null || isRowBusy}
                       onClick={() => void savePhotoDetails(photo)}
