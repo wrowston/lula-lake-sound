@@ -117,6 +117,7 @@ function SettingsForm() {
 
   const { status: autosaveStatus, flush: flushAutosave } = useAutosaveDraft({
     dirty: hasLocalEdits && source !== undefined,
+    debounceResetKey: localDraft,
     pauseWhen: busy !== null,
     saveEffect: () =>
       convexMutationEffect(() =>
