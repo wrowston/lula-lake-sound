@@ -1,6 +1,7 @@
 "use client";
 
 import Image from "next/image";
+import Link from "next/link";
 import { useState } from "react";
 
 import { cn } from "@/lib/utils";
@@ -32,13 +33,20 @@ export function Header({ scrollY, showPricing = false }: HeaderProps) {
     window.scrollTo({ top: 0, behavior: "smooth" });
   }
 
-  const navigationItems = [
-    { id: "the-space", label: "The Studio" },
-    { id: "equipment-specs", label: "Gear" },
-    ...(showPricing ? [{ id: "services-pricing", label: "Pricing" }] : []),
-    { id: "local-favorites", label: "Nearby" },
-    { id: "faq", label: "FAQ" },
-    { id: "artist-inquiries", label: "Inquire" },
+  type NavItem =
+    | { kind: "route"; key: string; href: string; label: string }
+    | { kind: "hash"; id: string; label: string };
+
+  const navigationItems: NavItem[] = [
+    { kind: "route", key: "about", href: "/about", label: "About" },
+    { kind: "hash", id: "the-space", label: "The Studio" },
+    { kind: "hash", id: "equipment-specs", label: "Gear" },
+    ...(showPricing
+      ? [{ kind: "hash" as const, id: "services-pricing", label: "Pricing" }]
+      : []),
+    { kind: "hash", id: "local-favorites", label: "Nearby" },
+    { kind: "hash", id: "faq", label: "FAQ" },
+    { kind: "hash", id: "artist-inquiries", label: "Inquire" },
   ];
 
   return (
@@ -67,16 +75,27 @@ export function Header({ scrollY, showPricing = false }: HeaderProps) {
             aria-label="Primary"
             className="hidden items-center gap-8 lg:flex"
           >
-            {navigationItems.map((item) => (
-              <a
-                key={item.id}
-                href={`#${item.id}`}
-                className="label-text group relative text-[10.5px] text-ivory/55 transition-colors duration-500 hover:text-sand"
-              >
-                {item.label}
-                <span className="absolute -bottom-1 left-0 h-px w-0 bg-sand transition-[width] duration-500 ease-[cubic-bezier(0.16,1,0.3,1)] group-hover:w-full" />
-              </a>
-            ))}
+            {navigationItems.map((item) =>
+              item.kind === "route" ? (
+                <Link
+                  key={item.key}
+                  href={item.href}
+                  className="label-text group relative text-[10.5px] text-ivory/55 transition-colors duration-500 hover:text-sand"
+                >
+                  {item.label}
+                  <span className="absolute -bottom-1 left-0 h-px w-0 bg-sand transition-[width] duration-500 ease-[cubic-bezier(0.16,1,0.3,1)] group-hover:w-full" />
+                </Link>
+              ) : (
+                <a
+                  key={item.id}
+                  href={`/#${item.id}`}
+                  className="label-text group relative text-[10.5px] text-ivory/55 transition-colors duration-500 hover:text-sand"
+                >
+                  {item.label}
+                  <span className="absolute -bottom-1 left-0 h-px w-0 bg-sand transition-[width] duration-500 ease-[cubic-bezier(0.16,1,0.3,1)] group-hover:w-full" />
+                </a>
+              ),
+            )}
           </nav>
 
           <button
@@ -134,16 +153,27 @@ export function Header({ scrollY, showPricing = false }: HeaderProps) {
           >
             <p className="eyebrow mb-8 text-sand/50">Menu</p>
             <nav className="flex flex-col divide-y divide-sand/10">
-              {navigationItems.map((item) => (
-                <a
-                  key={item.id}
-                  href={`#${item.id}`}
-                  onClick={handleNavigation}
-                  className="headline-secondary py-5 text-2xl text-ivory/85 transition-colors duration-500 hover:text-sand"
-                >
-                  {item.label}
-                </a>
-              ))}
+              {navigationItems.map((item) =>
+                item.kind === "route" ? (
+                  <Link
+                    key={item.key}
+                    href={item.href}
+                    onClick={handleNavigation}
+                    className="headline-secondary py-5 text-2xl text-ivory/85 transition-colors duration-500 hover:text-sand"
+                  >
+                    {item.label}
+                  </Link>
+                ) : (
+                  <a
+                    key={item.id}
+                    href={`/#${item.id}`}
+                    onClick={handleNavigation}
+                    className="headline-secondary py-5 text-2xl text-ivory/85 transition-colors duration-500 hover:text-sand"
+                  >
+                    {item.label}
+                  </a>
+                ),
+              )}
             </nav>
           </div>
         </div>

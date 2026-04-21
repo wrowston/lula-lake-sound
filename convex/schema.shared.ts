@@ -7,6 +7,7 @@ import { v } from "convex/values";
  * Sections today:
  * - `settings`  — site metadata (title, description; extend as CMS grows).
  * - `pricing`   — feature flags and package/rate catalog that govern pricing surfaces.
+ * - `about`     — About page hero copy, body block array, optional highlights, SEO meta, optional team headshots.
  */
 export const siteFlagsValidator = v.object({
   priceTabEnabled: v.boolean(),
@@ -94,15 +95,74 @@ export const pricingContentValidator = v.object({
   packages: v.optional(v.array(pricingPackageValidator)),
 });
 
+/**
+ * Ordered block that makes up the About page body.
+ *
+ * We intentionally pick a **block array of plain text** over a raw markdown
+ * string so public renderers never have to parse or sanitize HTML — each
+ * block's `text` goes into a React text node (which auto-escapes) inside a
+ * fixed element chosen by `type`. This satisfies the "no script injection"
+ * acceptance criteria without a sanitization pipeline.
+ *
+ * If richer formatting is needed later, switch to a markdown string field
+ * and run it through `rehype-sanitize` in the public loader.
+ */
+export const aboutBlockValidator = v.object({
+  type: v.union(v.literal("paragraph"), v.literal("heading")),
+  text: v.string(),
+});
+
+/** Team / staff row for the About page (headshot in Convex file storage). */
+export const aboutTeamMemberValidator = v.object({
+  id: v.string(),
+  name: v.string(),
+  title: v.string(),
+  /** Required to publish; optional while drafting so rows can be added before upload. */
+  storageId: v.optional(v.id("_storage")),
+});
+
+/**
+ * "about" section snapshot — About page copy (INF-70 / INF-98).
+ *
+ * - `heroTitle` — required display heading above the fold.
+ * - `heroSubtitle` — optional supporting line.
+ * - `bodyHtml` — rich-text body authored in the admin editor (Tiptap HTML
+ *   serialization). Preferred over the legacy `body` blocks when present.
+ *   Because Tiptap only emits nodes/marks from its fixed schema, the HTML is
+ *   safe to render by construction, BUT the public renderer should still
+ *   parse it into React elements through Tiptap's schema (never
+ *   `dangerouslySetInnerHTML` with attacker-controlled `href="javascript:"`
+ *   values — sanitize links there).
+ * - `body` — legacy ordered paragraph / heading blocks (see
+ *   `aboutBlockValidator`). Kept for back-compat so pre-INF-98 rows keep
+ *   validating; new writes populate `bodyHtml` instead.
+ * - `highlights` — optional short bulleted callouts (e.g. key studio facts).
+ * - `seoTitle` / `seoDescription` — optional overrides for page metadata;
+ *   when blank the route should fall back to the `settings` section.
+ * - `teamMembers` — optional ordered list of people (image, name, title).
+ */
+export const aboutContentValidator = v.object({
+  heroTitle: v.string(),
+  heroSubtitle: v.optional(v.string()),
+  bodyHtml: v.optional(v.string()),
+  body: v.array(aboutBlockValidator),
+  highlights: v.optional(v.array(v.string())),
+  seoTitle: v.optional(v.string()),
+  seoDescription: v.optional(v.string()),
+  teamMembers: v.optional(v.array(aboutTeamMemberValidator)),
+});
+
 /** Any section's snapshot payload — discriminated at runtime by the row's `section`. */
 export const cmsSnapshotValidator = v.union(
   settingsContentValidator,
   pricingContentValidator,
+  aboutContentValidator,
 );
 
 export const cmsSectionValidator = v.union(
   v.literal("settings"),
   v.literal("pricing"),
+  v.literal("about"),
 );
 
 /** Draft vs published rows in `gearCategories` / `gearItems` (INF-86). */

@@ -1,6 +1,9 @@
 import type { Infer } from "convex/values";
 import type { Doc } from "./_generated/dataModel";
 import type {
+  aboutBlockValidator,
+  aboutContentValidator,
+  aboutTeamMemberValidator,
   pricingBillingCadenceValidator,
   pricingContentValidator,
   pricingPackageValidator,
@@ -13,6 +16,22 @@ export type SettingsSnapshot = Infer<typeof settingsContentValidator>;
 export type PricingSnapshot = Infer<typeof pricingContentValidator>;
 export type PricingPackage = Infer<typeof pricingPackageValidator>;
 export type PricingBillingCadence = Infer<typeof pricingBillingCadenceValidator>;
+export type AboutSnapshot = Infer<typeof aboutContentValidator>;
+export type AboutBlock = Infer<typeof aboutBlockValidator>;
+export type AboutTeamMember = Infer<typeof aboutTeamMemberValidator>;
+
+/** Team row as returned to anonymous public callers (no raw storage id). */
+export type PublicAboutTeamMember = {
+  id: string;
+  name: string;
+  title: string;
+  imageUrl: string | null;
+};
+
+/** Published About payload for marketing routes (sanitized + image URLs). */
+export type PublicAboutSnapshot = Omit<AboutSnapshot, "teamMembers"> & {
+  teamMembers?: PublicAboutTeamMember[];
+};
 
 /** Per-section default snapshots used for seeding and new-row inserts. */
 export const SETTINGS_DEFAULTS: SettingsSnapshot = {
@@ -84,8 +103,35 @@ export const PRICING_DEFAULTS: PricingSnapshot = {
   packages: DEFAULT_PRICING_PACKAGES,
 };
 
+/**
+ * Default About page copy shipped with a brand-new deployment. Seeded so the
+ * public route renders before the owner has made their first publish. Kept
+ * intentionally short — real copy goes in via the admin editor.
+ */
+export const ABOUT_DEFAULTS: AboutSnapshot = {
+  heroTitle: "About Lula Lake Sound",
+  heroSubtitle: "A creative space for music production and recording.",
+  body: [
+    {
+      type: "paragraph",
+      text: "Lula Lake Sound is a studio focused on helping artists capture the sound they hear in their heads.",
+    },
+  ],
+  highlights: [],
+  seoTitle: "",
+  seoDescription: "",
+  teamMembers: [],
+};
+
 export function defaultSnapshotForSection(section: CmsSection): CmsSnapshot {
-  return section === "settings" ? SETTINGS_DEFAULTS : PRICING_DEFAULTS;
+  switch (section) {
+    case "settings":
+      return SETTINGS_DEFAULTS;
+    case "pricing":
+      return PRICING_DEFAULTS;
+    case "about":
+      return ABOUT_DEFAULTS;
+  }
 }
 
 /**

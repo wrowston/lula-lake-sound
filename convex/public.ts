@@ -1,5 +1,7 @@
 import { query } from "./_generated/server";
 import {
+  materializePublicAbout,
+  publishedAboutFromRow,
   publishedPricingFromRows,
   publishedSettingsFromRow,
 } from "./publicSettingsSnapshot";
@@ -83,6 +85,23 @@ export const getPublishedGear = query({
         ...(i.url !== undefined ? { url: i.url } : {}),
       })),
     };
+  },
+});
+
+/**
+ * Published About page copy only. Anonymous; reads `publishedSnapshot` for
+ * the `about` section. Falls back to seeded defaults when the row doesn't
+ * exist yet, so the public route always renders.
+ */
+export const getPublishedAbout = query({
+  args: {},
+  handler: async (ctx) => {
+    const row = await ctx.db
+      .query("cmsSections")
+      .withIndex("by_section", (q) => q.eq("section", "about"))
+      .unique();
+    const snapshot = publishedAboutFromRow(row);
+    return await materializePublicAbout(ctx, snapshot);
   },
 });
 

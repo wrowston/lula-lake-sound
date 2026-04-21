@@ -200,7 +200,7 @@ export function cmsErrorToastMessage(err: CmsAppError): string {
     case "PublishValidationFailed": {
       const detail =
         err.issues !== undefined && err.issues.length > 0
-          ? ` — ${err.issues.map((i) => `${i.path}: ${i.message}`).join("; ")}`
+          ? ` — ${err.issues.map((i) => i.message).join("; ")}`
           : "";
       return `[${err.section}] ${err.message}${detail}`;
     }

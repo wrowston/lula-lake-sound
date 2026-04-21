@@ -1,9 +1,16 @@
-import type { Doc } from "./_generated/dataModel";
+import type { Doc, Id } from "./_generated/dataModel";
+import type { QueryCtx } from "./_generated/server";
 import {
+  ABOUT_DEFAULTS,
   PRICING_DEFAULTS,
   SETTINGS_DEFAULTS,
+  type AboutBlock,
+  type AboutSnapshot,
+  type AboutTeamMember,
   type PricingPackage,
   type PricingSnapshot,
+  type PublicAboutSnapshot,
+  type PublicAboutTeamMember,
   type SettingsSnapshot,
 } from "./cmsShared";
 
@@ -141,6 +148,132 @@ export function publishedPricingFromRows(
     flags: flags ?? PRICING_DEFAULTS.flags,
     packages,
   };
+}
+
+function isValidAboutBlock(value: unknown): value is AboutBlock {
+  if (typeof value !== "object" || value === null) return false;
+  const v = value as Record<string, unknown>;
+  if (v.type !== "paragraph" && v.type !== "heading") return false;
+  if (typeof v.text !== "string") return false;
+  return true;
+}
+
+function isValidAboutTeamMember(value: unknown): value is AboutTeamMember {
+  if (typeof value !== "object" || value === null) return false;
+  const v = value as Record<string, unknown>;
+  if (typeof v.id !== "string" || v.id.trim().length === 0) return false;
+  if (typeof v.name !== "string") return false;
+  if (typeof v.title !== "string") return false;
+  if (
+    v.storageId !== undefined &&
+    (typeof v.storageId !== "string" || v.storageId.length === 0)
+  ) {
+    return false;
+  }
+  return true;
+}
+
+/**
+ * Returns safe published About page copy. Tolerant of partially-invalid
+ * stored data (e.g. a stray non-string highlight won't blow up the public
+ * route) and falls back to `ABOUT_DEFAULTS` when there's nothing usable.
+ *
+ * Strings are passed through **as text** — consumers must not feed them to
+ * `dangerouslySetInnerHTML`. If a future field stores markdown that allows
+ * raw HTML, sanitize here (e.g. rehype-sanitize) before returning.
+ */
+export function publishedAboutFromRow(
+  row: Doc<"cmsSections"> | null,
+): AboutSnapshot {
+  const snap = row?.publishedSnapshot as unknown;
+  if (!snap || typeof snap !== "object") {
+    return ABOUT_DEFAULTS;
+  }
+
+  const s = snap as {
+    heroTitle?: unknown;
+    heroSubtitle?: unknown;
+    bodyHtml?: unknown;
+    body?: unknown;
+    highlights?: unknown;
+    seoTitle?: unknown;
+    seoDescription?: unknown;
+    teamMembers?: unknown;
+  };
+
+  const heroTitle =
+    typeof s.heroTitle === "string" ? s.heroTitle : ABOUT_DEFAULTS.heroTitle;
+  const heroSubtitle =
+    typeof s.heroSubtitle === "string" ? s.heroSubtitle : undefined;
+
+  const bodyHtml =
+    typeof s.bodyHtml === "string" && s.bodyHtml.trim().length > 0
+      ? s.bodyHtml
+      : undefined;
+
+  const body: AboutBlock[] = Array.isArray(s.body)
+    ? s.body.filter(isValidAboutBlock)
+    : [];
+
+  const highlights: string[] | undefined = Array.isArray(s.highlights)
+    ? s.highlights.filter((h): h is string => typeof h === "string")
+    : undefined;
+
+  const seoTitle = typeof s.seoTitle === "string" ? s.seoTitle : undefined;
+  const seoDescription =
+    typeof s.seoDescription === "string" ? s.seoDescription : undefined;
+
+  const teamMembers: AboutTeamMember[] | undefined = Array.isArray(s.teamMembers)
+    ? s.teamMembers.filter(isValidAboutTeamMember).map((m) => ({
+        id: m.id,
+        name: m.name,
+        title: m.title,
+        ...(m.storageId !== undefined
+          ? { storageId: m.storageId as Id<"_storage"> }
+          : {}),
+      }))
+    : undefined;
+
+  return {
+    heroTitle,
+    ...(heroSubtitle !== undefined ? { heroSubtitle } : {}),
+    ...(bodyHtml !== undefined ? { bodyHtml } : {}),
+    // Legacy block body kept so pre-INF-98 rows keep rendering when
+    // `bodyHtml` is absent. Once all rows have `bodyHtml`, this can be
+    // dropped alongside the schema field.
+    body: body.length > 0 ? body : ABOUT_DEFAULTS.body,
+    ...(highlights !== undefined ? { highlights } : {}),
+    ...(seoTitle !== undefined ? { seoTitle } : {}),
+    ...(seoDescription !== undefined ? { seoDescription } : {}),
+    ...(teamMembers !== undefined && teamMembers.length > 0
+      ? { teamMembers }
+      : {}),
+  };
+}
+
+/**
+ * Resolve team headshots to signed URLs for anonymous public callers (no storage ids).
+ */
+export async function materializePublicAbout(
+  ctx: QueryCtx,
+  snapshot: AboutSnapshot,
+): Promise<PublicAboutSnapshot> {
+  const { teamMembers, ...rest } = snapshot;
+  if (!teamMembers || teamMembers.length === 0) {
+    return rest as PublicAboutSnapshot;
+  }
+  const publicTeam: PublicAboutTeamMember[] = await Promise.all(
+    teamMembers.map(async (m) => ({
+      id: m.id,
+      name: m.name,
+      title: m.title,
+      imageUrl:
+        m.storageId !== undefined
+          ? await ctx.storage.getUrl(m.storageId)
+          : null,
+    })),
+  );
+  return { ...rest, teamMembers: publicTeam };
 }
 
 /**

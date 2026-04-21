@@ -9,7 +9,7 @@ import {
 } from "convex/react";
 import { useUser } from "@clerk/nextjs";
 import { api } from "../../../../convex/_generated/api";
-import { useCallback, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { Effect } from "effect";
 import { toast } from "sonner";
 import {
@@ -133,6 +133,77 @@ function parsePriceInput(value: string): number | null {
   const num = Number(trimmed);
   if (!Number.isFinite(num) || num < 0) return null;
   return Math.round(num * 100);
+}
+
+type PriceAmountInputProps = Omit<
+  React.ComponentProps<typeof Input>,
+  "value" | "onChange"
+> & {
+  priceCents: number;
+  onCentsChange: (cents: number) => void;
+};
+
+/**
+ * Price is stored as integer cents but edited as a decimal string. A single
+ * controlled value that only updates when `parsePriceInput` succeeds rejects
+ * intermediate strings like `.` or `.00` (e.g. after deleting the leading
+ * digit), so the field appears read-only. Keep a local string while focused.
+ */
+function PriceAmountInput({
+  priceCents,
+  onCentsChange,
+  className,
+  onFocus,
+  onBlur,
+  ...rest
+}: PriceAmountInputProps) {
+  const [focused, setFocused] = useState(false);
+  const [text, setText] = useState(() => priceCentsToDisplay(priceCents));
+
+  useEffect(() => {
+    if (!focused) {
+      setText(priceCentsToDisplay(priceCents));
+    }
+  }, [priceCents, focused]);
+
+  return (
+    <Input
+      type="text"
+      inputMode="decimal"
+      {...rest}
+      className={className}
+      value={text}
+      onChange={(e) => {
+        const v = e.target.value;
+        setText(v);
+        const parsed = parsePriceInput(v);
+        if (parsed !== null) {
+          onCentsChange(parsed);
+        }
+      }}
+      onFocus={(e) => {
+        setFocused(true);
+        onFocus?.(e);
+      }}
+      onBlur={(e) => {
+        setFocused(false);
+        const trimmed = text.trim();
+        if (trimmed.length === 0) {
+          onCentsChange(0);
+          setText(priceCentsToDisplay(0));
+        } else {
+          const parsed = parsePriceInput(trimmed);
+          if (parsed !== null) {
+            onCentsChange(parsed);
+            setText(priceCentsToDisplay(parsed));
+          } else {
+            setText(priceCentsToDisplay(priceCents));
+          }
+        }
+        onBlur?.(e);
+      }}
+    />
+  );
 }
 
 export function PricingEditor() {
@@ -515,21 +586,12 @@ function PricingForm() {
                       Price
                     </span>
                     <div className="flex items-center gap-2">
-                      <Input
-                        type="text"
-                        inputMode="decimal"
+                      <PriceAmountInput
                         aria-label="Price amount"
-                        value={priceCentsToDisplay(pkg.priceCents)}
-                        onChange={(e) => {
-                          const next = parsePriceInput(e.target.value);
-                          if (next === null) {
-                            if (e.target.value.trim() === "") {
-                              updatePackage(pkg.id, { priceCents: 0 });
-                            }
-                            return;
-                          }
-                          updatePackage(pkg.id, { priceCents: next });
-                        }}
+                        priceCents={pkg.priceCents}
+                        onCentsChange={(cents) =>
+                          updatePackage(pkg.id, { priceCents: cents })
+                        }
                         className={cn(PRICING_FIELD_INPUT_CLASS, "flex-1")}
                       />
                       <Input

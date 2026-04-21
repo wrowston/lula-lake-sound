@@ -1,6 +1,7 @@
 import { v } from "convex/values";
 import { internalMutation } from "./_generated/server";
 import {
+  ABOUT_DEFAULTS,
   PRICING_DEFAULTS,
   SETTINGS_DEFAULTS,
   type CmsSection,
@@ -46,6 +47,7 @@ export const seedSiteSettingsDefaults = internalMutation({
     const results = await Promise.all([
       ensureSeeded("settings", SETTINGS_DEFAULTS),
       ensureSeeded("pricing", PRICING_DEFAULTS),
+      ensureSeeded("about", ABOUT_DEFAULTS),
     ]);
 
     return {

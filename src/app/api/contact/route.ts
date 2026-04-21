@@ -4,6 +4,21 @@ import { api } from "@convex/_generated/api";
 
 export const runtime = "nodejs";
 
+/** Default when `RESEND_FROM_EMAIL` is unset; must be on the verified Resend domain. */
+const DEFAULT_RESEND_FROM = "Lula Lake Sound <noreply@lulalakesound.com>";
+
+function resolveResendFrom(env: string | undefined): string {
+  const trimmed = env?.trim();
+  if (!trimmed) {
+    return DEFAULT_RESEND_FROM;
+  }
+  if (trimmed.includes("yourdomain.com")) {
+    console.warn("RESEND_FROM_EMAIL used placeholder domain; using default sender.");
+    return DEFAULT_RESEND_FROM;
+  }
+  return trimmed;
+}
+
 const MAX_LEN = {
   artistName: 200,
   contactName: 200,
@@ -75,11 +90,11 @@ export async function POST(request: Request) {
   }
 
   const resendKey = process.env.RESEND_API_KEY;
-  const fromEmail = process.env.RESEND_FROM_EMAIL;
+  const fromEmail = resolveResendFrom(process.env.RESEND_FROM_EMAIL);
   const toEmail = process.env.CONTACT_TO_EMAIL ?? "info@lulalakesound.com";
 
-  if (!resendKey || !fromEmail) {
-    console.error("Missing RESEND_API_KEY or RESEND_FROM_EMAIL");
+  if (!resendKey) {
+    console.error("Missing RESEND_API_KEY");
     return Response.json(
       { success: false, message: "Server configuration error." },
       { status: 500 }

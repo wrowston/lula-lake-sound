@@ -1,6 +1,7 @@
 import { query, mutation } from "./_generated/server";
 import { v } from "convex/values";
 import {
+  aboutContentValidator,
   cmsSectionValidator,
   pricingContentValidator,
   settingsContentValidator,
@@ -13,6 +14,13 @@ import {
   requireAuthenticatedIdentity,
   requireCmsOwner,
 } from "./lib/auth";
+import {
+  collectAboutTeamBlobIssues,
+  collectDraftOnlyAboutTeamStorageIds,
+  deleteDraftOnlyAboutTeamBlobs,
+  pruneAboutTeamBlobsAfterSaveDraft,
+} from "./aboutTeamStorage";
+import type { AboutSnapshot } from "./cmsShared";
 import {
   collectPublishIssues,
   ensureSectionRow,
@@ -70,37 +78,54 @@ export const getSection = query({
 export const saveDraft = mutation({
   args: {
     section: cmsSectionValidator,
-    content: v.union(settingsContentValidator, pricingContentValidator),
+    content: v.union(
+      settingsContentValidator,
+      pricingContentValidator,
+      aboutContentValidator,
+    ),
   },
   handler: async (ctx, args) => {
     const { updatedBy } = await requireCmsOwner(ctx);
 
-    // Runtime guard: the `content` union lets either shape through, but we
-    // enforce that the payload matches the target section so a settings row
-    // can never end up with a pricing payload (or vice versa).
+    // Runtime guard: the `content` union lets any of the three shapes through,
+    // but we enforce that the payload matches the target section so e.g. a
+    // settings row can never end up with a pricing or about payload.
+    const isSettingsPayload =
+      "metadata" in args.content &&
+      !("heroTitle" in args.content) &&
+      !("packages" in args.content);
+    const isPricingPayload =
+      "flags" in args.content &&
+      typeof (args.content as { flags?: unknown }).flags === "object" &&
+      (args.content as { flags?: { priceTabEnabled?: unknown } }).flags
+        ?.priceTabEnabled !== undefined;
+    const isAboutPayload =
+      "heroTitle" in args.content && "body" in args.content;
+
     if (args.section === "settings") {
-      if (!("metadata" in args.content) && !("flags" in args.content)) {
+      if (!isSettingsPayload) {
         cmsValidationError(
           "Settings content must include metadata.",
           "content",
         );
       }
-      if ("flags" in args.content && !("metadata" in args.content)) {
+    } else if (args.section === "pricing") {
+      if ("metadata" in args.content) {
         cmsValidationError(
-          "Settings content cannot be a pricing payload.",
+          "Pricing content cannot include metadata.",
           "content",
         );
       }
-    } else {
-      if (!("flags" in args.content)) {
+      if (!isPricingPayload) {
         cmsValidationError(
           "Pricing content must include flags.priceTabEnabled.",
           "content",
         );
       }
-      if ("metadata" in args.content) {
+    } else {
+      if (!isAboutPayload) {
         cmsValidationError(
-          "Pricing content cannot include metadata.",
+          "About content must include heroTitle and body blocks.",
           "content",
         );
       }
@@ -120,6 +145,14 @@ export const saveDraft = mutation({
       updatedAt: now,
       updatedBy,
     });
+
+    if (args.section === "about") {
+      await pruneAboutTeamBlobsAfterSaveDraft(
+        ctx,
+        row,
+        args.content as AboutSnapshot,
+      );
+    }
 
     return { ok: true as const, section: args.section, hasDraftChanges };
   },
@@ -167,10 +200,15 @@ export const validatePublishSection = query({
       row?.publishedSnapshot ??
       defaultSnapshotForSection(args.section);
     const issues = collectPublishIssues(args.section, snapshot);
+    const blobIssues =
+      args.section === "about"
+        ? await collectAboutTeamBlobIssues(ctx, snapshot as AboutSnapshot)
+        : [];
+    const allIssues = [...issues, ...blobIssues];
     return {
-      ok: issues.length === 0,
+      ok: allIssues.length === 0,
       section: args.section,
-      issues,
+      issues: allIssues,
     };
   },
 });
@@ -181,8 +219,8 @@ export const validatePublishSection = query({
  * `publishedSnapshot`, `publishedAt`, and `publishedBy` are unchanged.
  * When nothing has ever been published (`publishedAt === null`), published content
  * stays as stored (typically defaults from seed / first row insert); the draft is
- * cleared so the editor shows that same baseline. No separate storage refs today;
- * if snapshots gain `_storage` ids, add explicit cleanup here (see INF-76).
+ * cleared so the editor shows that same baseline. About team headshots: orphan
+ * blobs only referenced by the discarded draft are removed (see INF-76).
  */
 export const discardDraft = mutation({
   args: {
@@ -201,12 +239,19 @@ export const discardDraft = mutation({
 
     const now = Date.now();
 
+    const draftOnlyAboutBlobs =
+      args.section === "about" ? collectDraftOnlyAboutTeamStorageIds(row) : [];
+
     await ctx.db.patch(row._id, {
       draftSnapshot: undefined,
       hasDraftChanges: false,
       updatedAt: now,
       updatedBy,
     });
+
+    if (draftOnlyAboutBlobs.length > 0) {
+      await deleteDraftOnlyAboutTeamBlobs(ctx, draftOnlyAboutBlobs);
+    }
 
     return { ok: true as const, section: args.section, discarded: true };
   },
