@@ -7,6 +7,7 @@ import { v } from "convex/values";
  * Sections today:
  * - `settings`  — site metadata (title, description; extend as CMS grows).
  * - `pricing`   — feature flags and package/rate catalog that govern pricing surfaces.
+ * - `about`     — About page hero copy, body block array, optional highlights, SEO meta.
  */
 export const siteFlagsValidator = v.object({
   priceTabEnabled: v.boolean(),
@@ -94,15 +95,53 @@ export const pricingContentValidator = v.object({
   packages: v.optional(v.array(pricingPackageValidator)),
 });
 
+/**
+ * Ordered block that makes up the About page body.
+ *
+ * We intentionally pick a **block array of plain text** over a raw markdown
+ * string so public renderers never have to parse or sanitize HTML — each
+ * block's `text` goes into a React text node (which auto-escapes) inside a
+ * fixed element chosen by `type`. This satisfies the "no script injection"
+ * acceptance criteria without a sanitization pipeline.
+ *
+ * If richer formatting is needed later, switch to a markdown string field
+ * and run it through `rehype-sanitize` in the public loader.
+ */
+export const aboutBlockValidator = v.object({
+  type: v.union(v.literal("paragraph"), v.literal("heading")),
+  text: v.string(),
+});
+
+/**
+ * "about" section snapshot — About page copy (INF-xx follow-up to INF-70).
+ *
+ * - `heroTitle` — required display heading above the fold.
+ * - `heroSubtitle` — optional supporting line.
+ * - `body` — ordered paragraph / heading blocks (see `aboutBlockValidator`).
+ * - `highlights` — optional short bulleted callouts (e.g. key studio facts).
+ * - `seoTitle` / `seoDescription` — optional overrides for page metadata;
+ *   when blank the route should fall back to the `settings` section.
+ */
+export const aboutContentValidator = v.object({
+  heroTitle: v.string(),
+  heroSubtitle: v.optional(v.string()),
+  body: v.array(aboutBlockValidator),
+  highlights: v.optional(v.array(v.string())),
+  seoTitle: v.optional(v.string()),
+  seoDescription: v.optional(v.string()),
+});
+
 /** Any section's snapshot payload — discriminated at runtime by the row's `section`. */
 export const cmsSnapshotValidator = v.union(
   settingsContentValidator,
   pricingContentValidator,
+  aboutContentValidator,
 );
 
 export const cmsSectionValidator = v.union(
   v.literal("settings"),
   v.literal("pricing"),
+  v.literal("about"),
 );
 
 /** Draft vs published rows in `gearCategories` / `gearItems` (INF-86). */

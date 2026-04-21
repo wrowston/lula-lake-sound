@@ -1,6 +1,7 @@
 import { query, mutation } from "./_generated/server";
 import { v } from "convex/values";
 import {
+  aboutContentValidator,
   cmsSectionValidator,
   pricingContentValidator,
   settingsContentValidator,
@@ -70,37 +71,54 @@ export const getSection = query({
 export const saveDraft = mutation({
   args: {
     section: cmsSectionValidator,
-    content: v.union(settingsContentValidator, pricingContentValidator),
+    content: v.union(
+      settingsContentValidator,
+      pricingContentValidator,
+      aboutContentValidator,
+    ),
   },
   handler: async (ctx, args) => {
     const { updatedBy } = await requireCmsOwner(ctx);
 
-    // Runtime guard: the `content` union lets either shape through, but we
-    // enforce that the payload matches the target section so a settings row
-    // can never end up with a pricing payload (or vice versa).
+    // Runtime guard: the `content` union lets any of the three shapes through,
+    // but we enforce that the payload matches the target section so e.g. a
+    // settings row can never end up with a pricing or about payload.
+    const isSettingsPayload =
+      "metadata" in args.content &&
+      !("heroTitle" in args.content) &&
+      !("packages" in args.content);
+    const isPricingPayload =
+      "flags" in args.content &&
+      typeof (args.content as { flags?: unknown }).flags === "object" &&
+      (args.content as { flags?: { priceTabEnabled?: unknown } }).flags
+        ?.priceTabEnabled !== undefined;
+    const isAboutPayload =
+      "heroTitle" in args.content && "body" in args.content;
+
     if (args.section === "settings") {
-      if (!("metadata" in args.content) && !("flags" in args.content)) {
+      if (!isSettingsPayload) {
         cmsValidationError(
           "Settings content must include metadata.",
           "content",
         );
       }
-      if ("flags" in args.content && !("metadata" in args.content)) {
+    } else if (args.section === "pricing") {
+      if ("metadata" in args.content) {
         cmsValidationError(
-          "Settings content cannot be a pricing payload.",
+          "Pricing content cannot include metadata.",
           "content",
         );
       }
-    } else {
-      if (!("flags" in args.content)) {
+      if (!isPricingPayload) {
         cmsValidationError(
           "Pricing content must include flags.priceTabEnabled.",
           "content",
         );
       }
-      if ("metadata" in args.content) {
+    } else {
+      if (!isAboutPayload) {
         cmsValidationError(
-          "Pricing content cannot include metadata.",
+          "About content must include heroTitle and body blocks.",
           "content",
         );
       }

@@ -8,6 +8,7 @@
  * @module
  */
 
+import type * as aboutPreviewDraft from "../aboutPreviewDraft.js";
 import type * as admin_gear from "../admin/gear.js";
 import type * as admin_photos from "../admin/photos.js";
 import type * as admin_pricing from "../admin/pricing.js";
@@ -42,6 +43,7 @@ import type {
 } from "convex/server";
 
 declare const fullApi: ApiFromModules<{
+  aboutPreviewDraft: typeof aboutPreviewDraft;
   "admin/gear": typeof admin_gear;
   "admin/photos": typeof admin_photos;
   "admin/pricing": typeof admin_pricing;

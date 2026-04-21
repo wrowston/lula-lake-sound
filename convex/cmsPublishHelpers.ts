@@ -1,10 +1,12 @@
 import type { MutationCtx } from "./_generated/server";
 import type { Doc, Id } from "./_generated/dataModel";
 import {
+  ABOUT_DEFAULTS,
   PRICING_DEFAULTS,
   SETTINGS_DEFAULTS,
   cmsSnapshotsEqual,
   defaultSnapshotForSection,
+  type AboutSnapshot,
   type CmsSection,
   type CmsSnapshot,
   type PricingSnapshot,
@@ -46,6 +48,9 @@ async function initialSnapshotForSection(
       flags: legacyFlags ?? PRICING_DEFAULTS.flags,
       packages: [],
     } satisfies PricingSnapshot;
+  }
+  if (section === "about") {
+    return ABOUT_DEFAULTS;
   }
   return SETTINGS_DEFAULTS;
 }
@@ -177,6 +182,58 @@ function collectPricingIssues(draft: PricingSnapshot): PublishIssue[] {
   return issues;
 }
 
+function collectAboutIssues(draft: AboutSnapshot): PublishIssue[] {
+  const issues: PublishIssue[] = [];
+
+  const heroTitle = trimOrEmpty(draft.heroTitle);
+  if (heroTitle.length === 0) {
+    issues.push({
+      path: "heroTitle",
+      message: "Hero title is required to publish.",
+    });
+  }
+
+  if (!Array.isArray(draft.body) || draft.body.length === 0) {
+    issues.push({
+      path: "body",
+      message: "At least one body block is required.",
+    });
+  } else {
+    for (let i = 0; i < draft.body.length; i++) {
+      const block = draft.body[i];
+      const base = `body[${i}]`;
+      if (block.type !== "paragraph" && block.type !== "heading") {
+        issues.push({
+          path: `${base}.type`,
+          message: "Block type must be \"paragraph\" or \"heading\".",
+        });
+      }
+      if (typeof block.text !== "string" || block.text.trim().length === 0) {
+        issues.push({
+          path: `${base}.text`,
+          message: "Block text cannot be empty.",
+        });
+      }
+    }
+  }
+
+  if (draft.highlights !== undefined) {
+    for (let i = 0; i < draft.highlights.length; i++) {
+      if (
+        typeof draft.highlights[i] !== "string" ||
+        draft.highlights[i].trim().length === 0
+      ) {
+        issues.push({
+          path: `highlights[${i}]`,
+          message: "Highlight text cannot be empty.",
+        });
+      }
+    }
+  }
+
+  return issues;
+}
+
 /** Best-effort checks before promoting `draft` to published (INF-75). */
 export function collectPublishIssues(
   section: CmsSection,
@@ -184,6 +241,9 @@ export function collectPublishIssues(
 ): PublishIssue[] {
   if (section === "settings") {
     return collectSettingsIssues(draft as SettingsSnapshot);
+  }
+  if (section === "about") {
+    return collectAboutIssues(draft as AboutSnapshot);
   }
   return collectPricingIssues(draft as PricingSnapshot);
 }
