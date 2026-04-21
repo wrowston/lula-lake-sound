@@ -186,6 +186,101 @@ html.light {
   border: none;
 }
 
+/* ——— Tiptap About rich-text (WYSIWYG) ——— */
+
+/*
+ * The editable surface uses the studio dark palette (same as public About).
+ * Selectors use `.prose-editor` directly — Tiptap applies `prose-editor` on the
+ * same node as `ProseMirror`, so `.prose-editor .ProseMirror` never matched.
+ */
+
+.prose-editor.ProseMirror,
+.prose-editor {
+  min-height: 18rem;
+  outline: none;
+  color: rgba(232, 228, 220, 0.88);
+}
+
+.prose-editor > * + * {
+  margin-top: 1em;
+}
+
+.prose-editor h1,
+.prose-editor h2,
+.prose-editor h3 {
+  font-family: var(--font-family-acumin);
+  font-weight: 600;
+  letter-spacing: var(--letter-spacing-headline);
+  line-height: var(--line-height-headline);
+  color: var(--color-sand, #c6bda0);
+}
+
+.prose-editor h1 { font-size: 2rem; }
+.prose-editor h2 { font-size: 1.5rem; }
+.prose-editor h3 { font-size: 1.25rem; }
+
+.prose-editor p,
+.prose-editor li {
+  font-family: var(--font-family-titillium);
+  font-weight: 400;
+  line-height: var(--line-height-relaxed);
+  color: rgba(232, 228, 220, 0.82);
+}
+
+.prose-editor strong { color: rgba(246, 243, 235, 0.95); }
+
+.prose-editor em { font-style: italic; }
+
+.prose-editor s {
+  color: rgba(232, 228, 220, 0.55);
+  text-decoration-thickness: 1px;
+}
+
+.prose-editor blockquote {
+  border-left: 2px solid rgba(198, 189, 160, 0.35);
+  padding-left: 1rem;
+  font-style: italic;
+  color: rgba(232, 228, 220, 0.72);
+}
+
+.prose-editor ul,
+.prose-editor ol {
+  padding-left: 1.25rem;
+}
+
+.prose-editor ul { list-style: disc; }
+.prose-editor ol { list-style: decimal; }
+
+.prose-editor li > p { margin: 0; }
+
+.prose-editor code {
+  background-color: rgba(232, 228, 220, 0.1);
+  padding: 0.1em 0.35em;
+  border-radius: 0.25rem;
+  font-size: 0.875em;
+  color: rgba(232, 228, 220, 0.92);
+}
+
+.prose-editor a {
+  color: rgba(198, 189, 160, 0.95);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+.prose-editor hr {
+  border: 0;
+  border-top: 1px solid rgba(198, 189, 160, 0.2);
+  margin: 1.5em 0;
+}
+
+.prose-editor p.is-editor-empty:first-child::before {
+  content: attr(data-placeholder);
+  color: rgba(232, 228, 220, 0.38);
+  float: left;
+  height: 0;
+  pointer-events: none;
+}
+
 /* ——— Scrollbar ——— */
 
 .scrollbar-hide {

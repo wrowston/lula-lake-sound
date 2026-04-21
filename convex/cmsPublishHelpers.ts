@@ -13,6 +13,11 @@ import {
   type SettingsSnapshot,
 } from "./cmsShared";
 import { cmsPublishValidationFailed } from "./errors";
+import {
+  MAX_ABOUT_TEAM_MEMBERS,
+  collectAboutTeamBlobIssues,
+  pruneAboutTeamBlobsAfterPublish,
+} from "./aboutTeamStorage";
 
 export type PublishIssue = { path: string; message: string };
 
@@ -182,6 +187,17 @@ function collectPricingIssues(draft: PricingSnapshot): PublishIssue[] {
   return issues;
 }
 
+/** Very small HTML-to-plaintext helper — good enough for emptiness checks. */
+function htmlToPlaintext(html: string): string {
+  return html
+    .replace(/<[^>]*>/g, " ")
+    .replace(/&nbsp;/g, " ")
+    .replace(/&amp;/g, "&")
+    .replace(/&lt;/g, "<")
+    .replace(/&gt;/g, ">")
+    .trim();
+}
+
 function collectAboutIssues(draft: AboutSnapshot): PublishIssue[] {
   const issues: PublishIssue[] = [];
 
@@ -193,26 +209,34 @@ function collectAboutIssues(draft: AboutSnapshot): PublishIssue[] {
     });
   }
 
-  if (!Array.isArray(draft.body) || draft.body.length === 0) {
-    issues.push({
-      path: "body",
-      message: "At least one body block is required.",
-    });
-  } else {
-    for (let i = 0; i < draft.body.length; i++) {
-      const block = draft.body[i];
-      const base = `body[${i}]`;
-      if (block.type !== "paragraph" && block.type !== "heading") {
-        issues.push({
-          path: `${base}.type`,
-          message: "Block type must be \"paragraph\" or \"heading\".",
-        });
-      }
-      if (typeof block.text !== "string" || block.text.trim().length === 0) {
-        issues.push({
-          path: `${base}.text`,
-          message: "Block text cannot be empty.",
-        });
+  // Rich-text body (INF-98) is preferred. When present and non-empty it
+  // satisfies the "has body" requirement without needing legacy `body` blocks.
+  const hasRichBody =
+    typeof draft.bodyHtml === "string" &&
+    htmlToPlaintext(draft.bodyHtml).length > 0;
+
+  if (!hasRichBody) {
+    if (!Array.isArray(draft.body) || draft.body.length === 0) {
+      issues.push({
+        path: "bodyHtml",
+        message: "Body content is required to publish.",
+      });
+    } else {
+      for (let i = 0; i < draft.body.length; i++) {
+        const block = draft.body[i];
+        const base = `body[${i}]`;
+        if (block.type !== "paragraph" && block.type !== "heading") {
+          issues.push({
+            path: `${base}.type`,
+            message: `Block ${i + 1} must be a paragraph or heading.`,
+          });
+        }
+        if (typeof block.text !== "string" || block.text.trim().length === 0) {
+          issues.push({
+            path: `${base}.text`,
+            message: `Block ${i + 1} cannot be empty.`,
+          });
+        }
       }
     }
   }
@@ -225,7 +249,41 @@ function collectAboutIssues(draft: AboutSnapshot): PublishIssue[] {
       ) {
         issues.push({
           path: `highlights[${i}]`,
-          message: "Highlight text cannot be empty.",
+          message: `Highlight ${i + 1} cannot be empty.`,
+        });
+      }
+    }
+  }
+
+  const team = draft.teamMembers;
+  if (team !== undefined && team.length > 0) {
+    if (team.length > MAX_ABOUT_TEAM_MEMBERS) {
+      issues.push({
+        path: "teamMembers",
+        message: `At most ${MAX_ABOUT_TEAM_MEMBERS} team members are allowed.`,
+      });
+    }
+    for (let i = 0; i < team.length; i++) {
+      const base = `teamMembers[${i}]`;
+      const who = `Team member ${i + 1}`;
+      const name = trimOrEmpty(team[i].name);
+      const title = trimOrEmpty(team[i].title);
+      if (name.length === 0) {
+        issues.push({
+          path: `${base}.name`,
+          message: `${who} needs a name.`,
+        });
+      }
+      if (title.length === 0) {
+        issues.push({
+          path: `${base}.title`,
+          message: `${who} needs a title.`,
+        });
+      }
+      if (team[i].storageId === undefined) {
+        issues.push({
+          path: `${base}.storageId`,
+          message: `${who} needs a headshot image to publish.`,
         });
       }
     }
@@ -313,6 +371,19 @@ export async function publishSectionCore(
     cmsPublishValidationFailed(section, "Publish validation failed.", issues);
   }
 
+  if (section === "about") {
+    const blobIssues = await collectAboutTeamBlobIssues(
+      ctx,
+      draft as AboutSnapshot,
+    );
+    if (blobIssues.length > 0) {
+      cmsPublishValidationFailed(section, "Publish validation failed.", blobIssues);
+    }
+  }
+
+  const previousPublished =
+    section === "about" ? row.publishedSnapshot : undefined;
+
   const now = Date.now();
 
   await ctx.db.patch(id, {
@@ -324,6 +395,10 @@ export async function publishSectionCore(
     updatedAt: now,
     updatedBy: updatedByTokenId,
   });
+
+  if (section === "about" && previousPublished !== undefined) {
+    await pruneAboutTeamBlobsAfterPublish(ctx, previousPublished, draft);
+  }
 
   return {
     ok: true,
