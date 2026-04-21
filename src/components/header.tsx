@@ -46,7 +46,7 @@ export function Header({ scrollY, showPricing = false }: HeaderProps) {
       : []),
     { kind: "hash", id: "local-favorites", label: "Nearby" },
     { kind: "hash", id: "faq", label: "FAQ" },
-    { kind: "hash", id: "artist-inquiries", label: "Inquire" },
+    { kind: "hash", id: "artist-inquiries", label: "Contact" },
   ];
 
   return (
