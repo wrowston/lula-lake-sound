@@ -35,24 +35,20 @@ export function AmenitiesNearby() {
   return (
     <section
       id="local-favorites"
-      className="relative overflow-hidden bg-deep-forest px-6 py-28 md:py-40"
+      className="relative overflow-hidden bg-forest px-6 py-28 md:py-40"
     >
-      {/* Sagebrush ink-wash anchor — the softer, gray-green field from the
-       * brand kit. Held at low opacity under the canvas tooth so the
-       * amenity index stays the dominant layer. */}
-      <div className="absolute inset-0 bg-texture-sagebrush opacity-[0.05]" />
-      <div className="absolute inset-0 bg-texture-canvas opacity-30" />
+      <div className="absolute inset-0 bg-texture-canvas opacity-14" />
 
       <div className="relative z-10 mx-auto max-w-6xl">
         <div className="reveal mb-20 text-center">
-          <p className="eyebrow mb-6 text-sand/60">Local Favorites</p>
+          <p className="eyebrow mb-6 text-sand/82">Local Favorites</p>
           <h2 className="headline-primary mb-8 text-[2.25rem] text-warm-white md:text-[3rem] lg:text-[3.5rem]">
             Amenities Nearby
           </h2>
           <div className="section-rule mx-auto max-w-[9rem]" />
         </div>
 
-        <div className="reveal reveal-delay-2 grid grid-cols-1 divide-y divide-sand/10 border-y border-sand/10 md:grid-cols-2 md:divide-x md:divide-y-0 lg:grid-cols-4 [&>*:nth-child(n+3)]:border-t [&>*:nth-child(n+3)]:border-sand/10 lg:[&>*:nth-child(n+3)]:border-t-0">
+        <div className="reveal reveal-delay-2 grid grid-cols-1 divide-y divide-sand/14 border-y border-sand/14 md:grid-cols-2 md:divide-x md:divide-y-0 lg:grid-cols-4 [&>*:nth-child(n+3)]:border-t [&>*:nth-child(n+3)]:border-sand/14 lg:[&>*:nth-child(n+3)]:border-t-0">
           {AMENITIES_DATA.map((amenity, index) => (
             <AmenityCard
               key={index}

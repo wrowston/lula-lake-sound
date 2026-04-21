@@ -58,14 +58,14 @@ export function FAQ() {
   return (
     <section
       id="faq"
-      className="relative overflow-hidden bg-charcoal px-6 py-28 md:py-40"
+      className="relative overflow-hidden bg-washed-black px-6 py-28 md:py-40"
     >
-      {/* Seafoam ink-wash gives the FAQ its "quieter room" temperature. */}
-      <div className="absolute inset-0 bg-texture-seafoam opacity-[0.04]" />
-      <div className="absolute inset-0 bg-texture-stone opacity-20" />
-      {/* Chladni 3 soft-pulse at the right edge — used as rhythm per
-       * brand guide §5.2. */}
-      <div aria-hidden className="absolute inset-0 bg-chladni-3" />
+      <div className="absolute inset-0 bg-texture-stone opacity-12" />
+      {/* Chladni 3 uses screen blend; keep it very low so type stays crisp. */}
+      <div
+        aria-hidden
+        className="absolute inset-0 bg-chladni-3 !opacity-[0.07]"
+      />
 
       <div className="relative z-10 mx-auto max-w-3xl">
         <div className="reveal mb-20 flex w-full flex-col items-center text-center">
@@ -77,12 +77,12 @@ export function FAQ() {
             aria-hidden
             className="mb-10 h-12 w-auto opacity-80 md:h-14"
           />
-          <p className="eyebrow mb-6 text-sand/60">Support</p>
+          <p className="eyebrow mb-6 text-sand/82">Support</p>
           <h2 className="headline-primary mb-8 text-[2.25rem] text-warm-white md:text-[3rem] lg:text-[3.5rem]">
             Frequently Asked
           </h2>
           <div className="section-rule mx-auto mb-10 max-w-[9rem]" />
-          <p className="editorial-lede mx-auto max-w-2xl">
+          <p className="editorial-lede mx-auto max-w-2xl font-normal text-ivory/92">
             Everything you need to know about recording at Lula Lake Sound.
             Don&apos;t see your question? Just ask.
           </p>
@@ -91,7 +91,7 @@ export function FAQ() {
         <div className="reveal reveal-delay-2 space-y-16">
           {FAQ_CATEGORIES.map((category) => (
             <div key={category.category}>
-              <h3 className="eyebrow mb-8 border-b border-sand/15 pb-4 text-sand">
+              <h3 className="eyebrow mb-8 border-b border-sand/22 pb-4 text-sand">
                 {category.category}
               </h3>
 
@@ -99,12 +99,12 @@ export function FAQ() {
                 {category.questions.map((faq) => (
                   <AccordionItem key={faq.id} value={String(faq.id)}>
                     <AccordionTrigger>
-                      <span className="body-text text-base text-ivory/85">
+                      <span className="body-text text-base text-warm-white">
                         {faq.question}
                       </span>
                     </AccordionTrigger>
                     <AccordionPanel>
-                      <p className="body-text text-ivory/55">{faq.answer}</p>
+                      <p className="body-text text-ivory/84">{faq.answer}</p>
                     </AccordionPanel>
                   </AccordionItem>
                 ))}
@@ -113,12 +113,12 @@ export function FAQ() {
           ))}
         </div>
 
-        <div className="reveal reveal-delay-3 mt-24 border-t border-sand/10 pt-16 text-center">
-          <p className="eyebrow mb-5 text-sand/55">Contact</p>
-          <h3 className="headline-secondary mb-6 text-2xl text-sand md:text-[1.75rem]">
+        <div className="reveal reveal-delay-3 mt-24 border-t border-sand/15 pt-16 text-center">
+          <p className="eyebrow mb-5 text-sand/78">Contact</p>
+          <h3 className="headline-secondary mb-6 text-2xl text-warm-white md:text-[1.75rem]">
             Still Have Questions?
           </h3>
-          <p className="body-text mx-auto mb-10 max-w-xl text-ivory/55">
+          <p className="body-text mx-auto mb-10 max-w-xl text-ivory/84">
             We&apos;re here to help make your recording experience perfect.
             Reach out with any questions about our studio, services, or your
             project needs.

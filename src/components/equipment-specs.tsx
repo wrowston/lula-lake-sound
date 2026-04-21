@@ -68,12 +68,12 @@ function SectionHeader() {
         aria-hidden
         className="mb-10 h-12 w-auto opacity-80 md:h-14"
       />
-      <p className="eyebrow mb-6 text-sand/60">Equipment</p>
+      <p className="eyebrow mb-6 text-sand/82">Equipment</p>
       <h2 className="headline-primary mb-8 text-[2.25rem] text-warm-white md:text-[3rem] lg:text-[3.5rem]">
         Studio Specifications
       </h2>
       <div className="section-rule mx-auto mb-10 max-w-[9rem]" />
-      <p className="editorial-lede mx-auto max-w-2xl">
+      <p className="editorial-lede mx-auto max-w-2xl font-normal text-ivory/92">
         World-class equipment and acoustically designed spaces ensure your
         recordings capture every nuance with pristine clarity and character.
       </p>
@@ -83,11 +83,11 @@ function SectionHeader() {
 
 function StudioSpecsGrid() {
   return (
-    <div className="reveal reveal-delay-1 mb-20 grid grid-cols-1 divide-y divide-sand/10 border-y border-sand/10 md:grid-cols-3 md:divide-x md:divide-y-0">
+    <div className="reveal reveal-delay-1 mb-20 grid grid-cols-1 divide-y divide-sand/14 border-y border-sand/14 md:grid-cols-3 md:divide-x md:divide-y-0">
       {STUDIO_SPECS.map((spec) => (
         <div key={spec.label} className="px-6 py-10 text-center md:px-10">
           <div className="eyebrow mb-4 text-sand">{spec.label}</div>
-          <div className="body-text-small text-ivory/60">{spec.value}</div>
+          <div className="body-text-small text-ivory/86">{spec.value}</div>
         </div>
       ))}
     </div>
@@ -100,7 +100,7 @@ function SectionShell({ children }: { children: React.ReactNode }) {
       id="equipment-specs"
       className="relative overflow-hidden bg-forest px-6 py-28 md:py-40"
     >
-      <div className="absolute inset-0 bg-texture-canvas opacity-20" />
+      <div className="absolute inset-0 bg-texture-canvas opacity-12" />
       <div className="relative z-10 mx-auto max-w-6xl">
         <SectionHeader />
         <StudioSpecsGrid />
@@ -131,7 +131,7 @@ export function EquipmentSpecsSkeleton() {
 function EquipmentSpecsEmpty() {
   return (
     <div className="reveal reveal-delay-2 border-y border-sand/10 px-6 py-16 text-center">
-      <p className="body-text text-ivory/55">
+      <p className="body-text text-ivory/82">
         Equipment list coming soon. Check back shortly — our gear inventory is
         being updated.
       </p>
@@ -181,15 +181,15 @@ function EquipmentCategoriesAccordion({
   );
 
   return (
-    <div className="reveal reveal-delay-2 mx-auto max-w-4xl border-b border-sand/10">
+    <div className="reveal reveal-delay-2 mx-auto max-w-4xl border-b border-sand/14">
       <Accordion multiple defaultValue={initialExpanded}>
         {categories.map((category) => (
           <AccordionItem key={category.stableId} value={category.stableId}>
             <AccordionTrigger>
-              <span className="headline-secondary text-lg text-sand md:text-xl">
+              <span className="headline-secondary text-lg text-warm-white md:text-xl">
                 {category.name}
               </span>
-              <span className="label-text ml-auto mr-4 text-[10px] text-ivory/30">
+              <span className="label-text ml-auto mr-4 text-[10px] text-ivory/48">
                 {String(category.items.length).padStart(2, "0")}
               </span>
             </AccordionTrigger>
@@ -200,9 +200,9 @@ function EquipmentCategoriesAccordion({
                   return (
                     <div
                       key={item.stableId}
-                      className="flex items-baseline justify-between gap-4 border-b border-sand/8 py-3 last:border-0"
+                      className="flex items-baseline justify-between gap-4 border-b border-sand/12 py-3 last:border-0"
                     >
-                      <span className="body-text text-sm text-ivory/75">
+                      <span className="body-text text-sm text-ivory/90">
                         {item.url ? (
                           <a
                             href={item.url}
@@ -217,7 +217,7 @@ function EquipmentCategoriesAccordion({
                         )}
                       </span>
                       {specsLabel.length > 0 && (
-                        <span className="body-text-small whitespace-nowrap text-xs text-ivory/35">
+                        <span className="body-text-small whitespace-nowrap text-xs text-ivory/68">
                           {specsLabel}
                         </span>
                       )}

@@ -25,20 +25,20 @@ export function AmenityCard({
       className="group flex h-full flex-col justify-between gap-8 p-8 transition-colors duration-500 md:p-10"
     >
       <div>
-        <p className="eyebrow mb-4 text-ivory/35 transition-colors duration-500 group-hover:text-sand/70">
+        <p className="eyebrow mb-4 text-ivory/68 transition-colors duration-500 group-hover:text-sand/90">
           {type}
         </p>
-        <h3 className="headline-secondary text-xl text-sand transition-colors duration-500 group-hover:text-warm-white md:text-[1.375rem]">
+        <h3 className="headline-secondary text-xl text-warm-white transition-colors duration-500 group-hover:text-ivory md:text-[1.375rem]">
           {name}
         </h3>
-        <div className="mt-5 h-px w-10 bg-sand/35 transition-[width,background-color] duration-700 ease-[cubic-bezier(0.16,1,0.3,1)] group-hover:w-20 group-hover:bg-sand" />
+        <div className="mt-5 h-px w-10 bg-sand/48 transition-[width,background-color] duration-700 ease-[cubic-bezier(0.16,1,0.3,1)] group-hover:w-20 group-hover:bg-sand" />
       </div>
 
-      <p className="body-text-small leading-relaxed text-ivory/55">
+      <p className="body-text-small leading-relaxed text-ivory/84">
         {description}
       </p>
 
-      <span className="label-text inline-flex items-center gap-2 text-[10px] text-sand/55 transition-colors duration-500 group-hover:text-sand">
+      <span className="label-text inline-flex items-center gap-2 text-[10px] text-sand/75 transition-colors duration-500 group-hover:text-sand">
         Visit
         <svg
           className="size-3 transition-transform duration-500 group-hover:translate-x-1"

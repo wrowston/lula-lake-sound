@@ -25,7 +25,7 @@ function AccordionItem({
   return (
     <AccordionPrimitive.Item
       data-slot="accordion-item"
-      className={cn("border-b border-sand/12 last:border-b-0", className)}
+      className={cn("border-b border-sand/18 last:border-b-0", className)}
       {...props}
     />
   )
@@ -41,9 +41,9 @@ function AccordionTrigger({
       <AccordionPrimitive.Trigger
         data-slot="accordion-trigger"
         className={cn(
-          "group/acc flex flex-1 items-center justify-between gap-6 py-6 text-left text-ivory/85",
+          "group/acc flex flex-1 items-center justify-between gap-6 py-6 text-left text-warm-white",
           "transition-colors outline-none",
-          "hover:text-warm-white focus-visible:text-warm-white",
+          "hover:text-white focus-visible:text-white",
           "focus-visible:ring-0",
           className,
         )}
@@ -52,7 +52,7 @@ function AccordionTrigger({
         {children}
         <ChevronDown
           aria-hidden
-          className="size-4 shrink-0 text-sand/45 transition-transform duration-500 ease-[cubic-bezier(0.16,1,0.3,1)] group-data-[panel-open]/acc:rotate-180 group-data-[panel-open]/acc:text-sand"
+          className="size-4 shrink-0 text-sand/65 transition-transform duration-500 ease-[cubic-bezier(0.16,1,0.3,1)] group-data-[panel-open]/acc:rotate-180 group-data-[panel-open]/acc:text-sand"
         />
       </AccordionPrimitive.Trigger>
     </AccordionPrimitive.Header>
@@ -68,7 +68,7 @@ function AccordionPanel({
     <AccordionPrimitive.Panel
       data-slot="accordion-panel"
       className={cn(
-        "overflow-hidden text-sm text-ivory/60",
+        "overflow-hidden text-sm text-ivory/84",
         "data-[starting-style]:h-0 data-[ending-style]:h-0",
         "h-[var(--accordion-panel-height)] transition-[height] duration-500 ease-[cubic-bezier(0.16,1,0.3,1)]",
       )}
