@@ -525,7 +525,7 @@ html.light {
  * texture but below any content. Opacity is deliberately subdued. */
 .grain-overlay::after {
   content: "";
-  position: fixed;
+  position: absolute;
   inset: 0;
   z-index: 1;
   opacity: 0.04;

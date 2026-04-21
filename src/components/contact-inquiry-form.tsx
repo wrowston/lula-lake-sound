@@ -152,6 +152,7 @@ export function ContactInquiryForm() {
                 </FormLabel>
                 <FormControl>
                   <Input
+                    variant="editorial"
                     placeholder="Your artist or band name"
                     autoComplete="organization"
                     className={fieldClassName}
@@ -172,6 +173,7 @@ export function ContactInquiryForm() {
                 </FormLabel>
                 <FormControl>
                   <Input
+                    variant="editorial"
                     placeholder="Your full name"
                     autoComplete="name"
                     className={fieldClassName}
@@ -195,6 +197,7 @@ export function ContactInquiryForm() {
                 </FormLabel>
                 <FormControl>
                   <Input
+                    variant="editorial"
                     type="email"
                     placeholder="your@email.com"
                     autoComplete="email"
@@ -216,6 +219,7 @@ export function ContactInquiryForm() {
                 </FormLabel>
                 <FormControl>
                   <Input
+                    variant="editorial"
                     type="tel"
                     placeholder="(555) 123-4567"
                     autoComplete="tel"
