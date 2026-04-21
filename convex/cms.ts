@@ -103,6 +103,12 @@ export const saveDraft = mutation({
         );
       }
     } else if (args.section === "pricing") {
+      if ("metadata" in args.content) {
+        cmsValidationError(
+          "Pricing content cannot include metadata.",
+          "content",
+        );
+      }
       if (!isPricingPayload) {
         cmsValidationError(
           "Pricing content must include flags.priceTabEnabled.",
