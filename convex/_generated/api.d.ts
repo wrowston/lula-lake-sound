@@ -9,6 +9,8 @@
  */
 
 import type * as aboutPreviewDraft from "../aboutPreviewDraft.js";
+import type * as aboutTeamStorage from "../aboutTeamStorage.js";
+import type * as admin_aboutTeam from "../admin/aboutTeam.js";
 import type * as admin_gear from "../admin/gear.js";
 import type * as admin_photos from "../admin/photos.js";
 import type * as admin_pricing from "../admin/pricing.js";
@@ -44,6 +46,8 @@ import type {
 
 declare const fullApi: ApiFromModules<{
   aboutPreviewDraft: typeof aboutPreviewDraft;
+  aboutTeamStorage: typeof aboutTeamStorage;
+  "admin/aboutTeam": typeof admin_aboutTeam;
   "admin/gear": typeof admin_gear;
   "admin/photos": typeof admin_photos;
   "admin/pricing": typeof admin_pricing;

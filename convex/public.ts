@@ -1,5 +1,6 @@
 import { query } from "./_generated/server";
 import {
+  materializePublicAbout,
   publishedAboutFromRow,
   publishedPricingFromRows,
   publishedSettingsFromRow,
@@ -99,7 +100,8 @@ export const getPublishedAbout = query({
       .query("cmsSections")
       .withIndex("by_section", (q) => q.eq("section", "about"))
       .unique();
-    return publishedAboutFromRow(row);
+    const snapshot = publishedAboutFromRow(row);
+    return await materializePublicAbout(ctx, snapshot);
   },
 });
 

@@ -15,6 +15,13 @@ import {
   requireCmsOwner,
 } from "./lib/auth";
 import {
+  collectAboutTeamBlobIssues,
+  collectDraftOnlyAboutTeamStorageIds,
+  deleteDraftOnlyAboutTeamBlobs,
+  pruneAboutTeamBlobsAfterSaveDraft,
+} from "./aboutTeamStorage";
+import type { AboutSnapshot } from "./cmsShared";
+import {
   collectPublishIssues,
   ensureSectionRow,
   getSectionRow,
@@ -139,6 +146,14 @@ export const saveDraft = mutation({
       updatedBy,
     });
 
+    if (args.section === "about") {
+      await pruneAboutTeamBlobsAfterSaveDraft(
+        ctx,
+        row,
+        args.content as AboutSnapshot,
+      );
+    }
+
     return { ok: true as const, section: args.section, hasDraftChanges };
   },
 });
@@ -185,10 +200,15 @@ export const validatePublishSection = query({
       row?.publishedSnapshot ??
       defaultSnapshotForSection(args.section);
     const issues = collectPublishIssues(args.section, snapshot);
+    const blobIssues =
+      args.section === "about"
+        ? await collectAboutTeamBlobIssues(ctx, snapshot as AboutSnapshot)
+        : [];
+    const allIssues = [...issues, ...blobIssues];
     return {
-      ok: issues.length === 0,
+      ok: allIssues.length === 0,
       section: args.section,
-      issues,
+      issues: allIssues,
     };
   },
 });
@@ -199,8 +219,8 @@ export const validatePublishSection = query({
  * `publishedSnapshot`, `publishedAt`, and `publishedBy` are unchanged.
  * When nothing has ever been published (`publishedAt === null`), published content
  * stays as stored (typically defaults from seed / first row insert); the draft is
- * cleared so the editor shows that same baseline. No separate storage refs today;
- * if snapshots gain `_storage` ids, add explicit cleanup here (see INF-76).
+ * cleared so the editor shows that same baseline. About team headshots: orphan
+ * blobs only referenced by the discarded draft are removed (see INF-76).
  */
 export const discardDraft = mutation({
   args: {
@@ -219,12 +239,19 @@ export const discardDraft = mutation({
 
     const now = Date.now();
 
+    const draftOnlyAboutBlobs =
+      args.section === "about" ? collectDraftOnlyAboutTeamStorageIds(row) : [];
+
     await ctx.db.patch(row._id, {
       draftSnapshot: undefined,
       hasDraftChanges: false,
       updatedAt: now,
       updatedBy,
     });
+
+    if (draftOnlyAboutBlobs.length > 0) {
+      await deleteDraftOnlyAboutTeamBlobs(ctx, draftOnlyAboutBlobs);
+    }
 
     return { ok: true as const, section: args.section, discarded: true };
   },

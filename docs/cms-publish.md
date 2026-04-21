@@ -9,6 +9,7 @@
 |----------|------|
 | Anonymous / marketing site — metadata | `publishedSnapshot` only (`api.public.getPublishedSiteSettings`) |
 | Anonymous / marketing site — pricing flags | `publishedSnapshot` only (`api.public.getPublishedPricingFlags`) |
+| Anonymous / marketing site — About copy + team | `publishedSnapshot` only (`api.public.getPublishedAbout` — resolves headshot URLs; no raw `_storage` ids in the payload) |
 | Studio / preview — metadata | `api.siteSettingsPreviewDraft.getPreviewSiteSettings` (draft when present, else published; owner-gated) |
 | Studio / preview — pricing flags | `api.pricingPreviewDraft.getPreviewPricingFlags` (draft when present, else published; owner-gated) |
 
@@ -18,13 +19,13 @@
 |---------|-------|--------------|
 | `settings` | `{ metadata?: { title, description } }` | `/admin/settings` |
 | `pricing`  | `{ flags: { priceTabEnabled } }`         | `/admin/pricing` |
-| `about`    | `{ heroTitle, heroSubtitle?, body: Block[], highlights?, seoTitle?, seoDescription? }` (block = `{ type: 'paragraph' \| 'heading', text: string }`) | `/admin/about` |
+| `about`    | `{ heroTitle, heroSubtitle?, bodyHtml?, body: Block[], highlights?, seoTitle?, seoDescription?, teamMembers? }` — blocks as above; `teamMembers` is an optional array of `{ id, name, title, storageId? }` (`storageId` is a Convex `_storage` id; optional while drafting, required to publish). Headshots use the same upload limits as the gallery (JPEG/PNG/WebP). | `/admin/about` |
 
 Each section has its own `cmsSections` row and therefore its own independent draft / publish lifecycle. Publishing one section never publishes another (except via `api.admin.publish.publishSite`, which explicitly iterates all `cmsSections` rows with pending drafts **and** the studio gallery when `galleryPhotoMeta.hasDraftChanges` is true).
 
 > Legacy rows whose `settings.publishedSnapshot` still contains `flags` remain schema-valid thanks to an optional `flags` field on `settingsContentValidator`. Public / preview pricing queries fall back to that legacy location when the `pricing` row hasn’t been written yet, so no migration is required before deploy.
 
-> The `about` body uses a **block array of plain text** (`{type, text}`) rather than a raw markdown string so public renderers never have to parse or sanitize HTML — each block's `text` is rendered as a React text node inside a fixed element chosen by `type`. If raw markdown (with HTML) is introduced later, run it through `rehype-sanitize` in `publishedAboutFromRow` (or the public route loader) before handing off to a renderer.
+> The `about` body uses a **block array of plain text** (`{type, text}`) for legacy rows, or **`bodyHtml`** (Tiptap HTML) for new content. Team headshots live in Convex file storage; `saveDraft` / `publishSection` / `discardDraft` prune unreferenced blobs when refs disappear from the about snapshots (see `convex/aboutTeamStorage.ts`, INF-76).
 
 ## Admin UI (Settings, Pricing, Gear)
 

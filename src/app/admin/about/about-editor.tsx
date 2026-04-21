@@ -1,0 +1,1008 @@
+"use client";
+
+/**
+ * About admin editor (INF-98).
+ *
+ * A WYSIWYG rich text editor (Tiptap) styled like the public About page.
+ * Output is serialized to HTML
+ * and stored in `aboutContentValidator.bodyHtml`; the old paragraph/heading
+ * block array (`body`) is still accepted by the schema for back-compat and
+ * is migrated to HTML transparently when the user first edits.
+ *
+ * Editor features (via Tiptap `StarterKit` + `Link`):
+ *   - Bold, italic, strike, inline code
+ *   - Headings H1 / H2 / H3
+ *   - Blockquote
+ *   - Bullet + ordered lists, horizontal rule
+ *   - Links (restricted to http/https/mailto/tel protocols)
+ *   - Markdown shortcuts (e.g. `## `, `**bold**`, `> `, `- `)
+ *   - Undo / redo
+ *
+ * Safety: Tiptap only emits nodes/marks from its fixed schema, and Link
+ * protocols are restricted in `rich-text-editor.tsx`.
+ */
+
+import {
+  Authenticated,
+  Unauthenticated,
+  AuthLoading,
+  useQuery,
+  useMutation,
+} from "convex/react";
+import { useUser } from "@clerk/nextjs";
+import { useCallback, useMemo, useRef, useState } from "react";
+import { Effect } from "effect";
+import { toast } from "sonner";
+import { ArrowDown, ArrowUp, Plus, X } from "lucide-react";
+import type { Id } from "../../../../convex/_generated/dataModel";
+import { api } from "../../../../convex/_generated/api";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
+import { cn } from "@/lib/utils";
+import { convexMutationEffect, type CmsAppError } from "@/lib/effect-errors";
+import { runAdminEffect } from "@/lib/admin-run-effect";
+import { CmsPublishToolbar } from "@/components/admin/cms-publish-toolbar";
+import { useAutosaveDraft } from "@/lib/use-autosave-draft";
+import { RichTextEditor } from "./rich-text-editor";
+
+type AboutBlock = { type: "paragraph" | "heading"; text: string };
+
+/** Mirrors CMS team rows; `storageId` set after upload. */
+export type AboutTeamMemberRow = {
+  id: string;
+  name: string;
+  title: string;
+  storageId?: Id<"_storage">;
+};
+
+type AboutContent = {
+  heroTitle: string;
+  heroSubtitle?: string;
+  /** Rich-text body (Tiptap HTML). Preferred over legacy `body` blocks. */
+  bodyHtml?: string;
+  /** Kept for back-compat with pre-INF-98 stored rows. Not edited anymore. */
+  body: AboutBlock[];
+  highlights?: string[];
+  seoTitle?: string;
+  seoDescription?: string;
+  teamMembers: AboutTeamMemberRow[];
+};
+
+/** Keep in sync with `MAX_ABOUT_TEAM_MEMBERS` in `convex/aboutTeamStorage.ts`. */
+const MAX_TEAM_MEMBERS = 20;
+
+/** SEO character guidance — typical search-engine display limits. */
+const SEO_TITLE_RECOMMENDED = 60;
+const SEO_DESCRIPTION_RECOMMENDED = 160;
+
+const fieldClass =
+  "block w-full rounded-md border border-input bg-background px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground focus:border-ring focus:outline-none focus:ring-1 focus:ring-ring/50";
+
+function trimToUndefined(value: string): string | undefined {
+  const trimmed = value.trim();
+  return trimmed.length === 0 ? undefined : value;
+}
+
+/**
+ * Convert legacy paragraph/heading block arrays to Tiptap-compatible HTML
+ * so existing rows upgrade cleanly the first time the owner edits them.
+ */
+function blocksToHtml(blocks: AboutBlock[]): string {
+  if (blocks.length === 0) return "";
+  return blocks
+    .map((b) => {
+      const text = escapeHtml(b.text);
+      return b.type === "heading" ? `<h2>${text}</h2>` : `<p>${text}</p>`;
+    })
+    .join("");
+}
+
+function escapeHtml(value: string): string {
+  return value
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#39;");
+}
+
+function htmlToPlainText(html: string): string {
+  return html
+    .replace(/<[^>]*>/g, " ")
+    .replace(/&nbsp;/g, " ")
+    .replace(/&amp;/g, "&")
+    .replace(/&lt;/g, "<")
+    .replace(/&gt;/g, ">")
+    .trim();
+}
+
+async function uploadHeadshotToConvex(
+  uploadUrl: string,
+  file: File,
+): Promise<Id<"_storage">> {
+  return await new Promise((resolve, reject) => {
+    const xhr = new XMLHttpRequest();
+    xhr.open("POST", uploadUrl);
+    xhr.setRequestHeader("Content-Type", file.type);
+    xhr.addEventListener("load", () => {
+      if (xhr.status >= 200 && xhr.status < 300) {
+        try {
+          const parsed = JSON.parse(xhr.responseText) as {
+            storageId: Id<"_storage">;
+          };
+          resolve(parsed.storageId);
+        } catch {
+          reject(new Error("Upload succeeded but response was malformed."));
+        }
+      } else {
+        reject(new Error(`Upload failed (${xhr.status}).`));
+      }
+    });
+    xhr.addEventListener("error", () =>
+      reject(new Error("Network error during upload.")),
+    );
+    xhr.send(file);
+  });
+}
+
+/** Normalize whatever came off the wire to the editor shape. */
+function toAboutContent(raw: unknown): AboutContent {
+  const r = (raw ?? {}) as Partial<AboutContent> & Record<string, unknown>;
+  const body: AboutBlock[] = Array.isArray(r.body)
+    ? r.body
+        .filter(
+          (b): b is AboutBlock =>
+            typeof b === "object" &&
+            b !== null &&
+            typeof (b as AboutBlock).text === "string" &&
+            ((b as AboutBlock).type === "paragraph" ||
+              (b as AboutBlock).type === "heading"),
+        )
+        .map((b) => ({ type: b.type, text: b.text }))
+    : [];
+  const storedHtml =
+    typeof r.bodyHtml === "string" && r.bodyHtml.trim().length > 0
+      ? r.bodyHtml
+      : undefined;
+  const teamMembers: AboutTeamMemberRow[] = Array.isArray(r.teamMembers)
+    ? (r.teamMembers as unknown[])
+        .filter(
+          (m): m is AboutTeamMemberRow =>
+            typeof m === "object" &&
+            m !== null &&
+            typeof (m as AboutTeamMemberRow).id === "string" &&
+            typeof (m as AboutTeamMemberRow).name === "string" &&
+            typeof (m as AboutTeamMemberRow).title === "string",
+        )
+        .map((m) => ({
+          id: m.id,
+          name: m.name,
+          title: m.title,
+          ...(m.storageId !== undefined ? { storageId: m.storageId } : {}),
+        }))
+    : [];
+
+  return {
+    heroTitle: typeof r.heroTitle === "string" ? r.heroTitle : "",
+    heroSubtitle:
+      typeof r.heroSubtitle === "string" ? r.heroSubtitle : undefined,
+    // Seed `bodyHtml` from legacy blocks so the editor shows existing content
+    // even on rows that haven't been re-saved since INF-98.
+    bodyHtml: storedHtml ?? (body.length > 0 ? blocksToHtml(body) : undefined),
+    body,
+    highlights: Array.isArray(r.highlights)
+      ? (r.highlights as unknown[]).filter(
+          (h): h is string => typeof h === "string",
+        )
+      : undefined,
+    seoTitle: typeof r.seoTitle === "string" ? r.seoTitle : undefined,
+    seoDescription:
+      typeof r.seoDescription === "string" ? r.seoDescription : undefined,
+    teamMembers,
+  };
+}
+
+/**
+ * Publish-validation mirror (kept in sync with `collectAboutIssues` in
+ * `convex/cmsPublishHelpers.ts`) so blocking issues surface live.
+ */
+function collectAboutIssues(
+  draft: AboutContent,
+): { path: string; message: string }[] {
+  const issues: { path: string; message: string }[] = [];
+  if (draft.heroTitle.trim().length === 0) {
+    issues.push({
+      path: "heroTitle",
+      message: "Hero title is required to publish.",
+    });
+  }
+  const richBodyLen = draft.bodyHtml
+    ? htmlToPlainText(draft.bodyHtml).length
+    : 0;
+  if (richBodyLen === 0) {
+    issues.push({
+      path: "bodyHtml",
+      message: "Body content is required to publish.",
+    });
+  }
+  (draft.highlights ?? []).forEach((h, i) => {
+    if (h.trim().length === 0) {
+      const n = i + 1;
+      issues.push({
+        path: `highlights[${i}]`,
+        message: `Highlight ${n} cannot be empty.`,
+      });
+    }
+  });
+
+  const team = draft.teamMembers;
+  if (team.length > 0) {
+    if (team.length > MAX_TEAM_MEMBERS) {
+      issues.push({
+        path: "teamMembers",
+        message: `At most ${MAX_TEAM_MEMBERS} team members are allowed.`,
+      });
+    }
+    for (let i = 0; i < team.length; i++) {
+      const base = `teamMembers[${i}]`;
+      const who = `Team member ${i + 1}`;
+      if (team[i].name.trim().length === 0) {
+        issues.push({
+          path: `${base}.name`,
+          message: `${who} needs a name.`,
+        });
+      }
+      if (team[i].title.trim().length === 0) {
+        issues.push({
+          path: `${base}.title`,
+          message: `${who} needs a title.`,
+        });
+      }
+      if (team[i].storageId === undefined) {
+        issues.push({
+          path: `${base}.storageId`,
+          message: `${who} needs a headshot image to publish.`,
+        });
+      }
+    }
+  }
+
+  return issues;
+}
+
+export function AboutEditor() {
+  return (
+    <>
+      <AuthLoading>
+        <p className="body-text text-muted-foreground">Authenticating…</p>
+      </AuthLoading>
+
+      <Unauthenticated>
+        <p className="body-text text-muted-foreground">
+          Sign in to edit the About page.
+        </p>
+      </Unauthenticated>
+
+      <Authenticated>
+        <AboutForm />
+      </Authenticated>
+    </>
+  );
+}
+
+function AboutForm() {
+  const { user } = useUser();
+  const section = useQuery(api.cms.getSection, { section: "about" });
+  const saveDraft = useMutation(api.cms.saveDraft);
+  const publish = useMutation(api.cms.publishSection);
+  const discard = useMutation(api.cms.discardDraft);
+  const generateUploadUrl = useMutation(api.admin.photos.generateUploadUrl);
+
+  const [localDraft, setLocalDraft] = useState<AboutContent | null>(null);
+  const [busy, setBusy] = useState<string | null>(null);
+  const [inlineError, setInlineError] = useState<string | null>(null);
+  const [editorResetToken, setEditorResetToken] = useState(0);
+
+  // Snapshot of the initial HTML the Tiptap editor was mounted with for the
+  // current `editorResetToken`. Tiptap owns its internal state and would
+  // otherwise fight controlled `content` prop changes on every keystroke.
+  const initialHtmlRef = useRef<string | null>(null);
+
+  const source: AboutContent | undefined = useMemo(() => {
+    if (localDraft) return localDraft;
+    if (!section) return undefined;
+    return toAboutContent(section.draftSnapshot ?? section.publishedSnapshot);
+  }, [localDraft, section]);
+
+  // Lock in the `initialHtml` for the current editor instance the first time
+  // we have a source. Re-captured whenever `editorResetToken` changes, which
+  // is exactly when we want to remount (discard / first load).
+  const initialHtml = useMemo(() => {
+    if (!source) return "";
+    if (initialHtmlRef.current !== null) return initialHtmlRef.current;
+    const html = source.bodyHtml ?? "";
+    initialHtmlRef.current = html;
+    return html;
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [editorResetToken, source !== undefined]);
+
+  const mutate = useCallback((next: AboutContent) => {
+    setInlineError(null);
+    setLocalDraft(next);
+  }, []);
+
+  const setHeroTitle = useCallback(
+    (value: string) => {
+      if (!source) return;
+      mutate({ ...source, heroTitle: value });
+    },
+    [source, mutate],
+  );
+
+  const setHeroSubtitle = useCallback(
+    (value: string) => {
+      if (!source) return;
+      mutate({ ...source, heroSubtitle: trimToUndefined(value) });
+    },
+    [source, mutate],
+  );
+
+  const setSeoTitle = useCallback(
+    (value: string) => {
+      if (!source) return;
+      mutate({ ...source, seoTitle: trimToUndefined(value) });
+    },
+    [source, mutate],
+  );
+
+  const setSeoDescription = useCallback(
+    (value: string) => {
+      if (!source) return;
+      mutate({ ...source, seoDescription: trimToUndefined(value) });
+    },
+    [source, mutate],
+  );
+
+  const setBodyHtml = useCallback(
+    (html: string) => {
+      if (!source) return;
+      mutate({
+        ...source,
+        bodyHtml: html,
+        // Drop legacy blocks — once the owner edits, the rich HTML is the
+        // authoritative body and we don't want divergent fields.
+        body: [],
+      });
+    },
+    [source, mutate],
+  );
+
+  const setHighlights = useCallback(
+    (next: string[]) => {
+      if (!source) return;
+      mutate({
+        ...source,
+        highlights: next.length > 0 ? next : undefined,
+      });
+    },
+    [source, mutate],
+  );
+
+  const setTeamMembers = useCallback(
+    (next: AboutTeamMemberRow[]) => {
+      if (!source) return;
+      mutate({ ...source, teamMembers: next });
+    },
+    [source, mutate],
+  );
+
+  const [uploadBusy, setUploadBusy] = useState<string | null>(null);
+
+  const runAction = useCallback(
+    async <A,>(label: string, program: Effect.Effect<A, CmsAppError>) => {
+      setInlineError(null);
+      setBusy(label);
+      const outcome = await runAdminEffect(program, {
+        onErrorMessage: setInlineError,
+      });
+      if (outcome !== undefined) {
+        setLocalDraft(null);
+      }
+      setBusy(null);
+      return outcome;
+    },
+    [],
+  );
+
+  const hasDraftOnServer = section?.hasDraftChanges ?? false;
+  const hasLocalEdits = localDraft !== null;
+
+  const { status: autosaveStatus, flush: flushAutosave } = useAutosaveDraft({
+    dirty: hasLocalEdits && source !== undefined,
+    debounceResetKey: localDraft,
+    pauseWhen: busy !== null,
+    saveEffect: () =>
+      convexMutationEffect(() =>
+        saveDraft({
+          section: "about",
+          content: {
+            heroTitle: source?.heroTitle ?? "",
+            heroSubtitle: source?.heroSubtitle,
+            bodyHtml: source?.bodyHtml,
+            body: source?.body ?? [],
+            highlights: source?.highlights,
+            seoTitle: source?.seoTitle,
+            seoDescription: source?.seoDescription,
+            teamMembers: (source?.teamMembers ?? []).map((m) => ({
+              id: m.id,
+              name: m.name,
+              title: m.title,
+              ...(m.storageId !== undefined ? { storageId: m.storageId } : {}),
+            })),
+          },
+        }),
+      ),
+    onSaved: () => setLocalDraft(null),
+  });
+
+  const handleDiscardConfirm = useCallback(async (): Promise<boolean> => {
+    setInlineError(null);
+    if (hasDraftOnServer) {
+      setBusy("Discarding…");
+      const outcome = await runAdminEffect(
+        convexMutationEffect(() => discard({ section: "about" })),
+        { onErrorMessage: setInlineError },
+      );
+      setBusy(null);
+      if (outcome === undefined) {
+        return false;
+      }
+    }
+    setLocalDraft(null);
+    // Force Tiptap to remount with the now-canonical published HTML.
+    initialHtmlRef.current = null;
+    setEditorResetToken((n) => n + 1);
+    toast.success(
+      hasDraftOnServer
+        ? "Draft discarded. The editor now matches the published site."
+        : "Unsaved changes discarded.",
+    );
+    return true;
+  }, [discard, hasDraftOnServer]);
+
+  const issues = useMemo(
+    () => (source ? collectAboutIssues(source) : []),
+    [source],
+  );
+
+  if (section === undefined) {
+    return (
+      <p className="body-text text-muted-foreground">Loading About page…</p>
+    );
+  }
+
+  if (!source) {
+    return (
+      <p className="body-text text-muted-foreground">
+        No About content available.
+      </p>
+    );
+  }
+
+  const publishedByLabel =
+    section.publishedBy && user?.id === section.publishedBy ? "You" : undefined;
+
+  const seoTitleValue = source.seoTitle ?? "";
+  const seoDescriptionValue = source.seoDescription ?? "";
+
+  return (
+    <div className="space-y-8 pb-24">
+      <div className="space-y-8">
+          <fieldset className="space-y-3">
+            <legend className="label-text text-muted-foreground">Hero</legend>
+            <label className="block space-y-1">
+              <span className="body-text-small text-muted-foreground">
+                Title
+              </span>
+              <Input
+                type="text"
+                value={source.heroTitle}
+                onChange={(e) => setHeroTitle(e.target.value)}
+                placeholder="About Lula Lake Sound"
+                aria-invalid={source.heroTitle.trim().length === 0}
+                className="text-foreground placeholder:text-muted-foreground"
+              />
+            </label>
+            <label className="block space-y-1">
+              <span className="body-text-small text-muted-foreground">
+                Subtitle (optional)
+              </span>
+              <Textarea
+                rows={2}
+                value={source.heroSubtitle ?? ""}
+                onChange={(e) => setHeroSubtitle(e.target.value)}
+                placeholder="A creative space for music production and recording."
+                className="text-foreground placeholder:text-muted-foreground"
+              />
+            </label>
+          </fieldset>
+
+          <fieldset className="space-y-3">
+            <legend className="label-text text-muted-foreground">Body</legend>
+            <p className="body-text-small text-muted-foreground">
+              Rich text — toolbar or markdown shortcuts (
+              <code className="rounded bg-muted px-1">## </code>,{" "}
+              <code className="rounded bg-muted px-1">**bold**</code>,{" "}
+              <code className="rounded bg-muted px-1">*italic*</code>,{" "}
+              <code className="rounded bg-muted px-1">&gt; </code>,{" "}
+              <code className="rounded bg-muted px-1">- </code>).
+            </p>
+            <RichTextEditor
+              key={editorResetToken}
+              initialHtml={initialHtml}
+              placeholder="Tell the studio's story…"
+              onChange={setBodyHtml}
+              resetToken={editorResetToken}
+            />
+          </fieldset>
+
+          <fieldset className="space-y-3">
+            <legend className="label-text text-muted-foreground">Team</legend>
+            <p className="body-text-small text-muted-foreground">
+              Add people with a headshot, name, and title. Images are stored in
+              Convex file storage (same limits as the gallery).
+            </p>
+            <TeamMembersEditor
+              members={source.teamMembers}
+              onChange={setTeamMembers}
+              generateUploadUrl={generateUploadUrl}
+              uploadBusyKey={uploadBusy}
+              setUploadBusyKey={setUploadBusy}
+            />
+          </fieldset>
+
+          <fieldset className="space-y-3">
+            <legend className="label-text text-muted-foreground">
+              Highlights (optional)
+            </legend>
+            <p className="body-text-small text-muted-foreground">
+              Short bulleted callouts — e.g. key studio facts.
+            </p>
+            <HighlightsEditor
+              highlights={source.highlights ?? []}
+              onChange={setHighlights}
+            />
+          </fieldset>
+
+          <fieldset className="space-y-3">
+            <legend className="label-text text-muted-foreground">SEO</legend>
+            <p className="body-text-small text-muted-foreground">
+              Leave blank to fall back to the site-wide settings. Recommended
+              lengths follow Google snippet limits.
+            </p>
+            <label className="block space-y-1">
+              <div className="flex items-baseline justify-between">
+                <span className="body-text-small text-muted-foreground">
+                  SEO title
+                </span>
+                <CharCounter
+                  value={seoTitleValue}
+                  recommended={SEO_TITLE_RECOMMENDED}
+                />
+              </div>
+              <Input
+                type="text"
+                value={seoTitleValue}
+                onChange={(e) => setSeoTitle(e.target.value)}
+                placeholder="About | Lula Lake Sound"
+                className="text-foreground placeholder:text-muted-foreground"
+              />
+            </label>
+            <label className="block space-y-1">
+              <div className="flex items-baseline justify-between">
+                <span className="body-text-small text-muted-foreground">
+                  SEO description
+                </span>
+                <CharCounter
+                  value={seoDescriptionValue}
+                  recommended={SEO_DESCRIPTION_RECOMMENDED}
+                />
+              </div>
+              <textarea
+                rows={3}
+                value={seoDescriptionValue}
+                onChange={(e) => setSeoDescription(e.target.value)}
+                placeholder="A creative recording studio outside Chattanooga, TN…"
+                className={fieldClass}
+              />
+            </label>
+          </fieldset>
+
+          {issues.length > 0 ? (
+            <div
+              role="status"
+              className="rounded-md border border-amber-500/40 bg-amber-500/5 p-3 text-sm"
+            >
+              <p className="mb-1 font-medium text-amber-700 dark:text-amber-300">
+                {issues.length === 1
+                  ? "1 issue blocks publish"
+                  : `${issues.length} issues block publish`}
+              </p>
+              <ul className="list-disc space-y-0.5 pl-5 text-amber-800/90 dark:text-amber-200/90">
+                {issues.slice(0, 6).map((issue, i) => (
+                  <li key={`${issue.path}-${i}`}>{issue.message}</li>
+                ))}
+                {issues.length > 6 ? (
+                  <li className="text-amber-900/70 dark:text-amber-100/70">
+                    …and {issues.length - 6} more.
+                  </li>
+                ) : null}
+              </ul>
+            </div>
+          ) : null}
+      </div>
+
+      <CmsPublishToolbar
+        section="about"
+        sectionLabel="the About page"
+        hasDraftOnServer={hasDraftOnServer}
+        hasLocalEdits={hasLocalEdits}
+        publishedAt={section.publishedAt ?? null}
+        publishedByLabel={publishedByLabel}
+        busy={busy}
+        inlineError={inlineError}
+        autosaveStatus={autosaveStatus}
+        onPublish={() => {
+          if (issues.length > 0) {
+            setInlineError("Fix the blocking issues above before publishing.");
+            return;
+          }
+          const publishOnce = convexMutationEffect(() =>
+            publish({ section: "about" }),
+          );
+          void (async () => {
+            if (hasLocalEdits) {
+              const flushed = await flushAutosave();
+              if (!flushed) return;
+            }
+            await runAction("Publishing…", publishOnce);
+          })();
+        }}
+        onDiscardConfirm={handleDiscardConfirm}
+      />
+    </div>
+  );
+}
+
+interface TeamMembersEditorProps {
+  readonly members: AboutTeamMemberRow[];
+  readonly onChange: (next: AboutTeamMemberRow[]) => void;
+  readonly generateUploadUrl: () => Promise<{ uploadUrl: string }>;
+  readonly uploadBusyKey: string | null;
+  readonly setUploadBusyKey: (key: string | null) => void;
+}
+
+function TeamMembersEditor({
+  members,
+  onChange,
+  generateUploadUrl,
+  uploadBusyKey,
+  setUploadBusyKey,
+}: TeamMembersEditorProps) {
+  const storageIds = useMemo(
+    () =>
+      members
+        .map((m) => m.storageId)
+        .filter((id): id is Id<"_storage"> => id !== undefined),
+    [members],
+  );
+
+  const urlRows = useQuery(
+    api.admin.aboutTeam.getTeamHeadshotUrls,
+    storageIds.length > 0 ? { storageIds } : "skip",
+  );
+
+  const urlByStorageId = useMemo(() => {
+    const map = new Map<Id<"_storage">, string | null>();
+    if (urlRows) {
+      for (const row of urlRows) {
+        map.set(row.storageId, row.url);
+      }
+    }
+    return map;
+  }, [urlRows]);
+
+  const add = () => {
+    if (members.length >= MAX_TEAM_MEMBERS) return;
+    onChange([
+      ...members,
+      { id: crypto.randomUUID(), name: "", title: "" },
+    ]);
+  };
+
+  const remove = (idx: number) => {
+    onChange(members.filter((_, i) => i !== idx));
+  };
+
+  const move = (idx: number, dir: -1 | 1) => {
+    const j = idx + dir;
+    if (j < 0 || j >= members.length) return;
+    const next = [...members];
+    [next[idx], next[j]] = [next[j], next[idx]];
+    onChange(next);
+  };
+
+  const updateField = (
+    idx: number,
+    field: "name" | "title",
+    value: string,
+  ) => {
+    const next = [...members];
+    next[idx] = { ...next[idx], [field]: value };
+    onChange(next);
+  };
+
+  const onPickFile = async (idx: number, file: File) => {
+    if (!file.type.startsWith("image/")) {
+      toast.error("Choose an image file (JPEG, PNG, or WebP).");
+      return;
+    }
+    setUploadBusyKey(`upload-${idx}`);
+    try {
+      const { uploadUrl } = await generateUploadUrl();
+      const storageId = await uploadHeadshotToConvex(uploadUrl, file);
+      const next = [...members];
+      next[idx] = { ...next[idx], storageId };
+      onChange(next);
+      toast.success("Headshot uploaded.");
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Upload failed.");
+    } finally {
+      setUploadBusyKey(null);
+    }
+  };
+
+  const removePhoto = (idx: number) => {
+    const next = [...members];
+    const cur = next[idx];
+    next[idx] = {
+      id: cur.id,
+      name: cur.name,
+      title: cur.title,
+    };
+    onChange(next);
+    toast.success("Photo removed.");
+  };
+
+  return (
+    <div className="space-y-3">
+      {members.length === 0 ? (
+        <p className="rounded-md border border-dashed border-border px-3 py-2 text-xs text-muted-foreground">
+          No team members yet. Add people who appear on the public About page.
+        </p>
+      ) : (
+        <ul className="space-y-4">
+          {members.map((m, idx) => (
+            <li
+              key={m.id}
+              className="rounded-lg border border-border bg-muted/20 p-3 space-y-3"
+            >
+              <div className="flex flex-wrap items-start gap-3">
+                <div className="flex size-20 shrink-0 items-center justify-center overflow-hidden rounded-md border border-border bg-muted">
+                  {m.storageId && urlByStorageId.get(m.storageId) ? (
+                    // eslint-disable-next-line @next/next/no-img-element -- signed Convex URL
+                    <img
+                      src={urlByStorageId.get(m.storageId) ?? undefined}
+                      alt=""
+                      className="size-full object-cover"
+                    />
+                  ) : (
+                    <span className="px-1 text-center text-[10px] text-muted-foreground">
+                      No photo
+                    </span>
+                  )}
+                </div>
+                <div className="min-w-0 flex-1 space-y-2">
+                  <label className="block space-y-1">
+                    <span className="body-text-small text-muted-foreground">
+                      Name
+                    </span>
+                    <Input
+                      type="text"
+                      value={m.name}
+                      onChange={(e) => updateField(idx, "name", e.target.value)}
+                      placeholder="Jane Doe"
+                      className="text-foreground placeholder:text-muted-foreground"
+                    />
+                  </label>
+                  <label className="block space-y-1">
+                    <span className="body-text-small text-muted-foreground">
+                      Title
+                    </span>
+                    <Input
+                      type="text"
+                      value={m.title}
+                      onChange={(e) => updateField(idx, "title", e.target.value)}
+                      placeholder="Engineer / Producer"
+                      className="text-foreground placeholder:text-muted-foreground"
+                    />
+                  </label>
+                  <div className="flex flex-wrap items-center gap-2">
+                    <input
+                      id={`team-headshot-${m.id}`}
+                      type="file"
+                      accept="image/jpeg,image/png,image/webp"
+                      className="hidden"
+                      tabIndex={-1}
+                      disabled={uploadBusyKey !== null}
+                      onChange={(e) => {
+                        const f = e.target.files?.[0];
+                        e.target.value = "";
+                        if (f) void onPickFile(idx, f);
+                      }}
+                    />
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      disabled={uploadBusyKey !== null}
+                      onClick={() => {
+                        document.getElementById(`team-headshot-${m.id}`)?.click();
+                      }}
+                    >
+                      {uploadBusyKey === `upload-${idx}`
+                        ? "Uploading…"
+                        : m.storageId
+                          ? "Replace headshot"
+                          : "Upload headshot"}
+                    </Button>
+                    {m.storageId ? (
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="sm"
+                        className="text-muted-foreground hover:text-foreground"
+                        disabled={uploadBusyKey !== null}
+                        onClick={() => removePhoto(idx)}
+                      >
+                        Remove photo
+                      </Button>
+                    ) : null}
+                  </div>
+                </div>
+                <div className="flex shrink-0 flex-col gap-1">
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="icon"
+                    aria-label={`Move up ${idx + 1}`}
+                    disabled={idx === 0}
+                    onClick={() => move(idx, -1)}
+                  >
+                    <ArrowUp className="size-4" aria-hidden />
+                  </Button>
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="icon"
+                    aria-label={`Move down ${idx + 1}`}
+                    disabled={idx === members.length - 1}
+                    onClick={() => move(idx, 1)}
+                  >
+                    <ArrowDown className="size-4" aria-hidden />
+                  </Button>
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="icon"
+                    aria-label={`Remove ${idx + 1}`}
+                    onClick={() => remove(idx)}
+                  >
+                    <X className="size-4 text-muted-foreground" aria-hidden />
+                  </Button>
+                </div>
+              </div>
+            </li>
+          ))}
+        </ul>
+      )}
+      <Button
+        type="button"
+        variant="outline"
+        size="sm"
+        onClick={add}
+        disabled={members.length >= MAX_TEAM_MEMBERS}
+      >
+        <Plus className="mr-1 size-3.5" aria-hidden />
+        Add person
+      </Button>
+    </div>
+  );
+}
+
+interface HighlightsEditorProps {
+  readonly highlights: readonly string[];
+  readonly onChange: (next: string[]) => void;
+}
+
+function HighlightsEditor({ highlights, onChange }: HighlightsEditorProps) {
+  const update = (idx: number, value: string) => {
+    const next = [...highlights];
+    next[idx] = value;
+    onChange(next);
+  };
+  const remove = (idx: number) =>
+    onChange(highlights.filter((_, i) => i !== idx));
+  const add = () => onChange([...highlights, ""]);
+  const commit = () => {
+    const cleaned = highlights.map((h) => h.trim()).filter((h) => h.length > 0);
+    if (cleaned.length !== highlights.length) {
+      onChange(cleaned);
+    }
+  };
+
+  return (
+    <div className="space-y-2">
+      {highlights.length === 0 ? (
+        <p className="rounded-md border border-dashed border-border px-3 py-2 text-xs text-muted-foreground">
+          No highlights yet. Add short bullet callouts describing the studio.
+        </p>
+      ) : (
+        <ul className="space-y-2">
+          {highlights.map((h, idx) => (
+            <li key={idx} className="flex items-center gap-2">
+              <Input
+                type="text"
+                value={h}
+                onChange={(e) => update(idx, e.target.value)}
+                onBlur={commit}
+                placeholder={`Highlight ${idx + 1}`}
+                className="flex-1 text-foreground placeholder:text-muted-foreground"
+              />
+              <Button
+                type="button"
+                variant="ghost"
+                size="icon"
+                aria-label={`Remove highlight ${idx + 1}`}
+                onClick={() => remove(idx)}
+              >
+                <X className="size-4 text-muted-foreground" aria-hidden />
+              </Button>
+            </li>
+          ))}
+        </ul>
+      )}
+      <Button type="button" variant="outline" size="sm" onClick={add}>
+        <Plus className="mr-1 size-3.5" aria-hidden />
+        Add highlight
+      </Button>
+    </div>
+  );
+}
+
+interface CharCounterProps {
+  readonly value: string;
+  readonly recommended: number;
+}
+
+function CharCounter({ value, recommended }: CharCounterProps) {
+  const len = value.length;
+  const over = len > recommended;
+  const wayOver = len > recommended + Math.ceil(recommended * 0.2);
+  return (
+    <span
+      className={cn(
+        "font-mono text-[10px] tabular-nums",
+        wayOver
+          ? "text-destructive"
+          : over
+            ? "text-amber-600 dark:text-amber-400"
+            : "text-muted-foreground",
+      )}
+      aria-live="polite"
+    >
+      {len} / {recommended}
+    </span>
+  );
+}

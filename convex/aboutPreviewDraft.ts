@@ -1,6 +1,9 @@
 import { query } from "./_generated/server";
 import { requireCmsOwner } from "./lib/auth";
-import { publishedAboutFromRow } from "./publicSettingsSnapshot";
+import {
+  materializePublicAbout,
+  publishedAboutFromRow,
+} from "./publicSettingsSnapshot";
 
 /**
  * Preview About copy for owner-only access. Resolves **draft** when present,
@@ -26,8 +29,12 @@ export const getPreviewAbout = query({
       .unique();
 
     if (!row) {
+      const snapshot = await materializePublicAbout(
+        ctx,
+        publishedAboutFromRow(null),
+      );
       return {
-        ...publishedAboutFromRow(null),
+        ...snapshot,
         hasDraftChanges: false,
       };
     }
@@ -37,8 +44,13 @@ export const getPreviewAbout = query({
       publishedSnapshot: row.draftSnapshot ?? row.publishedSnapshot,
     };
 
+    const snapshot = await materializePublicAbout(
+      ctx,
+      publishedAboutFromRow(effectiveRow),
+    );
+
     return {
-      ...publishedAboutFromRow(effectiveRow),
+      ...snapshot,
       hasDraftChanges: row.hasDraftChanges,
     };
   },

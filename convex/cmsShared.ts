@@ -3,6 +3,7 @@ import type { Doc } from "./_generated/dataModel";
 import type {
   aboutBlockValidator,
   aboutContentValidator,
+  aboutTeamMemberValidator,
   pricingBillingCadenceValidator,
   pricingContentValidator,
   pricingPackageValidator,
@@ -17,6 +18,20 @@ export type PricingPackage = Infer<typeof pricingPackageValidator>;
 export type PricingBillingCadence = Infer<typeof pricingBillingCadenceValidator>;
 export type AboutSnapshot = Infer<typeof aboutContentValidator>;
 export type AboutBlock = Infer<typeof aboutBlockValidator>;
+export type AboutTeamMember = Infer<typeof aboutTeamMemberValidator>;
+
+/** Team row as returned to anonymous public callers (no raw storage id). */
+export type PublicAboutTeamMember = {
+  id: string;
+  name: string;
+  title: string;
+  imageUrl: string | null;
+};
+
+/** Published About payload for marketing routes (sanitized + image URLs). */
+export type PublicAboutSnapshot = Omit<AboutSnapshot, "teamMembers"> & {
+  teamMembers?: PublicAboutTeamMember[];
+};
 
 /** Per-section default snapshots used for seeding and new-row inserts. */
 export const SETTINGS_DEFAULTS: SettingsSnapshot = {
@@ -105,6 +120,7 @@ export const ABOUT_DEFAULTS: AboutSnapshot = {
   highlights: [],
   seoTitle: "",
   seoDescription: "",
+  teamMembers: [],
 };
 
 export function defaultSnapshotForSection(section: CmsSection): CmsSnapshot {

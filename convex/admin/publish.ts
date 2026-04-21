@@ -14,6 +14,8 @@ import type { Doc } from "../_generated/dataModel";
 import { requireCmsOwner } from "../lib/auth";
 import { cmsPublishValidationFailed } from "../errors";
 import { loadGalleryPhotos } from "../galleryPhotos";
+import { collectAboutTeamBlobIssues } from "../aboutTeamStorage";
+import type { AboutSnapshot } from "../cmsShared";
 import {
   collectAllPublishIssues,
   ensureSectionRow,
@@ -62,6 +64,20 @@ export const publishSite = mutation({
     }
 
     const issues = collectAllPublishIssues(targets);
+    for (const row of targets) {
+      if (row.section === "about" && row.draftSnapshot) {
+        const blobIssues = await collectAboutTeamBlobIssues(
+          ctx,
+          row.draftSnapshot as AboutSnapshot,
+        );
+        for (const issue of blobIssues) {
+          issues.push({
+            path: `about.${issue.path}`,
+            message: issue.message,
+          });
+        }
+      }
+    }
     if (galleryPending) {
       const draft = await loadGalleryPhotos(ctx, "draft");
       const photoIssues = await validateDraftForPublish(ctx, draft);
