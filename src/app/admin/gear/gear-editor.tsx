@@ -523,7 +523,7 @@ function GearEditorForm() {
     <div className="space-y-8 pb-24">
       <div className="space-y-6">
         <div className="space-y-2">
-          <h2 className="text-xl font-semibold tracking-tight text-foreground">
+          <h2 className="font-heading text-xl font-semibold text-foreground">
             Studio gear
           </h2>
           <p className="body-text-small max-w-2xl text-foreground/85">
@@ -567,7 +567,7 @@ function GearEditorForm() {
                   <p className="text-[10px] font-semibold uppercase tracking-wider text-foreground/55">
                     Category
                   </p>
-                  <h3 className="font-heading text-lg font-semibold leading-snug tracking-tight text-foreground">
+                  <h3 className="font-heading text-lg font-semibold leading-snug text-foreground">
                     {cat.name}
                   </h3>
                   <p className="body-text-small text-foreground/75">

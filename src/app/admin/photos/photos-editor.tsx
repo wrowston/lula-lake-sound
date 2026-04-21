@@ -1039,18 +1039,18 @@ function PhotosEditorForm() {
                       type="button"
                       variant="ghost"
                       size="icon-sm"
-                      className="bg-transparent"
+                      className="bg-transparent text-foreground hover:bg-muted/70 hover:text-foreground hover:no-underline disabled:text-foreground/35"
                       aria-label="Move photo up"
                       disabled={index === 0 || busy !== null || isRowBusy}
                       onClick={() => void movePhoto(photo.stableId, -1)}
                     >
-                      <ArrowUp className="size-3.5" aria-hidden />
+                      <ArrowUp className="size-4 stroke-[2.25]" aria-hidden />
                     </Button>
                     <Button
                       type="button"
                       variant="ghost"
                       size="icon-sm"
-                      className="bg-transparent"
+                      className="bg-transparent text-foreground hover:bg-muted/70 hover:text-foreground hover:no-underline disabled:text-foreground/35"
                       aria-label="Move photo down"
                       disabled={
                         index === photos.length - 1 ||
@@ -1059,21 +1059,18 @@ function PhotosEditorForm() {
                       }
                       onClick={() => void movePhoto(photo.stableId, 1)}
                     >
-                      <ArrowDown className="size-3.5" aria-hidden />
+                      <ArrowDown className="size-4 stroke-[2.25]" aria-hidden />
                     </Button>
                     <Button
                       type="button"
                       variant="ghost"
                       size="icon-sm"
-                      className="bg-transparent"
+                      className="bg-transparent text-destructive hover:bg-destructive/10 hover:text-destructive hover:no-underline"
                       aria-label="Delete photo"
                       disabled={busy !== null || isRowBusy}
                       onClick={() => setDeleteStableId(photo.stableId)}
                     >
-                      <Trash2
-                        className="size-3.5 text-destructive"
-                        aria-hidden
-                      />
+                      <Trash2 className="size-4 stroke-[2.25]" aria-hidden />
                     </Button>
                   </div>
                   {photo.url ? (
@@ -1128,7 +1125,7 @@ function PhotosEditorForm() {
 
                   <div className="grid gap-1.5">
                     <label className="min-w-0 space-y-0.5">
-                      <span className="text-[11px] leading-none text-muted-foreground">
+                      <span className="text-[11px] font-medium leading-none text-foreground/90">
                         Alt text
                         <span
                           className="ml-1 text-destructive"
@@ -1160,7 +1157,7 @@ function PhotosEditorForm() {
                     </label>
 
                     <label className="min-w-0 space-y-0.5">
-                      <span className="text-[11px] leading-none text-muted-foreground">
+                      <span className="text-[11px] font-medium leading-none text-foreground/90">
                         Caption
                       </span>
                       <Textarea
@@ -1185,6 +1182,7 @@ function PhotosEditorForm() {
                       type="button"
                       variant="outline"
                       size="sm"
+                      className="border-border text-foreground hover:bg-muted hover:text-foreground"
                       aria-label="Save photo details"
                       disabled={!isDirty || busy !== null || isRowBusy}
                       onClick={() => void savePhotoDetails(photo)}

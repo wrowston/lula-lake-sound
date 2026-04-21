@@ -33,19 +33,22 @@ const AMENITIES_DATA = [
 
 export function AmenitiesNearby() {
   return (
-    <section id="local-favorites" className="py-24 md:py-32 px-6 bg-deep-forest relative">
-      <div className="absolute inset-0 opacity-20 bg-texture-stone" />
+    <section
+      id="local-favorites"
+      className="relative overflow-hidden bg-forest px-6 py-28 md:py-40"
+    >
+      <div className="absolute inset-0 bg-texture-canvas opacity-14" />
 
-      <div className="relative z-10 max-w-6xl mx-auto">
-        <div className="text-center mb-16 reveal">
-          <p className="label-text text-sand/60 mb-4">Local Favorites</p>
-          <h2 className="headline-primary text-3xl md:text-4xl lg:text-5xl text-warm-white mb-6">
+      <div className="relative z-10 mx-auto max-w-6xl">
+        <div className="reveal mb-20 text-center">
+          <p className="eyebrow mb-6 text-sand/82">Local Favorites</p>
+          <h2 className="headline-primary mb-8 text-[2.25rem] text-warm-white md:text-[3rem] lg:text-[3.5rem]">
             Amenities Nearby
           </h2>
-          <div className="section-rule max-w-xs mx-auto" />
+          <div className="section-rule mx-auto max-w-[9rem]" />
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-px bg-sand/8 reveal reveal-delay-2">
+        <div className="reveal reveal-delay-2 grid grid-cols-1 divide-y divide-sand/14 border-y border-sand/14 md:grid-cols-2 md:divide-x md:divide-y-0 lg:grid-cols-4 [&>*:nth-child(n+3)]:border-t [&>*:nth-child(n+3)]:border-sand/14 lg:[&>*:nth-child(n+3)]:border-t-0">
           {AMENITIES_DATA.map((amenity, index) => (
             <AmenityCard
               key={index}

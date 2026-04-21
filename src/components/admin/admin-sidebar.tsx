@@ -71,15 +71,21 @@ export function AdminSidebar() {
       <SidebarHeader className="p-4 group-data-[collapsible=icon]:p-2">
         <Link
           href="/admin"
-          className="flex items-center gap-3 group-data-[collapsible=icon]:justify-center"
+          className="flex w-full min-w-0 flex-col items-stretch gap-1.5 group-data-[collapsible=icon]:items-center group-data-[collapsible=icon]:justify-center group-data-[collapsible=icon]:gap-0"
         >
           <Image
-            src="/LLS_Logo_Full_Tar.png"
+            src="/Logos/Wordmark/LLS_Logo_Text_Sand.png"
             alt="Lula Lake Sound"
-            width={32}
-            height={32}
-            className="shrink-0 dark:brightness-0 dark:invert"
-            style={{ width: "auto", height: "auto" }}
+            width={1024}
+            height={135}
+            className="h-6 w-auto max-w-full shrink-0 object-contain object-left group-data-[collapsible=icon]:hidden"
+          />
+          <Image
+            src="/Logos/Primary/LLS_Logo_Full_Concrete1.png"
+            alt="Lula Lake Sound"
+            width={800}
+            height={260}
+            className="hidden h-8 w-auto max-w-[calc(var(--sidebar-width-icon)-0.5rem)] shrink-0 object-contain object-center group-data-[collapsible=icon]:block"
           />
           <span className="headline-secondary text-sidebar-foreground text-sm tracking-wider group-data-[collapsible=icon]:hidden">
             Studio CMS

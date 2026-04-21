@@ -23,14 +23,19 @@ export default function NotFound() {
   return (
     <div className="min-h-screen bg-washed-black relative grain-overlay flex items-center justify-center px-6">
       <div className="relative z-10 max-w-xl w-full text-center">
-        <Link href="/" className="inline-block mb-10 hover:scale-105 transition-transform duration-300">
+        <Link
+          href="/"
+          className="inline-block mb-10 hover:scale-105 transition-transform duration-300"
+        >
+          {/* Stacked lockup for the 404 — per brand guide §2.3, the
+           * vertical form is the right choice for portrait-oriented,
+           * low-density moments like this one. */}
           <Image
-            src="/LLS_Logo_Full_Tar.png"
+            src="/Logos/STACK/LLS_Logo_Stack_Sage.png"
             alt="Lula Lake Sound — Back to homepage"
-            width={60}
-            height={60}
-            className="brightness-0 invert mx-auto"
-            style={{ height: "32px", width: "auto" }}
+            width={600}
+            height={720}
+            className="mx-auto h-28 w-auto object-contain"
             priority
           />
         </Link>

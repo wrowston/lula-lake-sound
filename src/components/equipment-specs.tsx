@@ -1,11 +1,17 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import Image from "next/image";
+import { useMemo } from "react";
+
+import {
+  Accordion,
+  AccordionItem,
+  AccordionPanel,
+  AccordionTrigger,
+} from "@/components/ui/accordion";
 
 /**
  * Published (or preview) gear payload surfaced to the marketing site.
- * Matches the return shape of `api.public.getPublishedGear` and the
- * `categories` portion of `api.gearPreviewDraft.getPreviewGear`.
  */
 export type GearSpecs =
   | { kind: "markdown"; text: string }
@@ -53,15 +59,23 @@ function formatSpecs(specs: GearSpecs): string {
 
 function SectionHeader() {
   return (
-    <div className="text-center mb-16 reveal">
-      <p className="label-text text-sand/60 mb-4">Equipment</p>
-      <h2 className="headline-primary text-3xl md:text-4xl lg:text-5xl text-warm-white mb-6">
+    <div className="reveal mb-20 flex w-full flex-col items-center text-center">
+      <Image
+        src="/Logos/Graphic/LLS_Logo_Graphic_Sand.png"
+        alt=""
+        width={200}
+        height={200}
+        aria-hidden
+        className="mb-10 h-12 w-auto opacity-80 md:h-14"
+      />
+      <p className="eyebrow mb-6 text-sand/82">Equipment</p>
+      <h2 className="headline-primary mb-8 text-[2.25rem] text-warm-white md:text-[3rem] lg:text-[3.5rem]">
         Studio Specifications
       </h2>
-      <div className="section-rule max-w-xs mx-auto mb-8" />
-      <p className="body-text text-lg text-ivory/60 max-w-2xl mx-auto">
-        World-class equipment and acoustically designed spaces ensure your recordings
-        capture every nuance with pristine clarity and character.
+      <div className="section-rule mx-auto mb-10 max-w-[9rem]" />
+      <p className="editorial-lede mx-auto max-w-2xl font-normal text-ivory/92">
+        World-class equipment and acoustically designed spaces ensure your
+        recordings capture every nuance with pristine clarity and character.
       </p>
     </div>
   );
@@ -69,25 +83,25 @@ function SectionHeader() {
 
 function StudioSpecsGrid() {
   return (
-    <div className="reveal reveal-delay-1 mb-16">
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-px bg-sand/10 border border-sand/10">
-        {STUDIO_SPECS.map((spec) => (
-          <div key={spec.label} className="bg-washed-black p-6 md:p-8 text-center">
-            <div className="label-text text-sand mb-3">{spec.label}</div>
-            <div className="body-text-small text-ivory/60">{spec.value}</div>
-          </div>
-        ))}
-      </div>
+    <div className="reveal reveal-delay-1 mb-20 grid grid-cols-1 divide-y divide-sand/14 border-y border-sand/14 md:grid-cols-3 md:divide-x md:divide-y-0">
+      {STUDIO_SPECS.map((spec) => (
+        <div key={spec.label} className="px-6 py-10 text-center md:px-10">
+          <div className="eyebrow mb-4 text-sand">{spec.label}</div>
+          <div className="body-text-small text-ivory/86">{spec.value}</div>
+        </div>
+      ))}
     </div>
   );
 }
 
 function SectionShell({ children }: { children: React.ReactNode }) {
   return (
-    <section id="equipment-specs" className="py-24 md:py-32 px-6 bg-charcoal relative">
-      <div className="absolute inset-0 opacity-20 bg-texture-stone" />
-
-      <div className="relative z-10 max-w-6xl mx-auto">
+    <section
+      id="equipment-specs"
+      className="relative overflow-hidden bg-forest px-6 py-28 md:py-40"
+    >
+      <div className="absolute inset-0 bg-texture-canvas opacity-12" />
+      <div className="relative z-10 mx-auto max-w-6xl">
         <SectionHeader />
         <StudioSpecsGrid />
         {children}
@@ -99,14 +113,14 @@ function SectionShell({ children }: { children: React.ReactNode }) {
 export function EquipmentSpecsSkeleton() {
   return (
     <SectionShell>
-      <div className="reveal reveal-delay-2 space-y-px" aria-hidden>
+      <div className="reveal reveal-delay-2 space-y-0" aria-hidden>
         {[0, 1, 2, 3].map((i) => (
           <div
             key={i}
-            className="border border-sand/8 bg-washed-black/60 px-6 py-5 flex items-center justify-between animate-pulse"
+            className="flex animate-pulse items-center justify-between border-b border-sand/10 px-0 py-6 last:border-b-0"
           >
             <div className="h-4 w-48 bg-sand/10" />
-            <div className="h-3 w-8 bg-sand/10" />
+            <div className="h-3 w-6 bg-sand/10" />
           </div>
         ))}
       </div>
@@ -116,10 +130,10 @@ export function EquipmentSpecsSkeleton() {
 
 function EquipmentSpecsEmpty() {
   return (
-    <div className="reveal reveal-delay-2 border border-sand/8 bg-washed-black/60 p-10 text-center">
-      <p className="body-text text-ivory/60">
-        Equipment list coming soon. Check back shortly — our gear inventory is being
-        updated.
+    <div className="reveal reveal-delay-2 border-y border-sand/10 px-6 py-16 text-center">
+      <p className="body-text text-ivory/82">
+        Equipment list coming soon. Check back shortly — our gear inventory is
+        being updated.
       </p>
     </div>
   );
@@ -162,83 +176,39 @@ function EquipmentCategoriesAccordion({
   readonly categories: readonly GearCategory[];
 }) {
   const initialExpanded = useMemo(
-    () =>
-      categories
-        .slice(0, DEFAULT_EXPANDED_COUNT)
-        .map((c) => c.stableId),
+    () => categories.slice(0, DEFAULT_EXPANDED_COUNT).map((c) => c.stableId),
     [categories],
   );
-  const [expanded, setExpanded] = useState<readonly string[]>(initialExpanded);
-
-  const toggle = (stableId: string) => {
-    setExpanded((prev) =>
-      prev.includes(stableId)
-        ? prev.filter((id) => id !== stableId)
-        : [...prev, stableId],
-    );
-  };
 
   return (
-    <div className="reveal reveal-delay-2 space-y-px">
-      {categories.map((category) => {
-        const isExpanded = expanded.includes(category.stableId);
-        return (
-          <div
-            key={category.stableId}
-            className="border border-sand/8 bg-washed-black/60"
-          >
-            <button
-              type="button"
-              onClick={() => toggle(category.stableId)}
-              aria-expanded={isExpanded}
-              aria-controls={`equipment-panel-${category.stableId}`}
-              className="w-full px-6 py-5 flex items-center justify-between hover:bg-sand/5 transition-colors"
-            >
-              <span className="headline-secondary text-lg text-sand">
+    <div className="reveal reveal-delay-2 mx-auto max-w-4xl border-b border-sand/14">
+      <Accordion multiple defaultValue={initialExpanded}>
+        {categories.map((category) => (
+          <AccordionItem key={category.stableId} value={category.stableId}>
+            <AccordionTrigger>
+              <span className="headline-secondary text-lg text-warm-white md:text-xl">
                 {category.name}
               </span>
-              <div className="flex items-center gap-3">
-                <span className="label-text text-ivory/30 text-[10px]">
-                  {category.items.length}
-                </span>
-                <svg
-                  className={`w-4 h-4 text-ivory/30 transition-transform duration-300 ${
-                    isExpanded ? "rotate-180" : ""
-                  }`}
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                  aria-hidden
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={1.5}
-                    d="M19 9l-7 7-7-7"
-                  />
-                </svg>
-              </div>
-            </button>
-
-            {isExpanded && (
-              <div
-                id={`equipment-panel-${category.stableId}`}
-                className="px-6 pb-6 grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-1"
-              >
+              <span className="label-text ml-auto mr-4 text-[10px] text-ivory/48">
+                {String(category.items.length).padStart(2, "0")}
+              </span>
+            </AccordionTrigger>
+            <AccordionPanel>
+              <div className="grid grid-cols-1 gap-x-10 gap-y-0 md:grid-cols-2">
                 {category.items.map((item) => {
                   const specsLabel = formatSpecs(item.specs);
                   return (
                     <div
                       key={item.stableId}
-                      className="py-2 border-b border-sand/5 last:border-0 flex items-baseline justify-between gap-4"
+                      className="flex items-baseline justify-between gap-4 border-b border-sand/12 py-3 last:border-0"
                     >
-                      <span className="body-text text-ivory/70 text-sm">
+                      <span className="body-text text-sm text-ivory/90">
                         {item.url ? (
                           <a
                             href={item.url}
                             target="_blank"
                             rel="noopener noreferrer"
-                            className="hover:text-sand underline-offset-4 hover:underline"
+                            className="underline-offset-[5px] hover:text-sand hover:underline"
                           >
                             {item.name}
                           </a>
@@ -247,7 +217,7 @@ function EquipmentCategoriesAccordion({
                         )}
                       </span>
                       {specsLabel.length > 0 && (
-                        <span className="body-text-small text-ivory/35 text-xs whitespace-nowrap">
+                        <span className="body-text-small whitespace-nowrap text-xs text-ivory/68">
                           {specsLabel}
                         </span>
                       )}
@@ -255,10 +225,10 @@ function EquipmentCategoriesAccordion({
                   );
                 })}
               </div>
-            )}
-          </div>
-        );
-      })}
+            </AccordionPanel>
+          </AccordionItem>
+        ))}
+      </Accordion>
     </div>
   );
 }

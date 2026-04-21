@@ -31,6 +31,7 @@ export default async function AdminLayout({
     <TooltipProvider>
       <Toaster richColors closeButton position="top-right" />
       <SidebarProvider
+        className="admin-dashboard-tokens"
         defaultOpen={defaultOpen}
         resizableWidth
         sidebarWidthStorageKey="admin_sidebar_width_px"

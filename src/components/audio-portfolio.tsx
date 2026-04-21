@@ -38,7 +38,7 @@ export function AudioPortfolio() {
       
       <div className="relative z-10 max-w-6xl mx-auto">
         <div className="text-center mb-16">
-          <h2 className="text-3xl md:text-4xl font-bold text-sand mb-6 tracking-wide font-acumin">
+          <h2 className="text-3xl md:text-4xl font-bold text-sand mb-6 font-acumin">
             STUDIO PORTFOLIO
           </h2>
           <p className="text-lg text-ivory/80 font-titillium max-w-3xl mx-auto leading-relaxed">
