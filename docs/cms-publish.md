@@ -18,10 +18,13 @@
 |---------|-------|--------------|
 | `settings` | `{ metadata?: { title, description } }` | `/admin/settings` |
 | `pricing`  | `{ flags: { priceTabEnabled } }`         | `/admin/pricing` |
+| `about`    | `{ heroTitle, heroSubtitle?, body: Block[], highlights?, seoTitle?, seoDescription? }` (block = `{ type: 'paragraph' \| 'heading', text: string }`) | `/admin/about` |
 
 Each section has its own `cmsSections` row and therefore its own independent draft / publish lifecycle. Publishing one section never publishes another (except via `api.admin.publish.publishSite`, which explicitly iterates all `cmsSections` rows with pending drafts **and** the studio gallery when `galleryPhotoMeta.hasDraftChanges` is true).
 
 > Legacy rows whose `settings.publishedSnapshot` still contains `flags` remain schema-valid thanks to an optional `flags` field on `settingsContentValidator`. Public / preview pricing queries fall back to that legacy location when the `pricing` row hasn’t been written yet, so no migration is required before deploy.
+
+> The `about` body uses a **block array of plain text** (`{type, text}`) rather than a raw markdown string so public renderers never have to parse or sanitize HTML — each block's `text` is rendered as a React text node inside a fixed element chosen by `type`. If raw markdown (with HTML) is introduced later, run it through `rehype-sanitize` in `publishedAboutFromRow` (or the public route loader) before handing off to a renderer.
 
 ## Admin UI (Settings, Pricing, Gear)
 

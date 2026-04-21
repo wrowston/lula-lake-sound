@@ -1,7 +1,10 @@
 import type { Doc } from "./_generated/dataModel";
 import {
+  ABOUT_DEFAULTS,
   PRICING_DEFAULTS,
   SETTINGS_DEFAULTS,
+  type AboutBlock,
+  type AboutSnapshot,
   type PricingPackage,
   type PricingSnapshot,
   type SettingsSnapshot,
@@ -140,6 +143,67 @@ export function publishedPricingFromRows(
   return {
     flags: flags ?? PRICING_DEFAULTS.flags,
     packages,
+  };
+}
+
+function isValidAboutBlock(value: unknown): value is AboutBlock {
+  if (typeof value !== "object" || value === null) return false;
+  const v = value as Record<string, unknown>;
+  if (v.type !== "paragraph" && v.type !== "heading") return false;
+  if (typeof v.text !== "string") return false;
+  return true;
+}
+
+/**
+ * Returns safe published About page copy. Tolerant of partially-invalid
+ * stored data (e.g. a stray non-string highlight won't blow up the public
+ * route) and falls back to `ABOUT_DEFAULTS` when there's nothing usable.
+ *
+ * Strings are passed through **as text** — consumers must not feed them to
+ * `dangerouslySetInnerHTML`. If a future field stores markdown that allows
+ * raw HTML, sanitize here (e.g. rehype-sanitize) before returning.
+ */
+export function publishedAboutFromRow(
+  row: Doc<"cmsSections"> | null,
+): AboutSnapshot {
+  const snap = row?.publishedSnapshot as unknown;
+  if (!snap || typeof snap !== "object") {
+    return ABOUT_DEFAULTS;
+  }
+
+  const s = snap as {
+    heroTitle?: unknown;
+    heroSubtitle?: unknown;
+    body?: unknown;
+    highlights?: unknown;
+    seoTitle?: unknown;
+    seoDescription?: unknown;
+  };
+
+  const heroTitle =
+    typeof s.heroTitle === "string" ? s.heroTitle : ABOUT_DEFAULTS.heroTitle;
+  const heroSubtitle =
+    typeof s.heroSubtitle === "string" ? s.heroSubtitle : undefined;
+
+  const body: AboutBlock[] = Array.isArray(s.body)
+    ? s.body.filter(isValidAboutBlock)
+    : [];
+
+  const highlights: string[] | undefined = Array.isArray(s.highlights)
+    ? s.highlights.filter((h): h is string => typeof h === "string")
+    : undefined;
+
+  const seoTitle = typeof s.seoTitle === "string" ? s.seoTitle : undefined;
+  const seoDescription =
+    typeof s.seoDescription === "string" ? s.seoDescription : undefined;
+
+  return {
+    heroTitle,
+    ...(heroSubtitle !== undefined ? { heroSubtitle } : {}),
+    body: body.length > 0 ? body : ABOUT_DEFAULTS.body,
+    ...(highlights !== undefined ? { highlights } : {}),
+    ...(seoTitle !== undefined ? { seoTitle } : {}),
+    ...(seoDescription !== undefined ? { seoDescription } : {}),
   };
 }
 
