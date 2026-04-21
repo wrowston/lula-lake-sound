@@ -109,7 +109,7 @@ export function Header({ scrollY, showPricing = false }: HeaderProps) {
               ) : (
                 <a
                   key={item.id}
-                  href={`#${item.id}`}
+                  href={`/#${item.id}`}
                   className="label-text text-ivory/60 hover:text-sand transition-colors duration-300 relative group"
                 >
                   {item.label}
@@ -162,7 +162,7 @@ export function Header({ scrollY, showPricing = false }: HeaderProps) {
                 ) : (
                   <a
                     key={item.id}
-                    href={`#${item.id}`}
+                    href={`/#${item.id}`}
                     onClick={handleNavigation}
                     className="headline-secondary text-ivory/80 hover:text-sand transition-colors duration-300 text-xl"
                   >

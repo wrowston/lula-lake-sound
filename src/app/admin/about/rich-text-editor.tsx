@@ -24,9 +24,6 @@
  */
 
 import { useEditor, EditorContent, type Editor } from "@tiptap/react";
-import StarterKit from "@tiptap/starter-kit";
-import Link from "@tiptap/extension-link";
-import Placeholder from "@tiptap/extension-placeholder";
 import { useMemo, useCallback } from "react";
 import {
   Bold,
@@ -45,28 +42,7 @@ import {
   Redo2,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
-
-/** Tiptap extensions for the About body editor. */
-function makeExtensions(placeholder?: string) {
-  return [
-    StarterKit.configure({
-      heading: { levels: [1, 2, 3] },
-    }),
-    Link.configure({
-      openOnClick: false,
-      autolink: true,
-      protocols: ["http", "https", "mailto", "tel"],
-      defaultProtocol: "https",
-      HTMLAttributes: {
-        rel: "noopener noreferrer",
-        target: "_blank",
-      },
-    }),
-    ...(placeholder
-      ? [Placeholder.configure({ placeholder, emptyEditorClass: "is-editor-empty" })]
-      : []),
-  ];
-}
+import { makeAboutTiptapExtensions } from "@/lib/about-tiptap-extensions";
 
 interface RichTextEditorProps {
   /** Initial HTML. Editor is uncontrolled internally; parent reads updates via `onChange`. */
@@ -87,7 +63,10 @@ export function RichTextEditor({
   onChange,
   resetToken,
 }: RichTextEditorProps) {
-  const extensions = useMemo(() => makeExtensions(placeholder), [placeholder]);
+  const extensions = useMemo(
+    () => makeAboutTiptapExtensions(placeholder),
+    [placeholder],
+  );
 
   const editor = useEditor(
     {

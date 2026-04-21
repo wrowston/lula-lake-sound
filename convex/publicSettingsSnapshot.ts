@@ -262,16 +262,15 @@ export async function materializePublicAbout(
   if (!teamMembers || teamMembers.length === 0) {
     return rest as PublicAboutSnapshot;
   }
-  const withImages = teamMembers.filter(
-    (m): m is AboutTeamMember & { storageId: Id<"_storage"> } =>
-      m.storageId !== undefined,
-  );
   const publicTeam: PublicAboutTeamMember[] = await Promise.all(
-    withImages.map(async (m) => ({
+    teamMembers.map(async (m) => ({
       id: m.id,
       name: m.name,
       title: m.title,
-      imageUrl: await ctx.storage.getUrl(m.storageId),
+      imageUrl:
+        m.storageId !== undefined
+          ? await ctx.storage.getUrl(m.storageId)
+          : null,
     })),
   );
   return { ...rest, teamMembers: publicTeam };

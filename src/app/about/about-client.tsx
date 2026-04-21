@@ -7,6 +7,7 @@ import { useEffect, useState } from "react";
 import { api } from "../../../convex/_generated/api";
 import type { PublicAboutSnapshot } from "../../../convex/cmsShared";
 import { Header } from "@/components/header";
+import { AboutBodyContent } from "./about-body-content";
 
 type PreloadedAbout = Preloaded<typeof api.public.getPublishedAbout>;
 type PreloadedPricing = Preloaded<typeof api.public.getPublishedPricingFlags>;
@@ -14,12 +15,7 @@ type PreloadedPricing = Preloaded<typeof api.public.getPublishedPricingFlags>;
 function AboutBody({ data }: { readonly data: PublicAboutSnapshot }) {
   const html = data.bodyHtml?.trim();
   if (html && html.length > 0) {
-    return (
-      <div
-        className="prose-editor max-w-none"
-        dangerouslySetInnerHTML={{ __html: html }}
-      />
-    );
+    return <AboutBodyContent key={html} html={html} />;
   }
 
   return (
