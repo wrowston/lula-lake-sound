@@ -1,5 +1,6 @@
 import type { Doc, Id } from "./_generated/dataModel";
 import type { MutationCtx, QueryCtx } from "./_generated/server";
+import { deleteStorageIfUnreferencedAcrossCms } from "./audioTracks";
 
 export const ALLOWED_GALLERY_IMAGE_TYPES = [
   "image/jpeg",
@@ -108,21 +109,7 @@ export async function deleteStorageIfUnreferenced(
   ctx: MutationCtx,
   storageId: Id<"_storage">,
 ): Promise<boolean> {
-  const refs = await ctx.db
-    .query("galleryPhotos")
-    .withIndex("by_storageId", (q) => q.eq("storageId", storageId))
-    .take(1);
-  if (refs.length > 0) {
-    return false;
-  }
-
-  const storage = await getStorageMetadata(ctx, storageId);
-  if (!storage) {
-    return false;
-  }
-
-  await ctx.storage.delete(storageId);
-  return true;
+  return deleteStorageIfUnreferencedAcrossCms(ctx, storageId);
 }
 
 export async function replaceGalleryScope(

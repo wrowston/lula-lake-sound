@@ -743,10 +743,12 @@ function AudioEditorForm() {
   const handleDiscardConfirm = useCallback(async (): Promise<boolean> => {
     setInlineError(null);
     if (hasDraftOnServer) {
+      setBusy("Discarding…");
       const outcome = await runAdminEffect(
         convexMutationEffect(() => discardDraftAudioTracks({})),
         { onErrorMessage: setInlineError },
       );
+      setBusy(null);
       if (outcome === undefined) {
         return false;
       }
