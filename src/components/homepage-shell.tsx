@@ -116,6 +116,7 @@ export function HomepageShell({
         showPricing={showPricing}
         showAbout={showAbout}
         aboutHref={aboutHref}
+        showRecordings
       />
       <Hero logoScale={logoScale} />
 

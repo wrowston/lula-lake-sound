@@ -211,6 +211,7 @@ export function AboutLayout({ data, showPricing, banner }: AboutLayoutProps) {
         showPricing={showPricing}
         showAbout
         aboutHref={aboutHref}
+        showRecordings
       />
 
       <main>

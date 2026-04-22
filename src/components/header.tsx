@@ -22,6 +22,12 @@ interface HeaderProps {
    * `/about` 404 before publish.
    */
   readonly aboutHref?: string;
+  /**
+   * INF-48 — shows the primary-nav "Recordings" link (desktop + mobile) when
+   * the public `/recordings` page is available. Defaults to `false` so
+   * callers that haven't opted in yet keep the link out of the nav.
+   */
+  readonly showRecordings?: boolean;
 }
 
 /**
@@ -37,6 +43,7 @@ export function Header({
   showPricing = false,
   showAbout = false,
   aboutHref = "/about",
+  showRecordings = false,
 }: HeaderProps) {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
@@ -68,6 +75,16 @@ export function Header({
       : []),
     { kind: "hash", id: "the-space", label: "The Studio" },
     { kind: "hash", id: "equipment-specs", label: "Gear" },
+    ...(showRecordings
+      ? [
+          {
+            kind: "route" as const,
+            key: "recordings",
+            href: "/recordings",
+            label: "Recordings",
+          },
+        ]
+      : []),
     ...(showPricing
       ? [{ kind: "hash" as const, id: "services-pricing", label: "Pricing" }]
       : []),
