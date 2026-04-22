@@ -12,8 +12,10 @@ import { FAQ } from "@/components/faq";
 import { Header } from "@/components/header";
 import { Hero } from "@/components/hero";
 import { SiteFooter } from "@/components/site-footer";
+import { AudioPortfolio } from "@/components/audio-portfolio";
 import { TheSpace, type GalleryPhoto } from "@/components/the-space";
 import type { PricingFlags } from "@/lib/site-settings";
+import type { PublishedAudioTrack } from "@/components/audio-portfolio";
 
 function calculateLogoScale(scrollY: number): number {
   return Math.max(0.7, 1 - scrollY * 0.0006);
@@ -29,6 +31,8 @@ interface HomepageShellProps {
   readonly gear: GearPayload | null | undefined;
   /** Published (or preview) gallery payload. */
   readonly photos: GalleryPhoto[] | null | undefined;
+  /** Published (or preview) audio tracks with playable URLs. */
+  readonly audioTracks: PublishedAudioTrack[] | null | undefined;
   /**
    * INF-46 About-page visibility flag. `null` / `undefined` keeps the nav
    * link hidden — the About page is opt-in via the CMS.
@@ -44,6 +48,7 @@ export function HomepageShell({
   pricingFlags,
   gear,
   photos,
+  audioTracks,
   aboutVisibility,
   banner,
 }: HomepageShellProps) {
@@ -121,6 +126,7 @@ export function HomepageShell({
 
       <main className="relative z-10">
         <TheSpace photos={photos} />
+        <AudioPortfolio tracks={audioTracks} />
         <EquipmentSpecs gear={gear} />
         <MarketingPricingSection pricingFlags={pricingFlags} />
         <AmenitiesNearby />

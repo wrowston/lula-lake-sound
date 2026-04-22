@@ -8,6 +8,7 @@ import {
 import { loadGearDocs, mapSortedGearTree } from "./gearTree";
 import type { Doc } from "./_generated/dataModel";
 import { loadGalleryPhotos, materializeGalleryPhotos } from "./galleryPhotos";
+import { loadAudioTracks, materializeAudioTracks } from "./audioTracks";
 
 /**
  * **Public (anonymous) site reads** — published snapshot only.
@@ -132,5 +133,17 @@ export const getPublishedGalleryPhotos = query({
     const rows = await loadGalleryPhotos(ctx, "published");
     const photos = await materializeGalleryPhotos(ctx, rows);
     return photos.filter((photo) => photo.url !== null);
+  },
+});
+
+/**
+ * Published audio portfolio tracks only. Anonymous; reads `scope === "published"`.
+ */
+export const getPublishedAudioTracks = query({
+  args: {},
+  handler: async (ctx) => {
+    const rows = await loadAudioTracks(ctx, "published");
+    const tracks = await materializeAudioTracks(ctx, rows);
+    return tracks.filter((track) => track.url !== null);
   },
 });

@@ -112,4 +112,30 @@ export default defineSchema({
     .index("by_scope_and_sort", ["scope", "sortOrder"])
     .index("by_scope_and_stableId", ["scope", "stableId"])
     .index("by_storageId", ["storageId"]),
+
+  /**
+   * Audio portfolio samples (INF-96): draft/published rows mirror gallery photos.
+   */
+  audioTrackMeta: defineTable({
+    singletonKey: v.literal("default"),
+    hasDraftChanges: v.boolean(),
+    publishedAt: v.union(v.number(), v.null()),
+    publishedBy: v.optional(v.string()),
+    updatedAt: v.number(),
+    updatedBy: v.optional(v.string()),
+  }).index("by_singleton", ["singletonKey"]),
+
+  audioTracks: defineTable({
+    scope: gearScopeValidator,
+    stableId: v.string(),
+    storageId: v.id("_storage"),
+    title: v.string(),
+    sortOrder: v.number(),
+    contentType: v.string(),
+    sizeBytes: v.number(),
+    originalFileName: v.optional(v.string()),
+  })
+    .index("by_scope_and_sort", ["scope", "sortOrder"])
+    .index("by_scope_and_stableId", ["scope", "stableId"])
+    .index("by_storageId", ["storageId"]),
 });

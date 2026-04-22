@@ -93,6 +93,11 @@ export function prewarmAdminNavigation(
       makeRouteQuerySpec(api.cms.getSection, { section: "pricing" }),
     ]);
   }
+  if (href === "/admin/audio") {
+    prewarmSpecs(convex, [
+      makeRouteQuerySpec(api.admin.audio.listDraftAudioTracks, {}),
+    ]);
+  }
 }
 
 type PrewarmFn = () => void | Promise<void>;
