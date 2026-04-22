@@ -30,7 +30,14 @@ import {
   useMutation,
 } from "convex/react";
 import { useUser } from "@clerk/nextjs";
-import { useCallback, useMemo, useRef, useState } from "react";
+import {
+  useCallback,
+  useMemo,
+  useRef,
+  useState,
+  memo,
+  startTransition,
+} from "react";
 import { Effect } from "effect";
 import { toast } from "sonner";
 import { ArrowDown, ArrowUp, Check, Plus, Trash2, X } from "lucide-react";
@@ -45,7 +52,7 @@ import { convexMutationEffect, type CmsAppError } from "@/lib/effect-errors";
 import { runAdminEffect } from "@/lib/admin-run-effect";
 import { CmsPublishToolbar } from "@/components/admin/cms-publish-toolbar";
 import { useAutosaveDraft } from "@/lib/use-autosave-draft";
-import { RichTextEditor } from "./rich-text-editor";
+import { RichTextEditor, type RichTextEditorHandle } from "./rich-text-editor";
 
 type AboutBlock = { type: "paragraph" | "heading"; text: string };
 
@@ -82,6 +89,12 @@ type AboutContent = {
 
 /** Keep in sync with `MAX_ABOUT_TEAM_MEMBERS` in `convex/aboutTeamStorage.ts`. */
 const MAX_TEAM_MEMBERS = 20;
+
+/**
+ * Debounce HTML for the publish-issues panel so typing the body doesn't
+ * force full-form validation work on every pause.
+ */
+const ISSUES_BODY_HTML_DEBOUNCE_MS = 1500;
 
 /** SEO character guidance — typical search-engine display limits. */
 const SEO_TITLE_RECOMMENDED = 60;
@@ -294,6 +307,55 @@ function collectAboutIssues(
   return issues;
 }
 
+const AboutIssuesPanel = memo(function AboutIssuesPanel({
+  base,
+  debouncedBodyHtml,
+  bodyDirty,
+}: {
+  readonly base: AboutContent;
+  readonly debouncedBodyHtml: string | null;
+  readonly bodyDirty: boolean;
+}) {
+  const issuesSource = useMemo((): AboutContent => {
+    if (!bodyDirty) return base;
+    return {
+      ...base,
+      bodyHtml: debouncedBodyHtml ?? base.bodyHtml ?? "",
+      body: [],
+    };
+  }, [base, bodyDirty, debouncedBodyHtml]);
+
+  const issues = useMemo(
+    () => collectAboutIssues(issuesSource),
+    [issuesSource],
+  );
+
+  if (issues.length === 0) return null;
+
+  return (
+    <div
+      role="status"
+      className="rounded-md border border-amber-500/40 bg-amber-500/5 p-3 text-sm"
+    >
+      <p className="mb-1 font-medium text-amber-700 dark:text-amber-300">
+        {issues.length === 1
+          ? "1 issue blocks publish"
+          : `${issues.length} issues block publish`}
+      </p>
+      <ul className="list-disc space-y-0.5 pl-5 text-amber-800/90 dark:text-amber-200/90">
+        {issues.slice(0, 6).map((issue, i) => (
+          <li key={`${issue.path}-${i}`}>{issue.message}</li>
+        ))}
+        {issues.length > 6 ? (
+          <li className="text-amber-900/70 dark:text-amber-100/70">
+            …and {issues.length - 6} more.
+          </li>
+        ) : null}
+      </ul>
+    </div>
+  );
+});
+
 export function AboutEditor() {
   return (
     <>
@@ -325,126 +387,147 @@ function AboutForm() {
   const [localDraft, setLocalDraft] = useState<AboutContent | null>(null);
   const [busy, setBusy] = useState<string | null>(null);
   const [inlineError, setInlineError] = useState<string | null>(null);
-  const [editorResetToken, setEditorResetToken] = useState(0);
+  /** Body lives in Tiptap; this flag drives autosave + merged validation. */
+  const [bodyDirty, setBodyDirty] = useState(false);
+  /** Debounced HTML for publish-issue panel (avoids parent re-render per key). */
+  const [debouncedBodyHtml, setDebouncedBodyHtml] = useState<string | null>(
+    null,
+  );
+  const bodyRef = useRef<RichTextEditorHandle>(null);
+  const issuesBodyHtmlDebounceRef = useRef<ReturnType<
+    typeof setTimeout
+  > | null>(null);
 
-  // Snapshot of the initial HTML the Tiptap editor was mounted with for the
-  // current `editorResetToken`. Tiptap owns its internal state and would
-  // otherwise fight controlled `content` prop changes on every keystroke.
-  const initialHtmlRef = useRef<string | null>(null);
-
-  const source: AboutContent | undefined = useMemo(() => {
-    if (localDraft) return localDraft;
+  const serverContent: AboutContent | undefined = useMemo(() => {
     if (!section) return undefined;
     return toAboutContent(section.draftSnapshot ?? section.publishedSnapshot);
-  }, [localDraft, section]);
+  }, [section]);
 
-  // Lock in the `initialHtml` for the current editor instance the first time
-  // we have a source. Re-captured whenever `editorResetToken` changes, which
-  // is exactly when we want to remount (discard / first load).
-  const initialHtml = useMemo(() => {
-    if (!source) return "";
-    if (initialHtmlRef.current !== null) return initialHtmlRef.current;
-    const html = source.bodyHtml ?? "";
-    initialHtmlRef.current = html;
-    return html;
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [editorResetToken, source !== undefined]);
+  const base: AboutContent | undefined = localDraft ?? serverContent;
 
-  const mutate = useCallback((next: AboutContent) => {
-    setInlineError(null);
-    setLocalDraft(next);
-  }, []);
+  const initialHtml = base?.bodyHtml ?? "";
 
   const setPublished = useCallback(
     (value: boolean) => {
-      if (!source) return;
-      mutate({ ...source, published: value });
+      setInlineError(null);
+      setLocalDraft((prev) => {
+        const current = prev ?? serverContent;
+        if (!current) return prev;
+        return { ...current, published: value };
+      });
     },
-    [source, mutate],
+    [serverContent],
   );
 
   const setHeroImageStorageId = useCallback(
     (value: Id<"_storage"> | undefined) => {
-      if (!source) return;
-      mutate({ ...source, heroImageStorageId: value });
+      setInlineError(null);
+      setLocalDraft((prev) => {
+        const current = prev ?? serverContent;
+        if (!current) return prev;
+        return { ...current, heroImageStorageId: value };
+      });
     },
-    [source, mutate],
+    [serverContent],
   );
 
   const setHeroTitle = useCallback(
     (value: string) => {
-      if (!source) return;
-      mutate({ ...source, heroTitle: value });
+      setInlineError(null);
+      setLocalDraft((prev) => {
+        const current = prev ?? serverContent;
+        if (!current) return prev;
+        return { ...current, heroTitle: value };
+      });
     },
-    [source, mutate],
+    [serverContent],
   );
 
   const setPullQuote = useCallback(
     (value: string) => {
-      if (!source) return;
-      mutate({ ...source, pullQuote: trimToUndefined(value) });
+      setInlineError(null);
+      setLocalDraft((prev) => {
+        const current = prev ?? serverContent;
+        if (!current) return prev;
+        return { ...current, pullQuote: trimToUndefined(value) };
+      });
     },
-    [source, mutate],
+    [serverContent],
   );
 
   const setHeroSubtitle = useCallback(
     (value: string) => {
-      if (!source) return;
-      mutate({ ...source, heroSubtitle: trimToUndefined(value) });
+      setInlineError(null);
+      setLocalDraft((prev) => {
+        const current = prev ?? serverContent;
+        if (!current) return prev;
+        return { ...current, heroSubtitle: trimToUndefined(value) };
+      });
     },
-    [source, mutate],
+    [serverContent],
   );
 
   const setSeoTitle = useCallback(
     (value: string) => {
-      if (!source) return;
-      mutate({ ...source, seoTitle: trimToUndefined(value) });
+      setInlineError(null);
+      setLocalDraft((prev) => {
+        const current = prev ?? serverContent;
+        if (!current) return prev;
+        return { ...current, seoTitle: trimToUndefined(value) };
+      });
     },
-    [source, mutate],
+    [serverContent],
   );
 
   const setSeoDescription = useCallback(
     (value: string) => {
-      if (!source) return;
-      mutate({ ...source, seoDescription: trimToUndefined(value) });
-    },
-    [source, mutate],
-  );
-
-  const setBodyHtml = useCallback(
-    (html: string) => {
-      if (!source) return;
-      mutate({
-        ...source,
-        bodyHtml: html,
-        // Drop legacy blocks — once the owner edits, the rich HTML is the
-        // authoritative body and we don't want divergent fields.
-        body: [],
+      setInlineError(null);
+      setLocalDraft((prev) => {
+        const current = prev ?? serverContent;
+        if (!current) return prev;
+        return { ...current, seoDescription: trimToUndefined(value) };
       });
     },
-    [source, mutate],
+    [serverContent],
   );
 
   const setHighlights = useCallback(
     (next: string[]) => {
-      if (!source) return;
-      mutate({
-        ...source,
-        highlights: next.length > 0 ? next : undefined,
+      setInlineError(null);
+      setLocalDraft((prev) => {
+        const current = prev ?? serverContent;
+        if (!current) return prev;
+        return {
+          ...current,
+          highlights: next.length > 0 ? next : undefined,
+        };
       });
     },
-    [source, mutate],
+    [serverContent],
   );
 
   const setTeamMembers = useCallback(
     (next: AboutTeamMemberRow[]) => {
-      if (!source) return;
-      mutate({ ...source, teamMembers: next });
+      setInlineError(null);
+      setLocalDraft((prev) => {
+        const current = prev ?? serverContent;
+        if (!current) return prev;
+        return { ...current, teamMembers: next };
+      });
     },
-    [source, mutate],
+    [serverContent],
   );
 
   const [uploadBusy, setUploadBusy] = useState<string | null>(null);
+
+  const clearLocalBodyUiState = useCallback(() => {
+    setBodyDirty(false);
+    setDebouncedBodyHtml(null);
+    if (issuesBodyHtmlDebounceRef.current !== null) {
+      clearTimeout(issuesBodyHtmlDebounceRef.current);
+      issuesBodyHtmlDebounceRef.current = null;
+    }
+  }, []);
 
   const runAction = useCallback(
     async <A,>(label: string, program: Effect.Effect<A, CmsAppError>) => {
@@ -455,51 +538,80 @@ function AboutForm() {
       });
       if (outcome !== undefined) {
         setLocalDraft(null);
+        clearLocalBodyUiState();
       }
       setBusy(null);
       return outcome;
     },
-    [],
+    [clearLocalBodyUiState],
   );
 
   const hasDraftOnServer = section?.hasDraftChanges ?? false;
-  const hasLocalEdits = localDraft !== null;
+  const hasLocalEdits = localDraft !== null || bodyDirty;
 
-  const { status: autosaveStatus, flush: flushAutosave } = useAutosaveDraft({
-    dirty: hasLocalEdits && source !== undefined,
-    debounceResetKey: localDraft,
-    pauseWhen: busy !== null,
-    saveEffect: () =>
-      convexMutationEffect(() =>
-        saveDraft({
-          section: "about",
-          content: {
-            published: source?.published ?? false,
-            ...(source?.heroImageStorageId !== undefined
-              ? { heroImageStorageId: source.heroImageStorageId }
-              : {}),
-            heroTitle: source?.heroTitle ?? "",
-            heroSubtitle: source?.heroSubtitle,
-            bodyHtml: source?.bodyHtml,
-            body: source?.body ?? [],
-            pullQuote: source?.pullQuote,
-            highlights: source?.highlights,
-            seoTitle: source?.seoTitle,
-            seoDescription: source?.seoDescription,
-            teamMembers: (source?.teamMembers ?? []).map((m) => ({
-              id: m.id,
-              name: m.name,
-              title: m.title,
-              ...(m.storageId !== undefined ? { storageId: m.storageId } : {}),
-            })),
-          },
-        }),
-      ),
-    onSaved: () => setLocalDraft(null),
-  });
+  const { status: autosaveStatus, flush: flushAutosave, kick: kickAutosave } =
+    useAutosaveDraft({
+      dirty: hasLocalEdits && base !== undefined,
+      debounceResetKey: localDraft,
+      pauseWhen: busy !== null,
+      saveEffect: () => {
+        const contentBase = (localDraft ?? serverContent)!;
+        const bodyHtml = bodyDirty
+          ? (bodyRef.current?.getHTML() ?? "")
+          : (contentBase.bodyHtml ?? "");
+        const bodyBlocks = bodyDirty ? [] : (contentBase.body ?? []);
+        return convexMutationEffect(() =>
+          saveDraft({
+            section: "about",
+            content: {
+              published: contentBase.published,
+              ...(contentBase.heroImageStorageId !== undefined
+                ? { heroImageStorageId: contentBase.heroImageStorageId }
+                : {}),
+              heroTitle: contentBase.heroTitle,
+              heroSubtitle: contentBase.heroSubtitle,
+              bodyHtml,
+              body: bodyBlocks,
+              pullQuote: contentBase.pullQuote,
+              highlights: contentBase.highlights,
+              seoTitle: contentBase.seoTitle,
+              seoDescription: contentBase.seoDescription,
+              teamMembers: (contentBase.teamMembers ?? []).map((m) => ({
+                id: m.id,
+                name: m.name,
+                title: m.title,
+                ...(m.storageId !== undefined ? { storageId: m.storageId } : {}),
+              })),
+            },
+          }),
+        );
+      },
+      onSaved: () => {
+        setLocalDraft(null);
+        clearLocalBodyUiState();
+      },
+    });
+
+  const handleBodyDirty = useCallback(() => {
+    setBodyDirty(true);
+    kickAutosave();
+    if (issuesBodyHtmlDebounceRef.current !== null) {
+      clearTimeout(issuesBodyHtmlDebounceRef.current);
+    }
+    issuesBodyHtmlDebounceRef.current = setTimeout(() => {
+      issuesBodyHtmlDebounceRef.current = null;
+      startTransition(() => {
+        setDebouncedBodyHtml(bodyRef.current?.getHTML() ?? "");
+      });
+    }, ISSUES_BODY_HTML_DEBOUNCE_MS);
+  }, [kickAutosave]);
 
   const handleDiscardConfirm = useCallback(async (): Promise<boolean> => {
     setInlineError(null);
+    const publishedHtml =
+      section !== undefined
+        ? (toAboutContent(section.publishedSnapshot).bodyHtml ?? "")
+        : "";
     if (hasDraftOnServer) {
       setBusy("Discarding…");
       const outcome = await runAdminEffect(
@@ -512,21 +624,15 @@ function AboutForm() {
       }
     }
     setLocalDraft(null);
-    // Force Tiptap to remount with the now-canonical published HTML.
-    initialHtmlRef.current = null;
-    setEditorResetToken((n) => n + 1);
+    clearLocalBodyUiState();
+    bodyRef.current?.reset(publishedHtml);
     toast.success(
       hasDraftOnServer
         ? "Draft discarded. The editor now matches the published site."
         : "Unsaved changes discarded.",
     );
     return true;
-  }, [discard, hasDraftOnServer]);
-
-  const issues = useMemo(
-    () => (source ? collectAboutIssues(source) : []),
-    [source],
-  );
+  }, [clearLocalBodyUiState, discard, hasDraftOnServer, section]);
 
   if (section === undefined) {
     return (
@@ -534,7 +640,7 @@ function AboutForm() {
     );
   }
 
-  if (!source) {
+  if (!base) {
     return (
       <p className="body-text text-muted-foreground">
         No About content available.
@@ -545,8 +651,8 @@ function AboutForm() {
   const publishedByLabel =
     section.publishedBy && user?.id === section.publishedBy ? "You" : undefined;
 
-  const seoTitleValue = source.seoTitle ?? "";
-  const seoDescriptionValue = source.seoDescription ?? "";
+  const seoTitleValue = base.seoTitle ?? "";
+  const seoDescriptionValue = base.seoDescription ?? "";
 
   return (
     <div className="space-y-8 pb-24">
@@ -558,7 +664,7 @@ function AboutForm() {
             <div className="flex items-start gap-3">
               <Switch
                 id="about-published"
-                checked={source.published}
+                checked={base.published}
                 onCheckedChange={setPublished}
               />
               <div className="space-y-1">
@@ -584,10 +690,10 @@ function AboutForm() {
               </span>
               <Input
                 type="text"
-                value={source.heroTitle}
+                value={base.heroTitle}
                 onChange={(e) => setHeroTitle(e.target.value)}
                 placeholder="About Lula Lake Sound"
-                aria-invalid={source.heroTitle.trim().length === 0}
+                aria-invalid={base.heroTitle.trim().length === 0}
                 className="text-foreground placeholder:text-muted-foreground"
               />
             </label>
@@ -597,7 +703,7 @@ function AboutForm() {
               </span>
               <Textarea
                 rows={2}
-                value={source.heroSubtitle ?? ""}
+                value={base.heroSubtitle ?? ""}
                 onChange={(e) => setHeroSubtitle(e.target.value)}
                 placeholder="A creative space for music production and recording."
                 className="text-foreground placeholder:text-muted-foreground"
@@ -623,7 +729,7 @@ function AboutForm() {
               gallery.
             </p>
             <HeroImagePicker
-              selectedStorageId={source.heroImageStorageId}
+              selectedStorageId={base.heroImageStorageId}
               onChange={setHeroImageStorageId}
               generateUploadUrl={generateUploadUrl}
               uploadBusyKey={uploadBusy}
@@ -642,11 +748,10 @@ function AboutForm() {
               <code className="rounded bg-muted px-1">- </code>).
             </p>
             <RichTextEditor
-              key={editorResetToken}
+              ref={bodyRef}
               initialHtml={initialHtml}
               placeholder="Tell the studio's story…"
-              onChange={setBodyHtml}
-              resetToken={editorResetToken}
+              onDirty={handleBodyDirty}
             />
           </fieldset>
 
@@ -655,12 +760,12 @@ function AboutForm() {
               Pull quote
             </legend>
             <p className="body-text-small text-muted-foreground">
-              Editorial callout rendered below the owner / studio-designer
-              headshots. Leave blank to hide the quote block.
+              Editorial callout rendered below the text body.
+              Leave blank to hide the quote block.
             </p>
             <Textarea
               rows={2}
-              value={source.pullQuote ?? ""}
+              value={base.pullQuote ?? ""}
               onChange={(e) => setPullQuote(e.target.value)}
               placeholder="The mountain doesn't rush. Neither should the music."
               className="text-foreground placeholder:text-muted-foreground"
@@ -674,7 +779,7 @@ function AboutForm() {
               Convex file storage (same limits as the gallery).
             </p>
             <TeamMembersEditor
-              members={source.teamMembers}
+              members={base.teamMembers}
               onChange={setTeamMembers}
               generateUploadUrl={generateUploadUrl}
               uploadBusyKey={uploadBusy}
@@ -690,7 +795,7 @@ function AboutForm() {
               Short bulleted callouts — e.g. key studio facts.
             </p>
             <HighlightsEditor
-              highlights={source.highlights ?? []}
+              highlights={base.highlights ?? []}
               onChange={setHighlights}
             />
           </fieldset>
@@ -739,28 +844,11 @@ function AboutForm() {
             </label>
           </fieldset>
 
-          {issues.length > 0 ? (
-            <div
-              role="status"
-              className="rounded-md border border-amber-500/40 bg-amber-500/5 p-3 text-sm"
-            >
-              <p className="mb-1 font-medium text-amber-700 dark:text-amber-300">
-                {issues.length === 1
-                  ? "1 issue blocks publish"
-                  : `${issues.length} issues block publish`}
-              </p>
-              <ul className="list-disc space-y-0.5 pl-5 text-amber-800/90 dark:text-amber-200/90">
-                {issues.slice(0, 6).map((issue, i) => (
-                  <li key={`${issue.path}-${i}`}>{issue.message}</li>
-                ))}
-                {issues.length > 6 ? (
-                  <li className="text-amber-900/70 dark:text-amber-100/70">
-                    …and {issues.length - 6} more.
-                  </li>
-                ) : null}
-              </ul>
-            </div>
-          ) : null}
+          <AboutIssuesPanel
+            base={base}
+            debouncedBodyHtml={debouncedBodyHtml}
+            bodyDirty={bodyDirty}
+          />
       </div>
 
       <CmsPublishToolbar
@@ -775,7 +863,16 @@ function AboutForm() {
         autosaveStatus={autosaveStatus}
         previewHref="/preview/about"
         onPublish={() => {
-          if (issues.length > 0) {
+          const liveBody = bodyDirty
+            ? (bodyRef.current?.getHTML() ?? "")
+            : (base.bodyHtml ?? "");
+          const publishSnapshot: AboutContent = {
+            ...base,
+            bodyHtml: liveBody,
+            body: [],
+          };
+          const publishIssues = collectAboutIssues(publishSnapshot);
+          if (publishIssues.length > 0) {
             setInlineError("Fix the blocking issues above before publishing.");
             return;
           }
@@ -826,7 +923,7 @@ type GalleryPickerPhoto = NonNullable<
   ReturnType<typeof useQuery<typeof api.admin.photos.listDraftPhotos>>
 >["photos"][number] & { url: string };
 
-function HeroImagePicker({
+const HeroImagePicker = memo(function HeroImagePicker({
   selectedStorageId,
   onChange,
   generateUploadUrl,
@@ -1057,7 +1154,7 @@ function HeroImagePicker({
       ) : null}
     </div>
   );
-}
+});
 
 interface TeamMembersEditorProps {
   readonly members: AboutTeamMemberRow[];
@@ -1067,7 +1164,7 @@ interface TeamMembersEditorProps {
   readonly setUploadBusyKey: (key: string | null) => void;
 }
 
-function TeamMembersEditor({
+const TeamMembersEditor = memo(function TeamMembersEditor({
   members,
   onChange,
   generateUploadUrl,
@@ -1303,14 +1400,17 @@ function TeamMembersEditor({
       </Button>
     </div>
   );
-}
+});
 
 interface HighlightsEditorProps {
   readonly highlights: readonly string[];
   readonly onChange: (next: string[]) => void;
 }
 
-function HighlightsEditor({ highlights, onChange }: HighlightsEditorProps) {
+const HighlightsEditor = memo(function HighlightsEditor({
+  highlights,
+  onChange,
+}: HighlightsEditorProps) {
   const update = (idx: number, value: string) => {
     const next = [...highlights];
     next[idx] = value;
@@ -1363,7 +1463,7 @@ function HighlightsEditor({ highlights, onChange }: HighlightsEditorProps) {
       </Button>
     </div>
   );
-}
+});
 
 interface CharCounterProps {
   readonly value: string;
