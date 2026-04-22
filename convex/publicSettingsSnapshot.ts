@@ -191,16 +191,27 @@ export function publishedAboutFromRow(
   }
 
   const s = snap as {
+    published?: unknown;
+    heroImageStorageId?: unknown;
     heroTitle?: unknown;
     heroSubtitle?: unknown;
     bodyHtml?: unknown;
     body?: unknown;
+    pullQuote?: unknown;
     highlights?: unknown;
     seoTitle?: unknown;
     seoDescription?: unknown;
     teamMembers?: unknown;
   };
 
+  // INF-46: hidden by default. Missing flag on legacy rows is treated as
+  // `false` so shipping the feature doesn't unexpectedly expose the page;
+  // the owner must toggle it on explicitly from the CMS.
+  const published = typeof s.published === "boolean" ? s.published : false;
+  const heroImageStorageId =
+    typeof s.heroImageStorageId === "string" && s.heroImageStorageId.length > 0
+      ? (s.heroImageStorageId as Id<"_storage">)
+      : undefined;
   const heroTitle =
     typeof s.heroTitle === "string" ? s.heroTitle : ABOUT_DEFAULTS.heroTitle;
   const heroSubtitle =
@@ -214,6 +225,11 @@ export function publishedAboutFromRow(
   const body: AboutBlock[] = Array.isArray(s.body)
     ? s.body.filter(isValidAboutBlock)
     : [];
+
+  const pullQuote =
+    typeof s.pullQuote === "string" && s.pullQuote.trim().length > 0
+      ? s.pullQuote
+      : undefined;
 
   const highlights: string[] | undefined = Array.isArray(s.highlights)
     ? s.highlights.filter((h): h is string => typeof h === "string")
@@ -235,6 +251,8 @@ export function publishedAboutFromRow(
     : undefined;
 
   return {
+    published,
+    ...(heroImageStorageId !== undefined ? { heroImageStorageId } : {}),
     heroTitle,
     ...(heroSubtitle !== undefined ? { heroSubtitle } : {}),
     ...(bodyHtml !== undefined ? { bodyHtml } : {}),
@@ -242,6 +260,7 @@ export function publishedAboutFromRow(
     // `bodyHtml` is absent. Once all rows have `bodyHtml`, this can be
     // dropped alongside the schema field.
     body: body.length > 0 ? body : ABOUT_DEFAULTS.body,
+    ...(pullQuote !== undefined ? { pullQuote } : {}),
     ...(highlights !== undefined ? { highlights } : {}),
     ...(seoTitle !== undefined ? { seoTitle } : {}),
     ...(seoDescription !== undefined ? { seoDescription } : {}),
@@ -252,28 +271,42 @@ export function publishedAboutFromRow(
 }
 
 /**
- * Resolve team headshots to signed URLs for anonymous public callers (no storage ids).
+ * Resolve team headshots + the CMS-picked hero image to signed URLs for
+ * anonymous public callers (never leaks raw storage ids). `null` signals the
+ * blob is missing / deleted — the public renderer should fall back to a
+ * baked-in default image.
  */
 export async function materializePublicAbout(
   ctx: QueryCtx,
   snapshot: AboutSnapshot,
 ): Promise<PublicAboutSnapshot> {
-  const { teamMembers, ...rest } = snapshot;
-  if (!teamMembers || teamMembers.length === 0) {
-    return rest as PublicAboutSnapshot;
-  }
-  const publicTeam: PublicAboutTeamMember[] = await Promise.all(
-    teamMembers.map(async (m) => ({
-      id: m.id,
-      name: m.name,
-      title: m.title,
-      imageUrl:
-        m.storageId !== undefined
-          ? await ctx.storage.getUrl(m.storageId)
-          : null,
-    })),
-  );
-  return { ...rest, teamMembers: publicTeam };
+  const { teamMembers, heroImageStorageId, ...rest } = snapshot;
+
+  const heroImageUrl =
+    heroImageStorageId !== undefined
+      ? await ctx.storage.getUrl(heroImageStorageId)
+      : null;
+
+  const publicTeam: PublicAboutTeamMember[] | undefined =
+    teamMembers && teamMembers.length > 0
+      ? await Promise.all(
+          teamMembers.map(async (m) => ({
+            id: m.id,
+            name: m.name,
+            title: m.title,
+            imageUrl:
+              m.storageId !== undefined
+                ? await ctx.storage.getUrl(m.storageId)
+                : null,
+          })),
+        )
+      : undefined;
+
+  return {
+    ...rest,
+    ...(publicTeam !== undefined ? { teamMembers: publicTeam } : {}),
+    heroImageUrl,
+  };
 }
 
 /**

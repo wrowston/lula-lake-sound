@@ -30,21 +30,29 @@ import {
   useMutation,
 } from "convex/react";
 import { useUser } from "@clerk/nextjs";
-import { useCallback, useMemo, useRef, useState } from "react";
+import {
+  useCallback,
+  useMemo,
+  useRef,
+  useState,
+  memo,
+  startTransition,
+} from "react";
 import { Effect } from "effect";
 import { toast } from "sonner";
-import { ArrowDown, ArrowUp, Plus, X } from "lucide-react";
+import { ArrowDown, ArrowUp, Check, Plus, Trash2, X } from "lucide-react";
 import type { Id } from "../../../../convex/_generated/dataModel";
 import { api } from "../../../../convex/_generated/api";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Switch } from "@/components/ui/switch";
 import { Textarea } from "@/components/ui/textarea";
 import { cn } from "@/lib/utils";
 import { convexMutationEffect, type CmsAppError } from "@/lib/effect-errors";
 import { runAdminEffect } from "@/lib/admin-run-effect";
 import { CmsPublishToolbar } from "@/components/admin/cms-publish-toolbar";
 import { useAutosaveDraft } from "@/lib/use-autosave-draft";
-import { RichTextEditor } from "./rich-text-editor";
+import { RichTextEditor, type RichTextEditorHandle } from "./rich-text-editor";
 
 type AboutBlock = { type: "paragraph" | "heading"; text: string };
 
@@ -57,12 +65,22 @@ export type AboutTeamMemberRow = {
 };
 
 type AboutContent = {
+  /** INF-46 visibility flag — gates the public `/about` route and nav link. */
+  published: boolean;
+  /**
+   * INF-46 follow-up — storage id of the hero image. The owner picks from
+   * the existing studio gallery; we intentionally reuse already-uploaded
+   * blobs rather than adding a bespoke upload surface here.
+   */
+  heroImageStorageId?: Id<"_storage">;
   heroTitle: string;
   heroSubtitle?: string;
   /** Rich-text body (Tiptap HTML). Preferred over legacy `body` blocks. */
   bodyHtml?: string;
   /** Kept for back-compat with pre-INF-98 stored rows. Not edited anymore. */
   body: AboutBlock[];
+  /** INF-46 editorial pull quote rendered below the headshots. */
+  pullQuote?: string;
   highlights?: string[];
   seoTitle?: string;
   seoDescription?: string;
@@ -71,6 +89,12 @@ type AboutContent = {
 
 /** Keep in sync with `MAX_ABOUT_TEAM_MEMBERS` in `convex/aboutTeamStorage.ts`. */
 const MAX_TEAM_MEMBERS = 20;
+
+/**
+ * Debounce HTML for the publish-issues panel so typing the body doesn't
+ * force full-form validation work on every pause.
+ */
+const ISSUES_BODY_HTML_DEBOUNCE_MS = 1500;
 
 /** SEO character guidance — typical search-engine display limits. */
 const SEO_TITLE_RECOMMENDED = 60;
@@ -184,6 +208,14 @@ function toAboutContent(raw: unknown): AboutContent {
     : [];
 
   return {
+    // INF-46: default hidden so rows saved before this field existed stay
+    // off until the owner explicitly enables the page.
+    published: typeof r.published === "boolean" ? r.published : false,
+    heroImageStorageId:
+      typeof r.heroImageStorageId === "string" &&
+      r.heroImageStorageId.length > 0
+        ? (r.heroImageStorageId as Id<"_storage">)
+        : undefined,
     heroTitle: typeof r.heroTitle === "string" ? r.heroTitle : "",
     heroSubtitle:
       typeof r.heroSubtitle === "string" ? r.heroSubtitle : undefined,
@@ -191,6 +223,10 @@ function toAboutContent(raw: unknown): AboutContent {
     // even on rows that haven't been re-saved since INF-98.
     bodyHtml: storedHtml ?? (body.length > 0 ? blocksToHtml(body) : undefined),
     body,
+    pullQuote:
+      typeof r.pullQuote === "string" && r.pullQuote.trim().length > 0
+        ? r.pullQuote
+        : undefined,
     highlights: Array.isArray(r.highlights)
       ? (r.highlights as unknown[]).filter(
           (h): h is string => typeof h === "string",
@@ -271,6 +307,55 @@ function collectAboutIssues(
   return issues;
 }
 
+const AboutIssuesPanel = memo(function AboutIssuesPanel({
+  base,
+  debouncedBodyHtml,
+  bodyDirty,
+}: {
+  readonly base: AboutContent;
+  readonly debouncedBodyHtml: string | null;
+  readonly bodyDirty: boolean;
+}) {
+  const issuesSource = useMemo((): AboutContent => {
+    if (!bodyDirty) return base;
+    return {
+      ...base,
+      bodyHtml: debouncedBodyHtml ?? base.bodyHtml ?? "",
+      body: [],
+    };
+  }, [base, bodyDirty, debouncedBodyHtml]);
+
+  const issues = useMemo(
+    () => collectAboutIssues(issuesSource),
+    [issuesSource],
+  );
+
+  if (issues.length === 0) return null;
+
+  return (
+    <div
+      role="status"
+      className="rounded-md border border-amber-500/40 bg-amber-500/5 p-3 text-sm"
+    >
+      <p className="mb-1 font-medium text-amber-700 dark:text-amber-300">
+        {issues.length === 1
+          ? "1 issue blocks publish"
+          : `${issues.length} issues block publish`}
+      </p>
+      <ul className="list-disc space-y-0.5 pl-5 text-amber-800/90 dark:text-amber-200/90">
+        {issues.slice(0, 6).map((issue, i) => (
+          <li key={`${issue.path}-${i}`}>{issue.message}</li>
+        ))}
+        {issues.length > 6 ? (
+          <li className="text-amber-900/70 dark:text-amber-100/70">
+            …and {issues.length - 6} more.
+          </li>
+        ) : null}
+      </ul>
+    </div>
+  );
+});
+
 export function AboutEditor() {
   return (
     <>
@@ -302,102 +387,147 @@ function AboutForm() {
   const [localDraft, setLocalDraft] = useState<AboutContent | null>(null);
   const [busy, setBusy] = useState<string | null>(null);
   const [inlineError, setInlineError] = useState<string | null>(null);
-  const [editorResetToken, setEditorResetToken] = useState(0);
+  /** Body lives in Tiptap; this flag drives autosave + merged validation. */
+  const [bodyDirty, setBodyDirty] = useState(false);
+  /** Debounced HTML for publish-issue panel (avoids parent re-render per key). */
+  const [debouncedBodyHtml, setDebouncedBodyHtml] = useState<string | null>(
+    null,
+  );
+  const bodyRef = useRef<RichTextEditorHandle>(null);
+  const issuesBodyHtmlDebounceRef = useRef<ReturnType<
+    typeof setTimeout
+  > | null>(null);
 
-  // Snapshot of the initial HTML the Tiptap editor was mounted with for the
-  // current `editorResetToken`. Tiptap owns its internal state and would
-  // otherwise fight controlled `content` prop changes on every keystroke.
-  const initialHtmlRef = useRef<string | null>(null);
-
-  const source: AboutContent | undefined = useMemo(() => {
-    if (localDraft) return localDraft;
+  const serverContent: AboutContent | undefined = useMemo(() => {
     if (!section) return undefined;
     return toAboutContent(section.draftSnapshot ?? section.publishedSnapshot);
-  }, [localDraft, section]);
+  }, [section]);
 
-  // Lock in the `initialHtml` for the current editor instance the first time
-  // we have a source. Re-captured whenever `editorResetToken` changes, which
-  // is exactly when we want to remount (discard / first load).
-  const initialHtml = useMemo(() => {
-    if (!source) return "";
-    if (initialHtmlRef.current !== null) return initialHtmlRef.current;
-    const html = source.bodyHtml ?? "";
-    initialHtmlRef.current = html;
-    return html;
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [editorResetToken, source !== undefined]);
+  const base: AboutContent | undefined = localDraft ?? serverContent;
 
-  const mutate = useCallback((next: AboutContent) => {
-    setInlineError(null);
-    setLocalDraft(next);
-  }, []);
+  const initialHtml = base?.bodyHtml ?? "";
+
+  const setPublished = useCallback(
+    (value: boolean) => {
+      setInlineError(null);
+      setLocalDraft((prev) => {
+        const current = prev ?? serverContent;
+        if (!current) return prev;
+        return { ...current, published: value };
+      });
+    },
+    [serverContent],
+  );
+
+  const setHeroImageStorageId = useCallback(
+    (value: Id<"_storage"> | undefined) => {
+      setInlineError(null);
+      setLocalDraft((prev) => {
+        const current = prev ?? serverContent;
+        if (!current) return prev;
+        return { ...current, heroImageStorageId: value };
+      });
+    },
+    [serverContent],
+  );
 
   const setHeroTitle = useCallback(
     (value: string) => {
-      if (!source) return;
-      mutate({ ...source, heroTitle: value });
+      setInlineError(null);
+      setLocalDraft((prev) => {
+        const current = prev ?? serverContent;
+        if (!current) return prev;
+        return { ...current, heroTitle: value };
+      });
     },
-    [source, mutate],
+    [serverContent],
+  );
+
+  const setPullQuote = useCallback(
+    (value: string) => {
+      setInlineError(null);
+      setLocalDraft((prev) => {
+        const current = prev ?? serverContent;
+        if (!current) return prev;
+        return { ...current, pullQuote: trimToUndefined(value) };
+      });
+    },
+    [serverContent],
   );
 
   const setHeroSubtitle = useCallback(
     (value: string) => {
-      if (!source) return;
-      mutate({ ...source, heroSubtitle: trimToUndefined(value) });
+      setInlineError(null);
+      setLocalDraft((prev) => {
+        const current = prev ?? serverContent;
+        if (!current) return prev;
+        return { ...current, heroSubtitle: trimToUndefined(value) };
+      });
     },
-    [source, mutate],
+    [serverContent],
   );
 
   const setSeoTitle = useCallback(
     (value: string) => {
-      if (!source) return;
-      mutate({ ...source, seoTitle: trimToUndefined(value) });
+      setInlineError(null);
+      setLocalDraft((prev) => {
+        const current = prev ?? serverContent;
+        if (!current) return prev;
+        return { ...current, seoTitle: trimToUndefined(value) };
+      });
     },
-    [source, mutate],
+    [serverContent],
   );
 
   const setSeoDescription = useCallback(
     (value: string) => {
-      if (!source) return;
-      mutate({ ...source, seoDescription: trimToUndefined(value) });
-    },
-    [source, mutate],
-  );
-
-  const setBodyHtml = useCallback(
-    (html: string) => {
-      if (!source) return;
-      mutate({
-        ...source,
-        bodyHtml: html,
-        // Drop legacy blocks — once the owner edits, the rich HTML is the
-        // authoritative body and we don't want divergent fields.
-        body: [],
+      setInlineError(null);
+      setLocalDraft((prev) => {
+        const current = prev ?? serverContent;
+        if (!current) return prev;
+        return { ...current, seoDescription: trimToUndefined(value) };
       });
     },
-    [source, mutate],
+    [serverContent],
   );
 
   const setHighlights = useCallback(
     (next: string[]) => {
-      if (!source) return;
-      mutate({
-        ...source,
-        highlights: next.length > 0 ? next : undefined,
+      setInlineError(null);
+      setLocalDraft((prev) => {
+        const current = prev ?? serverContent;
+        if (!current) return prev;
+        return {
+          ...current,
+          highlights: next.length > 0 ? next : undefined,
+        };
       });
     },
-    [source, mutate],
+    [serverContent],
   );
 
   const setTeamMembers = useCallback(
     (next: AboutTeamMemberRow[]) => {
-      if (!source) return;
-      mutate({ ...source, teamMembers: next });
+      setInlineError(null);
+      setLocalDraft((prev) => {
+        const current = prev ?? serverContent;
+        if (!current) return prev;
+        return { ...current, teamMembers: next };
+      });
     },
-    [source, mutate],
+    [serverContent],
   );
 
   const [uploadBusy, setUploadBusy] = useState<string | null>(null);
+
+  const clearLocalBodyUiState = useCallback(() => {
+    setBodyDirty(false);
+    setDebouncedBodyHtml(null);
+    if (issuesBodyHtmlDebounceRef.current !== null) {
+      clearTimeout(issuesBodyHtmlDebounceRef.current);
+      issuesBodyHtmlDebounceRef.current = null;
+    }
+  }, []);
 
   const runAction = useCallback(
     async <A,>(label: string, program: Effect.Effect<A, CmsAppError>) => {
@@ -408,46 +538,80 @@ function AboutForm() {
       });
       if (outcome !== undefined) {
         setLocalDraft(null);
+        clearLocalBodyUiState();
       }
       setBusy(null);
       return outcome;
     },
-    [],
+    [clearLocalBodyUiState],
   );
 
   const hasDraftOnServer = section?.hasDraftChanges ?? false;
-  const hasLocalEdits = localDraft !== null;
+  const hasLocalEdits = localDraft !== null || bodyDirty;
 
-  const { status: autosaveStatus, flush: flushAutosave } = useAutosaveDraft({
-    dirty: hasLocalEdits && source !== undefined,
-    debounceResetKey: localDraft,
-    pauseWhen: busy !== null,
-    saveEffect: () =>
-      convexMutationEffect(() =>
-        saveDraft({
-          section: "about",
-          content: {
-            heroTitle: source?.heroTitle ?? "",
-            heroSubtitle: source?.heroSubtitle,
-            bodyHtml: source?.bodyHtml,
-            body: source?.body ?? [],
-            highlights: source?.highlights,
-            seoTitle: source?.seoTitle,
-            seoDescription: source?.seoDescription,
-            teamMembers: (source?.teamMembers ?? []).map((m) => ({
-              id: m.id,
-              name: m.name,
-              title: m.title,
-              ...(m.storageId !== undefined ? { storageId: m.storageId } : {}),
-            })),
-          },
-        }),
-      ),
-    onSaved: () => setLocalDraft(null),
-  });
+  const { status: autosaveStatus, flush: flushAutosave, kick: kickAutosave } =
+    useAutosaveDraft({
+      dirty: hasLocalEdits && base !== undefined,
+      debounceResetKey: localDraft,
+      pauseWhen: busy !== null,
+      saveEffect: () => {
+        const contentBase = (localDraft ?? serverContent)!;
+        const bodyHtml = bodyDirty
+          ? (bodyRef.current?.getHTML() ?? "")
+          : (contentBase.bodyHtml ?? "");
+        const bodyBlocks = bodyDirty ? [] : (contentBase.body ?? []);
+        return convexMutationEffect(() =>
+          saveDraft({
+            section: "about",
+            content: {
+              published: contentBase.published,
+              ...(contentBase.heroImageStorageId !== undefined
+                ? { heroImageStorageId: contentBase.heroImageStorageId }
+                : {}),
+              heroTitle: contentBase.heroTitle,
+              heroSubtitle: contentBase.heroSubtitle,
+              bodyHtml,
+              body: bodyBlocks,
+              pullQuote: contentBase.pullQuote,
+              highlights: contentBase.highlights,
+              seoTitle: contentBase.seoTitle,
+              seoDescription: contentBase.seoDescription,
+              teamMembers: (contentBase.teamMembers ?? []).map((m) => ({
+                id: m.id,
+                name: m.name,
+                title: m.title,
+                ...(m.storageId !== undefined ? { storageId: m.storageId } : {}),
+              })),
+            },
+          }),
+        );
+      },
+      onSaved: () => {
+        setLocalDraft(null);
+        clearLocalBodyUiState();
+      },
+    });
+
+  const handleBodyDirty = useCallback(() => {
+    setBodyDirty(true);
+    kickAutosave();
+    if (issuesBodyHtmlDebounceRef.current !== null) {
+      clearTimeout(issuesBodyHtmlDebounceRef.current);
+    }
+    issuesBodyHtmlDebounceRef.current = setTimeout(() => {
+      issuesBodyHtmlDebounceRef.current = null;
+      startTransition(() => {
+        setDebouncedBodyHtml(bodyRef.current?.getHTML() ?? "");
+      });
+    }, ISSUES_BODY_HTML_DEBOUNCE_MS);
+  }, [kickAutosave]);
 
   const handleDiscardConfirm = useCallback(async (): Promise<boolean> => {
     setInlineError(null);
+    const publishedHtml =
+      section !== undefined
+        ? (toAboutContent(section.publishedSnapshot).bodyHtml ?? "")
+        : "";
     if (hasDraftOnServer) {
       setBusy("Discarding…");
       const outcome = await runAdminEffect(
@@ -460,21 +624,15 @@ function AboutForm() {
       }
     }
     setLocalDraft(null);
-    // Force Tiptap to remount with the now-canonical published HTML.
-    initialHtmlRef.current = null;
-    setEditorResetToken((n) => n + 1);
+    clearLocalBodyUiState();
+    bodyRef.current?.reset(publishedHtml);
     toast.success(
       hasDraftOnServer
         ? "Draft discarded. The editor now matches the published site."
         : "Unsaved changes discarded.",
     );
     return true;
-  }, [discard, hasDraftOnServer]);
-
-  const issues = useMemo(
-    () => (source ? collectAboutIssues(source) : []),
-    [source],
-  );
+  }, [clearLocalBodyUiState, discard, hasDraftOnServer, section]);
 
   if (section === undefined) {
     return (
@@ -482,7 +640,7 @@ function AboutForm() {
     );
   }
 
-  if (!source) {
+  if (!base) {
     return (
       <p className="body-text text-muted-foreground">
         No About content available.
@@ -493,12 +651,37 @@ function AboutForm() {
   const publishedByLabel =
     section.publishedBy && user?.id === section.publishedBy ? "You" : undefined;
 
-  const seoTitleValue = source.seoTitle ?? "";
-  const seoDescriptionValue = source.seoDescription ?? "";
+  const seoTitleValue = base.seoTitle ?? "";
+  const seoDescriptionValue = base.seoDescription ?? "";
 
   return (
     <div className="space-y-8 pb-24">
       <div className="space-y-8">
+          <fieldset className="space-y-3">
+            <legend className="label-text text-muted-foreground">
+              Visibility
+            </legend>
+            <div className="flex items-start gap-3">
+              <Switch
+                id="about-published"
+                checked={base.published}
+                onCheckedChange={setPublished}
+              />
+              <div className="space-y-1">
+                <label
+                  htmlFor="about-published"
+                  className="body-text-small cursor-pointer text-foreground"
+                >
+                  Show About page on site
+                </label>
+                <p className="body-text-small text-muted-foreground">
+                  Hides the public <code>/about</code> route and the header
+                  nav link when off. Preview still shows the draft value.
+                </p>
+              </div>
+            </div>
+          </fieldset>
+
           <fieldset className="space-y-3">
             <legend className="label-text text-muted-foreground">Hero</legend>
             <label className="block space-y-1">
@@ -507,10 +690,10 @@ function AboutForm() {
               </span>
               <Input
                 type="text"
-                value={source.heroTitle}
+                value={base.heroTitle}
                 onChange={(e) => setHeroTitle(e.target.value)}
                 placeholder="About Lula Lake Sound"
-                aria-invalid={source.heroTitle.trim().length === 0}
+                aria-invalid={base.heroTitle.trim().length === 0}
                 className="text-foreground placeholder:text-muted-foreground"
               />
             </label>
@@ -520,12 +703,38 @@ function AboutForm() {
               </span>
               <Textarea
                 rows={2}
-                value={source.heroSubtitle ?? ""}
+                value={base.heroSubtitle ?? ""}
                 onChange={(e) => setHeroSubtitle(e.target.value)}
                 placeholder="A creative space for music production and recording."
                 className="text-foreground placeholder:text-muted-foreground"
               />
             </label>
+          </fieldset>
+
+          <fieldset className="space-y-3">
+            <legend className="label-text text-muted-foreground">
+              Hero image
+            </legend>
+            <p className="body-text-small text-muted-foreground">
+              Pick a photo from the studio gallery or upload a bespoke
+              image just for this page. Gallery uploads are managed from
+              the{" "}
+              <a
+                href="/admin/photos"
+                className="underline underline-offset-2 hover:text-foreground"
+              >
+                Photos
+              </a>{" "}
+              admin; bespoke uploads won&rsquo;t appear in the public
+              gallery.
+            </p>
+            <HeroImagePicker
+              selectedStorageId={base.heroImageStorageId}
+              onChange={setHeroImageStorageId}
+              generateUploadUrl={generateUploadUrl}
+              uploadBusyKey={uploadBusy}
+              setUploadBusyKey={setUploadBusy}
+            />
           </fieldset>
 
           <fieldset className="space-y-3">
@@ -539,11 +748,27 @@ function AboutForm() {
               <code className="rounded bg-muted px-1">- </code>).
             </p>
             <RichTextEditor
-              key={editorResetToken}
+              ref={bodyRef}
               initialHtml={initialHtml}
               placeholder="Tell the studio's story…"
-              onChange={setBodyHtml}
-              resetToken={editorResetToken}
+              onDirty={handleBodyDirty}
+            />
+          </fieldset>
+
+          <fieldset className="space-y-3">
+            <legend className="label-text text-muted-foreground">
+              Pull quote
+            </legend>
+            <p className="body-text-small text-muted-foreground">
+              Editorial callout rendered below the text body.
+              Leave blank to hide the quote block.
+            </p>
+            <Textarea
+              rows={2}
+              value={base.pullQuote ?? ""}
+              onChange={(e) => setPullQuote(e.target.value)}
+              placeholder="The mountain doesn't rush. Neither should the music."
+              className="text-foreground placeholder:text-muted-foreground"
             />
           </fieldset>
 
@@ -554,7 +779,7 @@ function AboutForm() {
               Convex file storage (same limits as the gallery).
             </p>
             <TeamMembersEditor
-              members={source.teamMembers}
+              members={base.teamMembers}
               onChange={setTeamMembers}
               generateUploadUrl={generateUploadUrl}
               uploadBusyKey={uploadBusy}
@@ -570,7 +795,7 @@ function AboutForm() {
               Short bulleted callouts — e.g. key studio facts.
             </p>
             <HighlightsEditor
-              highlights={source.highlights ?? []}
+              highlights={base.highlights ?? []}
               onChange={setHighlights}
             />
           </fieldset>
@@ -619,28 +844,11 @@ function AboutForm() {
             </label>
           </fieldset>
 
-          {issues.length > 0 ? (
-            <div
-              role="status"
-              className="rounded-md border border-amber-500/40 bg-amber-500/5 p-3 text-sm"
-            >
-              <p className="mb-1 font-medium text-amber-700 dark:text-amber-300">
-                {issues.length === 1
-                  ? "1 issue blocks publish"
-                  : `${issues.length} issues block publish`}
-              </p>
-              <ul className="list-disc space-y-0.5 pl-5 text-amber-800/90 dark:text-amber-200/90">
-                {issues.slice(0, 6).map((issue, i) => (
-                  <li key={`${issue.path}-${i}`}>{issue.message}</li>
-                ))}
-                {issues.length > 6 ? (
-                  <li className="text-amber-900/70 dark:text-amber-100/70">
-                    …and {issues.length - 6} more.
-                  </li>
-                ) : null}
-              </ul>
-            </div>
-          ) : null}
+          <AboutIssuesPanel
+            base={base}
+            debouncedBodyHtml={debouncedBodyHtml}
+            bodyDirty={bodyDirty}
+          />
       </div>
 
       <CmsPublishToolbar
@@ -653,8 +861,18 @@ function AboutForm() {
         busy={busy}
         inlineError={inlineError}
         autosaveStatus={autosaveStatus}
+        previewHref="/preview/about"
         onPublish={() => {
-          if (issues.length > 0) {
+          const liveBody = bodyDirty
+            ? (bodyRef.current?.getHTML() ?? "")
+            : (base.bodyHtml ?? "");
+          const publishSnapshot: AboutContent = {
+            ...base,
+            bodyHtml: liveBody,
+            body: [],
+          };
+          const publishIssues = collectAboutIssues(publishSnapshot);
+          if (publishIssues.length > 0) {
             setInlineError("Fix the blocking issues above before publishing.");
             return;
           }
@@ -675,6 +893,269 @@ function AboutForm() {
   );
 }
 
+interface HeroImagePickerProps {
+  readonly selectedStorageId: Id<"_storage"> | undefined;
+  readonly onChange: (storageId: Id<"_storage"> | undefined) => void;
+  readonly generateUploadUrl: () => Promise<{ uploadUrl: string }>;
+  readonly uploadBusyKey: string | null;
+  readonly setUploadBusyKey: (key: string | null) => void;
+}
+
+/**
+ * Inline picker for the About hero image.
+ *
+ * The owner can either pick a photo from the studio gallery (sourced from
+ * `api.admin.photos.listDraftPhotos` so unpublished uploads are also
+ * selectable) or upload a bespoke image just for the About page that
+ * intentionally does NOT land in the public gallery. Both cases resolve to
+ * a Convex `_storage` id, so the public About page renders them the same
+ * way via `storage.getUrl`.
+ *
+ * When the currently selected id isn't a gallery photo we fall back to a
+ * direct URL lookup (`api.admin.about.getHeroImageUrl`) so the thumbnail
+ * still renders. Only when the underlying blob has been deleted (URL
+ * resolves to `null`) do we surface a recoverable warning.
+ */
+const HERO_IMAGE_MAX_BYTES = 50 * 1024 * 1024;
+const HERO_IMAGE_ACCEPT = "image/jpeg,image/png,image/webp";
+
+type GalleryPickerPhoto = NonNullable<
+  ReturnType<typeof useQuery<typeof api.admin.photos.listDraftPhotos>>
+>["photos"][number] & { url: string };
+
+const HeroImagePicker = memo(function HeroImagePicker({
+  selectedStorageId,
+  onChange,
+  generateUploadUrl,
+  uploadBusyKey,
+  setUploadBusyKey,
+}: HeroImagePickerProps) {
+  const draft = useQuery(api.admin.photos.listDraftPhotos);
+
+  const photos = useMemo<GalleryPickerPhoto[]>(
+    () =>
+      (draft?.photos ?? []).filter(
+        (p): p is GalleryPickerPhoto =>
+          typeof p.url === "string" && p.url.length > 0,
+      ),
+    [draft],
+  );
+
+  const selectedInGallery = useMemo(
+    () => photos.find((p) => p.storageId === selectedStorageId),
+    [photos, selectedStorageId],
+  );
+
+  // Resolve a URL for bespoke (non-gallery) hero uploads so we can still
+  // show a preview. Skipped when the selected id is already in the gallery
+  // list (we reuse the gallery-provided URL) or nothing is selected.
+  const bespokeUrl = useQuery(
+    api.admin.about.getHeroImageUrl,
+    selectedStorageId !== undefined && !selectedInGallery
+      ? { storageId: selectedStorageId }
+      : "skip",
+  );
+
+  const isUploading = uploadBusyKey === "hero-image-upload";
+
+  const onUploadFile = async (file: File) => {
+    if (!file.type.startsWith("image/")) {
+      toast.error("Choose an image file (JPEG, PNG, or WebP).");
+      return;
+    }
+    if (file.size > HERO_IMAGE_MAX_BYTES) {
+      toast.error(
+        `Image must be ${Math.floor(HERO_IMAGE_MAX_BYTES / (1024 * 1024))}MB or smaller.`,
+      );
+      return;
+    }
+    setUploadBusyKey("hero-image-upload");
+    try {
+      const { uploadUrl } = await generateUploadUrl();
+      const storageId = await uploadHeadshotToConvex(uploadUrl, file);
+      onChange(storageId);
+      toast.success("Hero image uploaded.");
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Upload failed.");
+    } finally {
+      setUploadBusyKey(null);
+    }
+  };
+
+  const selectedUrl = selectedInGallery?.url ?? bespokeUrl ?? null;
+  // Only treat the selection as orphaned once we've heard back from both
+  // the gallery list and the bespoke URL query. Otherwise the first render
+  // after selection flashes a false warning.
+  const selectedIsOrphaned =
+    selectedStorageId !== undefined &&
+    draft !== undefined &&
+    !selectedInGallery &&
+    bespokeUrl === null;
+
+  const uploadButton = (
+    <>
+      <input
+        id="about-hero-upload-input"
+        type="file"
+        accept={HERO_IMAGE_ACCEPT}
+        className="hidden"
+        tabIndex={-1}
+        disabled={uploadBusyKey !== null}
+        onChange={(e) => {
+          const f = e.target.files?.[0];
+          e.target.value = "";
+          if (f) void onUploadFile(f);
+        }}
+      />
+      <Button
+        type="button"
+        variant="outline"
+        size="sm"
+        disabled={uploadBusyKey !== null}
+        onClick={() => {
+          document.getElementById("about-hero-upload-input")?.click();
+        }}
+      >
+        {isUploading
+          ? "Uploading…"
+          : selectedStorageId !== undefined
+            ? "Upload different image"
+            : "Upload new image"}
+      </Button>
+    </>
+  );
+
+  if (draft === undefined) {
+    return (
+      <p className="rounded-md border border-dashed border-border px-3 py-4 text-xs text-muted-foreground">
+        Loading gallery photos…
+      </p>
+    );
+  }
+
+  return (
+    <div className="space-y-3">
+      {selectedIsOrphaned ? (
+        <div className="flex items-start justify-between gap-3 rounded-md border border-amber-500/40 bg-amber-500/5 px-3 py-2 text-xs">
+          <p className="text-amber-800 dark:text-amber-200">
+            The previously selected image is no longer available. Pick a
+            new one, upload another, or clear the selection.
+          </p>
+          <Button
+            type="button"
+            variant="ghost"
+            size="sm"
+            className="shrink-0 text-amber-800 hover:text-amber-900 dark:text-amber-200 dark:hover:text-amber-100"
+            onClick={() => onChange(undefined)}
+          >
+            <Trash2 className="mr-1 size-3.5" aria-hidden />
+            Clear
+          </Button>
+        </div>
+      ) : null}
+
+      {selectedUrl ? (
+        <div className="flex items-center gap-3 rounded-md border border-border bg-muted/30 p-3">
+          <div className="relative size-16 shrink-0 overflow-hidden rounded-md border border-border bg-muted">
+            {/* eslint-disable-next-line @next/next/no-img-element -- signed Convex URL, not eligible for `next/image` in admin surfaces. */}
+            <img
+              src={selectedUrl}
+              alt=""
+              aria-hidden
+              className="size-full object-cover"
+            />
+          </div>
+          <div className="min-w-0 flex-1 space-y-0.5">
+            <p className="body-text-small truncate text-foreground">
+              {selectedInGallery
+                ? selectedInGallery.alt ||
+                  selectedInGallery.originalFileName ||
+                  "Selected photo"
+                : "Custom upload"}
+            </p>
+            <p className="text-xs text-muted-foreground">
+              {selectedInGallery
+                ? "This photo will appear as the About page hero."
+                : "Bespoke upload — not part of the public gallery."}
+            </p>
+          </div>
+          <Button
+            type="button"
+            variant="ghost"
+            size="sm"
+            onClick={() => onChange(undefined)}
+          >
+            <Trash2 className="mr-1 size-3.5" aria-hidden />
+            Remove
+          </Button>
+        </div>
+      ) : null}
+
+      <div className="flex items-center justify-between gap-3">
+        <p className="body-text-small text-muted-foreground">
+          {photos.length === 0
+            ? "No gallery photos yet — upload a bespoke image for the hero."
+            : "Pick from the gallery below or upload a bespoke image."}
+        </p>
+        {uploadButton}
+      </div>
+
+      {photos.length > 0 ? (
+        <div
+          role="radiogroup"
+          aria-label="Hero image"
+          className="grid grid-cols-3 gap-2 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6"
+        >
+          {photos.map((photo) => {
+            const isSelected = photo.storageId === selectedStorageId;
+            return (
+              <button
+                key={photo.stableId}
+                type="button"
+                role="radio"
+                aria-checked={isSelected}
+                aria-label={
+                  photo.alt ||
+                  photo.originalFileName ||
+                  `Use ${photo.stableId} as hero image`
+                }
+                onClick={() => {
+                  onChange(isSelected ? undefined : photo.storageId);
+                }}
+                className={cn(
+                  "group relative aspect-square overflow-hidden rounded-md border transition",
+                  "focus:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background",
+                  isSelected
+                    ? "border-primary ring-2 ring-primary/40"
+                    : "border-border hover:border-foreground/40",
+                )}
+              >
+                {/* eslint-disable-next-line @next/next/no-img-element -- admin-only thumbnail, signed Convex URL. */}
+                <img
+                  src={photo.url}
+                  alt=""
+                  aria-hidden
+                  className={cn(
+                    "size-full object-cover transition group-hover:scale-[1.02]",
+                    !isSelected && "opacity-90 group-hover:opacity-100",
+                  )}
+                />
+                {isSelected ? (
+                  <span className="pointer-events-none absolute inset-0 flex items-center justify-center bg-primary/20">
+                    <span className="inline-flex size-6 items-center justify-center rounded-full bg-primary text-primary-foreground shadow">
+                      <Check className="size-3.5" aria-hidden />
+                    </span>
+                  </span>
+                ) : null}
+              </button>
+            );
+          })}
+        </div>
+      ) : null}
+    </div>
+  );
+});
+
 interface TeamMembersEditorProps {
   readonly members: AboutTeamMemberRow[];
   readonly onChange: (next: AboutTeamMemberRow[]) => void;
@@ -683,7 +1164,7 @@ interface TeamMembersEditorProps {
   readonly setUploadBusyKey: (key: string | null) => void;
 }
 
-function TeamMembersEditor({
+const TeamMembersEditor = memo(function TeamMembersEditor({
   members,
   onChange,
   generateUploadUrl,
@@ -919,14 +1400,17 @@ function TeamMembersEditor({
       </Button>
     </div>
   );
-}
+});
 
 interface HighlightsEditorProps {
   readonly highlights: readonly string[];
   readonly onChange: (next: string[]) => void;
 }
 
-function HighlightsEditor({ highlights, onChange }: HighlightsEditorProps) {
+const HighlightsEditor = memo(function HighlightsEditor({
+  highlights,
+  onChange,
+}: HighlightsEditorProps) {
   const update = (idx: number, value: string) => {
     const next = [...highlights];
     next[idx] = value;
@@ -979,7 +1463,7 @@ function HighlightsEditor({ highlights, onChange }: HighlightsEditorProps) {
       </Button>
     </div>
   );
-}
+});
 
 interface CharCounterProps {
   readonly value: string;

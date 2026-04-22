@@ -47,6 +47,11 @@ export interface UseAutosaveDraftResult {
   /** Current autosave status for UI indicators. */
   readonly status: AutosaveStatus;
   /**
+   * Restart the idle debounce timer without changing `debounceResetKey`
+   * (e.g. rich-text transactions where `dirty` stays `true`).
+   */
+  readonly kick: () => void;
+  /**
    * Force-flush the pending autosave immediately (used e.g. by Publish so
    * any in-flight debounce doesn't get skipped). Resolves when the save
    * completes (or immediately if nothing to save). Returns `false` if a save
@@ -83,6 +88,8 @@ export function useAutosaveDraft({
   const lingerTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const inFlightRef = useRef(false);
   const mountedRef = useRef(true);
+  const pauseWhenRef = useRef(pauseWhen);
+  pauseWhenRef.current = pauseWhen;
 
   const clearTimer = () => {
     if (timerRef.current !== null) {
@@ -117,6 +124,17 @@ export function useAutosaveDraft({
     }, savedLingerMs);
     return true;
   }, [savedLingerMs]);
+
+  const kick = useCallback(() => {
+    if (pauseWhenRef.current) {
+      return;
+    }
+    clearTimer();
+    timerRef.current = setTimeout(() => {
+      timerRef.current = null;
+      void runSave();
+    }, delayMs);
+  }, [delayMs, runSave]);
 
   useEffect(() => {
     if (pauseWhen) {
@@ -157,5 +175,5 @@ export function useAutosaveDraft({
     return await runSave();
   }, [dirty, runSave]);
 
-  return { status, flush };
+  return { status, kick, flush };
 }

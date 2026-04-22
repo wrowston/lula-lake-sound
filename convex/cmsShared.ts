@@ -28,9 +28,20 @@ export type PublicAboutTeamMember = {
   imageUrl: string | null;
 };
 
-/** Published About payload for marketing routes (sanitized + image URLs). */
-export type PublicAboutSnapshot = Omit<AboutSnapshot, "teamMembers"> & {
+/**
+ * Published About payload for marketing routes (sanitized + image URLs).
+ *
+ * `heroImageStorageId` is stripped (we never leak storage ids to anonymous
+ * callers); the resolved signed URL lives on `heroImageUrl` instead. When
+ * the storage blob has been deleted or was never set, `heroImageUrl` is
+ * `null` — the public renderer should fall back to a baked-in default.
+ */
+export type PublicAboutSnapshot = Omit<
+  AboutSnapshot,
+  "teamMembers" | "heroImageStorageId"
+> & {
   teamMembers?: PublicAboutTeamMember[];
+  heroImageUrl?: string | null;
 };
 
 /** Per-section default snapshots used for seeding and new-row inserts. */
@@ -107,8 +118,12 @@ export const PRICING_DEFAULTS: PricingSnapshot = {
  * Default About page copy shipped with a brand-new deployment. Seeded so the
  * public route renders before the owner has made their first publish. Kept
  * intentionally short — real copy goes in via the admin editor.
+ *
+ * `published` defaults to `false` (INF-46): the About page is hidden behind
+ * a feature flag until the owner explicitly enables it from the CMS.
  */
 export const ABOUT_DEFAULTS: AboutSnapshot = {
+  published: false,
   heroTitle: "About Lula Lake Sound",
   heroSubtitle: "A creative space for music production and recording.",
   body: [
@@ -117,6 +132,7 @@ export const ABOUT_DEFAULTS: AboutSnapshot = {
       text: "Lula Lake Sound is a studio focused on helping artists capture the sound they hear in their heads.",
     },
   ],
+  pullQuote: "The mountain doesn't rush. Neither should the music.",
   highlights: [],
   seoTitle: "",
   seoDescription: "",

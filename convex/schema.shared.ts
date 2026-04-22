@@ -122,8 +122,17 @@ export const aboutTeamMemberValidator = v.object({
 });
 
 /**
- * "about" section snapshot — About page copy (INF-70 / INF-98).
+ * "about" section snapshot — About page copy (INF-70 / INF-98 / INF-46).
  *
+ * - `published` — INF-46 visibility flag. Feature-flag that gates the public
+ *   `/about` route and the header's "About" nav link. Treated as `false`
+ *   (hidden) when absent so net-new deployments stay off until the owner
+ *   explicitly enables the page from the CMS.
+ * - `heroImageStorageId` — optional Convex storage id of the cinematic hero
+ *   image shown at the top of the public About page. The owner picks an
+ *   already-uploaded photo from the studio gallery (INF-46 follow-up); the
+ *   public renderer falls back to a baked-in image when this is absent or
+ *   when the storage blob has been deleted (`storage.getUrl` → `null`).
  * - `heroTitle` — required display heading above the fold.
  * - `heroSubtitle` — optional supporting line.
  * - `bodyHtml` — rich-text body authored in the admin editor (Tiptap HTML
@@ -136,16 +145,23 @@ export const aboutTeamMemberValidator = v.object({
  * - `body` — legacy ordered paragraph / heading blocks (see
  *   `aboutBlockValidator`). Kept for back-compat so pre-INF-98 rows keep
  *   validating; new writes populate `bodyHtml` instead.
+ * - `pullQuote` — INF-46 editorial pull quote rendered **below** the
+ *   owner / studio-designer headshots on the Variant A layout.
  * - `highlights` — optional short bulleted callouts (e.g. key studio facts).
  * - `seoTitle` / `seoDescription` — optional overrides for page metadata;
  *   when blank the route should fall back to the `settings` section.
  * - `teamMembers` — optional ordered list of people (image, name, title).
+ *   The public page renders the first two entries as owner / studio
+ *   designer headshots in the Variant A layout.
  */
 export const aboutContentValidator = v.object({
+  published: v.optional(v.boolean()),
+  heroImageStorageId: v.optional(v.id("_storage")),
   heroTitle: v.string(),
   heroSubtitle: v.optional(v.string()),
   bodyHtml: v.optional(v.string()),
   body: v.array(aboutBlockValidator),
+  pullQuote: v.optional(v.string()),
   highlights: v.optional(v.array(v.string())),
   seoTitle: v.optional(v.string()),
   seoDescription: v.optional(v.string()),

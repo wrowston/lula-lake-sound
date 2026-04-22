@@ -7,9 +7,10 @@ import { cn } from "@/lib/utils"
  * Lula Lake Sound Button.
  *
  * Editorial, near-square corners and generous horizontal padding to read more
- * like a printed card than a SaaS CTA. Default variant pairs sand-on-washed-
- * black (the brand's quiet-luxury primary pairing); outline is a thin ivory
- * stroke that fills on hover. No drop shadows, no gradients.
+ * like a printed card than a SaaS CTA. Default stays sand-on-washed-black
+ * for the marketing shell. Outline / ghost use shadcn semantic tokens so the
+ * Studio CMS light theme keeps readable contrast (sand-on-cream was failing
+ * WCAG for controls).
  */
 const buttonVariants = cva(
   [
@@ -28,15 +29,15 @@ const buttonVariants = cva(
         /** Solid sand on washed-black — primary CTA. */
         default:
           "border-transparent bg-sand text-washed-black hover:bg-warm-white",
-        /** Thin ivory stroke that fills on hover — quiet secondary. */
+        /** Theme-aware stroke; sand on dark site, rust on light CMS. */
         outline:
-          "border-sand/40 bg-transparent text-sand hover:bg-sand hover:text-washed-black",
+          "border-primary/55 bg-transparent text-primary hover:bg-primary hover:text-primary-foreground",
         /** Rust ink on sand — used when you need richer brand tone. */
         secondary:
           "border-transparent bg-rust text-warm-white hover:bg-maroon",
         /** Type-only, with a thin underline reveal on hover. */
         ghost:
-          "border-transparent bg-transparent text-sand/80 hover:text-sand hover:underline hover:underline-offset-[6px]",
+          "border-transparent bg-transparent text-muted-foreground hover:text-foreground hover:underline hover:underline-offset-[6px]",
         /**
          * Gold-on-washed-black emphasis. Reserved for single moments of
          * recommendation/selection per brand guide §3.2 (Gold is an accent
@@ -48,7 +49,7 @@ const buttonVariants = cva(
         destructive:
           "border-transparent bg-fire/90 text-warm-white hover:bg-fire",
         link:
-          "border-transparent h-auto px-0 text-sand underline underline-offset-[6px] decoration-sand/40 hover:decoration-sand",
+          "border-transparent h-auto px-0 text-primary underline underline-offset-[6px] decoration-primary/40 hover:decoration-primary",
       },
       size: {
         default: "h-10 px-6 py-2 gap-2",
