@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useRef, useState } from "react";
 import { Effect } from "effect";
 import { runAdminEffect } from "@/lib/admin-run-effect";
 import { type CmsAppError } from "@/lib/effect-errors";
@@ -10,35 +10,23 @@ export type { AutosaveStatus };
 
 export interface UseAutosaveDraftOptions {
   /**
-   * Whether there are pending local edits that should be flushed. When this
-   * transitions to `true`, the debounce timer is (re)started.
+   * When false, `kick()` and scheduled saves do not run (e.g. no local edits
+   * or no server `source` yet). Updated every render via ref; read at
+   * schedule and save time.
    */
-  readonly dirty: boolean;
-  /**
-   * When `dirty` is true, include a value that changes on every local edit
-   * (e.g. the draft object from React state, or a serialized snapshot) so the
-   * debounce timer clears and restarts after each keystroke — idle debounce
-   * from the last edit, not from the first time `dirty` became true.
-   * Ignored when `dirty` is false (the effect still clears any pending timer).
-   */
-  readonly debounceResetKey?: unknown;
-  /** Debounce delay before persisting to the server. Defaults to 1000ms. */
-  readonly delayMs?: number;
+  readonly isDirty: boolean;
   /**
    * Factory that returns the Effect to persist the current draft. Called
    * every time autosave fires so it closes over the latest editor state.
    */
   readonly saveEffect: () => Effect.Effect<unknown, CmsAppError>;
   /**
-   * While `true`, autosave is paused — pending timers are cancelled and new
-   * ones are not scheduled (e.g. during publish/discard).
-   */
-  readonly pauseWhen?: boolean;
-  /**
    * Called after a successful autosave. Use to clear local draft state so
    * the editor falls back to the server `draftSnapshot`.
    */
   readonly onSaved?: () => void;
+  /** Debounce delay before persisting to the server. Defaults to 1000ms. */
+  readonly delayMs?: number;
   /** How long the "saved" status lingers before returning to idle. */
   readonly savedLingerMs?: number;
 }
@@ -47,34 +35,39 @@ export interface UseAutosaveDraftResult {
   /** Current autosave status for UI indicators. */
   readonly status: AutosaveStatus;
   /**
-   * Restart the idle debounce timer without changing `debounceResetKey`
-   * (e.g. rich-text transactions where `dirty` stays `true`).
+   * Restart the idle debounce timer (call after every local edit). No-ops if
+   * not dirty, or after `cancel()`/unmount.
    */
   readonly kick: () => void;
   /**
-   * Force-flush the pending autosave immediately (used e.g. by Publish so
-   * any in-flight debounce doesn't get skipped). Resolves when the save
-   * completes (or immediately if nothing to save). Returns `false` if a save
-   * was required or in flight and did not complete successfully.
+   * Clear any pending debounce/linger timers (e.g. when starting publish or
+   * discard). Does not set unmounted; call `onUnmount` ref when leaving the
+   * page to prevent post-`startTransition` setState.
+   */
+  readonly cancel: () => void;
+  /**
+   * Force-flush the pending autosave immediately (e.g. Publish). Resolves when
+   * the save completes. Returns `false` if a save was required and did not
+   * complete successfully.
    */
   readonly flush: () => Promise<boolean>;
+  /**
+   * Ref callback to attach to the editor root; cleanup runs on unmount and
+   * stops timers + guards async completion.
+   */
+  readonly onUnmount: (node: HTMLDivElement | null) => void;
 }
 
 /**
- * Debounced autosave hook. While `dirty` is true, a timer runs `saveEffect`
- * after `delayMs` with no further edits. The timer is cleared and restarted
- * whenever `debounceResetKey` changes (pass draft state or a revision counter
- * from the editor so each keystroke resets the idle window). When `dirty` is
- * false, pending timers are cleared and no save is scheduled. Timers are also
- * cancelled on unmount or when `pauseWhen` is `true`.
+ * Debounced autosave. Call `kick()` from change handlers; call `cancel()` when
+ * pausing (e.g. before `setBusy` for publish). No effect hook — scheduling is
+ * imperative only.
  */
 export function useAutosaveDraft({
-  dirty,
-  debounceResetKey,
-  delayMs = 1000,
+  isDirty,
   saveEffect,
-  pauseWhen = false,
   onSaved,
+  delayMs = 1000,
   savedLingerMs = 1600,
 }: UseAutosaveDraftOptions): UseAutosaveDraftResult {
   const [status, setStatus] = useState<AutosaveStatus>("idle");
@@ -83,36 +76,37 @@ export function useAutosaveDraft({
   saveEffectRef.current = saveEffect;
   const onSavedRef = useRef(onSaved);
   onSavedRef.current = onSaved;
+  const isDirtyRef = useRef(isDirty);
+  isDirtyRef.current = isDirty;
 
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const lingerTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const inFlightRef = useRef(false);
-  const mountedRef = useRef(true);
-  const pauseWhenRef = useRef(pauseWhen);
-  pauseWhenRef.current = pauseWhen;
+  const activeRef = useRef(true);
 
-  const clearTimer = () => {
+  const clearTimer = useCallback(() => {
     if (timerRef.current !== null) {
       clearTimeout(timerRef.current);
       timerRef.current = null;
     }
-  };
+  }, []);
 
-  const clearLinger = () => {
+  const clearLinger = useCallback(() => {
     if (lingerTimerRef.current !== null) {
       clearTimeout(lingerTimerRef.current);
       lingerTimerRef.current = null;
     }
-  };
+  }, []);
 
   const runSave = useCallback(async (): Promise<boolean> => {
     if (inFlightRef.current) return true;
+    if (!isDirtyRef.current) return true;
     inFlightRef.current = true;
     clearLinger();
     setStatus("saving");
     const outcome = await runAdminEffect(saveEffectRef.current());
     inFlightRef.current = false;
-    if (!mountedRef.current) return false;
+    if (!activeRef.current) return false;
     if (outcome === undefined) {
       setStatus("error");
       return false;
@@ -120,60 +114,66 @@ export function useAutosaveDraft({
     onSavedRef.current?.();
     setStatus("saved");
     lingerTimerRef.current = setTimeout(() => {
-      if (mountedRef.current) setStatus("idle");
+      if (activeRef.current) setStatus("idle");
     }, savedLingerMs);
     return true;
-  }, [savedLingerMs]);
+  }, [clearLinger, savedLingerMs]);
+
+  const scheduleKick = useCallback(() => {
+    if (!activeRef.current) {
+      return;
+    }
+    clearTimer();
+    timerRef.current = setTimeout(() => {
+      timerRef.current = null;
+      void runSave();
+    }, delayMs);
+  }, [clearTimer, delayMs, runSave]);
 
   const kick = useCallback(() => {
-    if (pauseWhenRef.current) {
-      return;
-    }
-    clearTimer();
-    timerRef.current = setTimeout(() => {
-      timerRef.current = null;
-      void runSave();
-    }, delayMs);
-  }, [delayMs, runSave]);
+    scheduleKick();
+  }, [scheduleKick]);
 
-  useEffect(() => {
-    if (pauseWhen) {
-      clearTimer();
-      return;
-    }
-    if (!dirty) {
-      clearTimer();
-      return;
-    }
+  const cancel = useCallback(() => {
     clearTimer();
-    timerRef.current = setTimeout(() => {
-      timerRef.current = null;
-      void runSave();
-    }, delayMs);
-    return clearTimer;
-  }, [dirty, debounceResetKey, delayMs, pauseWhen, runSave]);
+    clearLinger();
+  }, [clearLinger, clearTimer]);
 
-  useEffect(() => {
-    mountedRef.current = true;
-    return () => {
-      mountedRef.current = false;
-      clearTimer();
-      clearLinger();
-    };
-  }, []);
+  const dispose = useCallback(() => {
+    activeRef.current = false;
+    clearTimer();
+    clearLinger();
+  }, [clearLinger, clearTimer]);
+
+  const onUnmount = useCallback(
+    (node: HTMLDivElement | null) => {
+      if (node) {
+        activeRef.current = true;
+        return;
+      }
+      dispose();
+    },
+    [dispose],
+  );
 
   const flush = useCallback(async (): Promise<boolean> => {
     clearTimer();
-    if (!dirty && !inFlightRef.current) return true;
+    if (!isDirtyRef.current && !inFlightRef.current) {
+      return true;
+    }
     if (inFlightRef.current) {
       while (inFlightRef.current) {
         await new Promise((r) => setTimeout(r, 50));
       }
-      if (!mountedRef.current) return false;
-      if (!dirty) return true;
+      if (!activeRef.current) {
+        return false;
+      }
+      if (!isDirtyRef.current) {
+        return true;
+      }
     }
     return await runSave();
-  }, [dirty, runSave]);
+  }, [clearTimer, runSave]);
 
-  return { status, kick, flush };
+  return { status, kick, cancel, flush, onUnmount };
 }

@@ -9,7 +9,7 @@ import {
 } from "convex/react";
 import { useUser } from "@clerk/nextjs";
 import { api } from "../../../../convex/_generated/api";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useMemo, useRef, useState } from "react";
 import { Effect } from "effect";
 import { toast } from "sonner";
 import {
@@ -159,12 +159,7 @@ function PriceAmountInput({
 }: PriceAmountInputProps) {
   const [focused, setFocused] = useState(false);
   const [text, setText] = useState(() => priceCentsToDisplay(priceCents));
-
-  useEffect(() => {
-    if (!focused) {
-      setText(priceCentsToDisplay(priceCents));
-    }
-  }, [priceCents, focused]);
+  const displayText = focused ? text : priceCentsToDisplay(priceCents);
 
   return (
     <Input
@@ -172,7 +167,7 @@ function PriceAmountInput({
       inputMode="decimal"
       {...rest}
       className={className}
-      value={text}
+      value={displayText}
       onChange={(e) => {
         const v = e.target.value;
         setText(v);
@@ -183,6 +178,7 @@ function PriceAmountInput({
       }}
       onFocus={(e) => {
         setFocused(true);
+        setText(priceCentsToDisplay(priceCents));
         onFocus?.(e);
       }}
       onBlur={(e) => {
@@ -236,6 +232,8 @@ function PricingForm() {
   const [localDraft, setLocalDraft] = useState<PricingContent | null>(null);
   const [busy, setBusy] = useState<string | null>(null);
   const [inlineError, setInlineError] = useState<string | null>(null);
+  const kickAutosaveRef = useRef<() => void>(() => {});
+  const cancelAutosaveRef = useRef<() => void>(() => {});
 
   const source: PricingContent | undefined = useMemo(() => {
     if (localDraft) return localDraft;
@@ -246,13 +244,11 @@ function PricingForm() {
     });
   }, [localDraft, pricing]);
 
-  const mutate = useCallback(
-    (next: PricingContent) => {
-      setInlineError(null);
-      setLocalDraft(next);
-    },
-    [],
-  );
+  const mutate = useCallback((next: PricingContent) => {
+    setInlineError(null);
+    setLocalDraft(next);
+    kickAutosaveRef.current();
+  }, []);
 
   const setPriceTabEnabled = useCallback(
     (checked: boolean) => {
@@ -345,6 +341,7 @@ function PricingForm() {
 
   const runAction = useCallback(
     async <A,>(label: string, program: Effect.Effect<A, CmsAppError>) => {
+      cancelAutosaveRef.current();
       setInlineError(null);
       setBusy(label);
       const outcome = await runAdminEffect(program, {
@@ -362,10 +359,14 @@ function PricingForm() {
   const hasDraftOnServer = pricing?.hasDraftChanges ?? false;
   const hasLocalEdits = localDraft !== null;
 
-  const { status: autosaveStatus, flush: flushAutosave } = useAutosaveDraft({
-    dirty: hasLocalEdits && source !== undefined,
-    debounceResetKey: localDraft,
-    pauseWhen: busy !== null,
+  const {
+    status: autosaveStatus,
+    flush: flushAutosave,
+    kick: kickAutosave,
+    cancel: cancelAutosave,
+    onUnmount: autosaveOnUnmount,
+  } = useAutosaveDraft({
+    isDirty: hasLocalEdits && source !== undefined,
     saveEffect: () =>
       convexMutationEffect(() =>
         saveDraft({
@@ -375,8 +376,11 @@ function PricingForm() {
       ),
     onSaved: () => setLocalDraft(null),
   });
+  kickAutosaveRef.current = kickAutosave;
+  cancelAutosaveRef.current = cancelAutosave;
 
   const handleDiscardConfirm = useCallback(async (): Promise<boolean> => {
+    cancelAutosaveRef.current();
     setInlineError(null);
     if (hasDraftOnServer) {
       setBusy("Discarding…");
@@ -414,7 +418,7 @@ function PricingForm() {
     pricing.publishedBy && user?.id === pricing.publishedBy ? "You" : undefined;
 
   return (
-    <div className="space-y-10 pb-24">
+    <div className="space-y-10 pb-24" ref={autosaveOnUnmount}>
       <fieldset className="space-y-3">
         <legend className="label-text text-muted-foreground">Visibility</legend>
         <div className="flex items-start gap-3">

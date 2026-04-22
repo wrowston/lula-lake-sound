@@ -9,7 +9,7 @@ import {
 } from "convex/react";
 import { useUser } from "@clerk/nextjs";
 import { api } from "../../../../convex/_generated/api";
-import { useCallback, useState } from "react";
+import { useCallback, useRef, useState } from "react";
 import { Effect } from "effect";
 import { toast } from "sonner";
 import { convexMutationEffect, type CmsAppError } from "@/lib/effect-errors";
@@ -75,6 +75,8 @@ function SettingsForm() {
   const [localDraft, setLocalDraft] = useState<SettingsContent | null>(null);
   const [busy, setBusy] = useState<string | null>(null);
   const [inlineError, setInlineError] = useState<string | null>(null);
+  const kickAutosaveRef = useRef<() => void>(() => {});
+  const cancelAutosaveRef = useRef<() => void>(() => {});
 
   const source: SettingsContent | undefined =
     localDraft ??
@@ -92,12 +94,14 @@ function SettingsForm() {
       if (!source) return;
       setInlineError(null);
       setLocalDraft({ ...source, metadata });
+      kickAutosaveRef.current();
     },
     [source],
   );
 
   const runAction = useCallback(
     async <A,>(label: string, program: Effect.Effect<A, CmsAppError>) => {
+      cancelAutosaveRef.current();
       setInlineError(null);
       setBusy(label);
       const outcome = await runAdminEffect(program, {
@@ -115,10 +119,14 @@ function SettingsForm() {
   const hasDraftOnServer = section?.hasDraftChanges ?? false;
   const hasLocalEdits = localDraft !== null;
 
-  const { status: autosaveStatus, flush: flushAutosave } = useAutosaveDraft({
-    dirty: hasLocalEdits && source !== undefined,
-    debounceResetKey: localDraft,
-    pauseWhen: busy !== null,
+  const {
+    status: autosaveStatus,
+    flush: flushAutosave,
+    kick: kickAutosave,
+    cancel: cancelAutosave,
+    onUnmount: autosaveOnUnmount,
+  } = useAutosaveDraft({
+    isDirty: hasLocalEdits && source !== undefined,
     saveEffect: () =>
       convexMutationEffect(() =>
         saveDraft({
@@ -128,8 +136,11 @@ function SettingsForm() {
       ),
     onSaved: () => setLocalDraft(null),
   });
+  kickAutosaveRef.current = kickAutosave;
+  cancelAutosaveRef.current = cancelAutosave;
 
   const handleDiscardConfirm = useCallback(async (): Promise<boolean> => {
+    cancelAutosaveRef.current();
     setInlineError(null);
     if (hasDraftOnServer) {
       setBusy("Discarding…");
@@ -165,7 +176,7 @@ function SettingsForm() {
     section.publishedBy && user?.id === section.publishedBy ? "You" : undefined;
 
   return (
-    <div className="space-y-8 pb-24">
+    <div className="space-y-8 pb-24" ref={autosaveOnUnmount}>
       <fieldset className="space-y-3">
         <legend className="label-text text-muted-foreground">Site Metadata</legend>
         <label className="block space-y-1">

@@ -4,7 +4,7 @@ import { convexToJson, type Value } from "convex/values";
 import { getFunctionName } from "convex/server";
 import type { ConvexReactClient } from "convex/react";
 import type { FunctionArgs, FunctionReference } from "convex/server";
-import { useEffect, useMemo, useRef } from "react";
+import { useCallback, useMemo, useRef } from "react";
 import { api } from "@convex/_generated/api";
 
 export const PREWARM_DEBOUNCE_MS = 120;
@@ -144,26 +144,43 @@ export function createRoutePrewarmIntent(
   return { handlers, cancel };
 }
 
+/**
+ * @returns Handlers for hover/focus prewarm, plus a ref callback to attach to a
+ * root that unmounts with this intent — cleanup runs on detach and cancels the
+ * debounce timer (replaces an effect-based unmount cleanup).
+ */
 export function useRoutePrewarmIntent(
   prewarmFn: PrewarmFn,
   options: UseRoutePrewarmIntentOptions = {},
-): RoutePrewarmIntentHandlers {
+): {
+  readonly handlers: RoutePrewarmIntentHandlers;
+  /** Attach to a root element (e.g. wrapper around the link) so timer cancels on unmount. */
+  readonly intentRootRef: (node: Element | null) => void;
+} {
   const prewarmRef = useRef(prewarmFn);
   prewarmRef.current = prewarmFn;
 
   const debounceMs = options.debounceMs ?? PREWARM_DEBOUNCE_MS;
 
-  const controller = useMemo(
-    () =>
-      createRoutePrewarmIntent(() => prewarmRef.current(), { debounceMs }),
-    [debounceMs],
+  const previousController = useRef<ReturnType<typeof createRoutePrewarmIntent> | null>(
+    null,
   );
+  const controller = useMemo(() => {
+    previousController.current?.cancel();
+    const next = createRoutePrewarmIntent(() => prewarmRef.current(), {
+      debounceMs,
+    });
+    previousController.current = next;
+    return next;
+  }, [debounceMs]);
 
-  useEffect(() => {
-    return () => {
-      controller.cancel();
-    };
-  }, [controller]);
+  const controllerRef = useRef(controller);
+  controllerRef.current = controller;
 
-  return controller.handlers;
+  const intentRootRef = useCallback((node: Element | null) => {
+    if (node) return;
+    controllerRef.current.cancel();
+  }, []);
+
+  return { handlers: controller.handlers, intentRootRef };
 }

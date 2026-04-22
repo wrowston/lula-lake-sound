@@ -145,7 +145,7 @@ export function AboutLayout({ data, showPricing, banner }: AboutLayoutProps) {
       : "/about";
 
   // Ref callback owns the scroll listener + reveal observer lifecycle so we
-  // can follow the project's "no useEffect" convention (see AGENTS.md). React
+  // can follow the project's "no effect hook" convention (see AGENTS.md). React
   // 19 runs the cleanup returned here when the node detaches, matching the
   // pattern in `src/components/homepage-shell.tsx`.
   const containerRef = useCallback((node: HTMLDivElement | null) => {

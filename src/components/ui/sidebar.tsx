@@ -40,6 +40,22 @@ const SIDEBAR_WIDTH_DEFAULT_PX = 256
 const SIDEBAR_WIDTH_MIN_PX = 200
 const SIDEBAR_WIDTH_MAX_PX = 480
 
+function readClampedWidth(key: string) {
+  if (typeof window === "undefined") return SIDEBAR_WIDTH_DEFAULT_PX
+  try {
+    const raw = window.localStorage.getItem(key)
+    if (raw == null) return SIDEBAR_WIDTH_DEFAULT_PX
+    const n = Number.parseInt(raw, 10)
+    if (!Number.isFinite(n)) return SIDEBAR_WIDTH_DEFAULT_PX
+    return Math.min(
+      SIDEBAR_WIDTH_MAX_PX,
+      Math.max(SIDEBAR_WIDTH_MIN_PX, n)
+    )
+  } catch {
+    return SIDEBAR_WIDTH_DEFAULT_PX
+  }
+}
+
 type SidebarContextProps = {
   state: "expanded" | "collapsed"
   open: boolean
@@ -84,42 +100,40 @@ function SidebarProvider({
 }) {
   const isMobile = useIsMobile()
   const [openMobile, setOpenMobile] = React.useState(false)
-  const [sidebarWidthPx, setSidebarWidthPxState] = React.useState(
-    SIDEBAR_WIDTH_DEFAULT_PX
+  const [widthOverridePx, setWidthOverridePx] = React.useState<number | null>(
+    null
   )
 
-  React.useEffect(() => {
-    if (!resizableWidth || typeof window === "undefined") return
-    try {
-      const raw = window.localStorage.getItem(sidebarWidthStorageKey)
-      if (raw == null) return
-      const n = Number.parseInt(raw, 10)
-      if (Number.isFinite(n)) {
-        setSidebarWidthPxState(
-          Math.min(SIDEBAR_WIDTH_MAX_PX, Math.max(SIDEBAR_WIDTH_MIN_PX, n))
-        )
-      }
-    } catch {
-      /* ignore */
-    }
-  }, [resizableWidth, sidebarWidthStorageKey])
+  const storedWidth = React.useSyncExternalStore(
+    resizableWidth
+      ? (on) => {
+          const onStorage = (e: StorageEvent) => {
+            if (e.key === sidebarWidthStorageKey || e.key === null) on()
+          }
+          window.addEventListener("storage", onStorage)
+          return () => window.removeEventListener("storage", onStorage)
+        }
+      : () => () => {},
+    () => readClampedWidth(sidebarWidthStorageKey),
+    () => SIDEBAR_WIDTH_DEFAULT_PX
+  )
+
+  const sidebarWidthPx = resizableWidth
+    ? (widthOverridePx ?? storedWidth)
+    : SIDEBAR_WIDTH_DEFAULT_PX
 
   const setSidebarWidthPx = React.useCallback(
     (px: number) => {
+      if (!resizableWidth) return
       const clamped = Math.min(
         SIDEBAR_WIDTH_MAX_PX,
         Math.max(SIDEBAR_WIDTH_MIN_PX, Math.round(px))
       )
-      setSidebarWidthPxState(clamped)
-      if (resizableWidth && typeof window !== "undefined") {
-        try {
-          window.localStorage.setItem(
-            sidebarWidthStorageKey,
-            String(clamped)
-          )
-        } catch {
-          /* ignore */
-        }
+      setWidthOverridePx(clamped)
+      try {
+        window.localStorage.setItem(sidebarWidthStorageKey, String(clamped))
+      } catch {
+        /* ignore */
       }
     },
     [resizableWidth, sidebarWidthStorageKey]
@@ -149,21 +163,28 @@ function SidebarProvider({
     return isMobile ? setOpenMobile((open) => !open) : setOpen((open) => !open)
   }, [isMobile, setOpen, setOpenMobile])
 
-  // Adds a keyboard shortcut to toggle the sidebar.
-  React.useEffect(() => {
+  const toggleSidebarRef = React.useRef(toggleSidebar)
+  toggleSidebarRef.current = toggleSidebar
+
+  // ⌘/Ctrl-B — ref callback owns the window listener; cleanup on detach.
+  const sidebarWrapperRef = React.useCallback((node: HTMLDivElement | null) => {
+    if (!node) {
+      return
+    }
     const handleKeyDown = (event: KeyboardEvent) => {
       if (
         event.key === SIDEBAR_KEYBOARD_SHORTCUT &&
         (event.metaKey || event.ctrlKey)
       ) {
         event.preventDefault()
-        toggleSidebar()
+        toggleSidebarRef.current()
       }
     }
-
     window.addEventListener("keydown", handleKeyDown)
-    return () => window.removeEventListener("keydown", handleKeyDown)
-  }, [toggleSidebar])
+    return () => {
+      window.removeEventListener("keydown", handleKeyDown)
+    }
+  }, [])
 
   // We add a state so that we can do data-state="expanded" or "collapsed".
   // This makes it easier to style the sidebar with Tailwind classes.
@@ -201,6 +222,7 @@ function SidebarProvider({
   return (
     <SidebarContext.Provider value={contextValue}>
       <div
+        ref={sidebarWrapperRef}
         data-slot="sidebar-wrapper"
         style={
           {

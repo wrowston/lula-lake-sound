@@ -36,8 +36,8 @@ function AdminNavLinkItem({
   pathname: string;
 }) {
   const convex = useConvex();
-  const prewarmHandlers = useRoutePrewarmIntent(() =>
-    prewarmAdminNavigation(convex, item.href),
+  const { handlers: prewarmHandlers, intentRootRef } = useRoutePrewarmIntent(
+    () => prewarmAdminNavigation(convex, item.href),
   );
 
   function isActive(href: string) {
@@ -50,7 +50,9 @@ function AdminNavLinkItem({
       <SidebarMenuButton
         isActive={isActive(item.href)}
         tooltip={item.title}
-        render={<Link href={item.href} {...prewarmHandlers} />}
+        render={
+          <Link href={item.href} ref={intentRootRef} {...prewarmHandlers} />
+        }
       >
         <item.icon className="size-4" />
         <span>{item.title}</span>

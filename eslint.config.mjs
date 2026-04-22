@@ -11,6 +11,24 @@ const compat = new FlatCompat({
 
 const eslintConfig = [
   ...compat.extends("next/core-web-vitals", "next/typescript"),
+  {
+    files: ["src/**/*.{ts,tsx}"],
+    rules: {
+      "no-restricted-syntax": [
+        "error",
+        {
+          selector: "ImportSpecifier[imported.name='useEffect']",
+          message:
+            "Do not use useEffect — see AGENTS.md §2. Prefer ref callbacks, useSyncExternalStore, derived state, or event handlers.",
+        },
+        {
+          selector:
+            "MemberExpression[object.name='React'][property.name='useEffect']",
+          message: "Do not use React.useEffect — see AGENTS.md §2.",
+        },
+      ],
+    },
+  },
 ];
 
 export default eslintConfig;
