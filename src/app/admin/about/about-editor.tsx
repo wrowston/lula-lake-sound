@@ -33,11 +33,12 @@ import { useUser } from "@clerk/nextjs";
 import { useCallback, useMemo, useRef, useState } from "react";
 import { Effect } from "effect";
 import { toast } from "sonner";
-import { ArrowDown, ArrowUp, Plus, X } from "lucide-react";
+import { ArrowDown, ArrowUp, Check, Plus, Trash2, X } from "lucide-react";
 import type { Id } from "../../../../convex/_generated/dataModel";
 import { api } from "../../../../convex/_generated/api";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Switch } from "@/components/ui/switch";
 import { Textarea } from "@/components/ui/textarea";
 import { cn } from "@/lib/utils";
 import { convexMutationEffect, type CmsAppError } from "@/lib/effect-errors";
@@ -57,12 +58,22 @@ export type AboutTeamMemberRow = {
 };
 
 type AboutContent = {
+  /** INF-46 visibility flag — gates the public `/about` route and nav link. */
+  published: boolean;
+  /**
+   * INF-46 follow-up — storage id of the hero image. The owner picks from
+   * the existing studio gallery; we intentionally reuse already-uploaded
+   * blobs rather than adding a bespoke upload surface here.
+   */
+  heroImageStorageId?: Id<"_storage">;
   heroTitle: string;
   heroSubtitle?: string;
   /** Rich-text body (Tiptap HTML). Preferred over legacy `body` blocks. */
   bodyHtml?: string;
   /** Kept for back-compat with pre-INF-98 stored rows. Not edited anymore. */
   body: AboutBlock[];
+  /** INF-46 editorial pull quote rendered below the headshots. */
+  pullQuote?: string;
   highlights?: string[];
   seoTitle?: string;
   seoDescription?: string;
@@ -184,6 +195,14 @@ function toAboutContent(raw: unknown): AboutContent {
     : [];
 
   return {
+    // INF-46: default hidden so rows saved before this field existed stay
+    // off until the owner explicitly enables the page.
+    published: typeof r.published === "boolean" ? r.published : false,
+    heroImageStorageId:
+      typeof r.heroImageStorageId === "string" &&
+      r.heroImageStorageId.length > 0
+        ? (r.heroImageStorageId as Id<"_storage">)
+        : undefined,
     heroTitle: typeof r.heroTitle === "string" ? r.heroTitle : "",
     heroSubtitle:
       typeof r.heroSubtitle === "string" ? r.heroSubtitle : undefined,
@@ -191,6 +210,10 @@ function toAboutContent(raw: unknown): AboutContent {
     // even on rows that haven't been re-saved since INF-98.
     bodyHtml: storedHtml ?? (body.length > 0 ? blocksToHtml(body) : undefined),
     body,
+    pullQuote:
+      typeof r.pullQuote === "string" && r.pullQuote.trim().length > 0
+        ? r.pullQuote
+        : undefined,
     highlights: Array.isArray(r.highlights)
       ? (r.highlights as unknown[]).filter(
           (h): h is string => typeof h === "string",
@@ -332,10 +355,34 @@ function AboutForm() {
     setLocalDraft(next);
   }, []);
 
+  const setPublished = useCallback(
+    (value: boolean) => {
+      if (!source) return;
+      mutate({ ...source, published: value });
+    },
+    [source, mutate],
+  );
+
+  const setHeroImageStorageId = useCallback(
+    (value: Id<"_storage"> | undefined) => {
+      if (!source) return;
+      mutate({ ...source, heroImageStorageId: value });
+    },
+    [source, mutate],
+  );
+
   const setHeroTitle = useCallback(
     (value: string) => {
       if (!source) return;
       mutate({ ...source, heroTitle: value });
+    },
+    [source, mutate],
+  );
+
+  const setPullQuote = useCallback(
+    (value: string) => {
+      if (!source) return;
+      mutate({ ...source, pullQuote: trimToUndefined(value) });
     },
     [source, mutate],
   );
@@ -427,10 +474,15 @@ function AboutForm() {
         saveDraft({
           section: "about",
           content: {
+            published: source?.published ?? false,
+            ...(source?.heroImageStorageId !== undefined
+              ? { heroImageStorageId: source.heroImageStorageId }
+              : {}),
             heroTitle: source?.heroTitle ?? "",
             heroSubtitle: source?.heroSubtitle,
             bodyHtml: source?.bodyHtml,
             body: source?.body ?? [],
+            pullQuote: source?.pullQuote,
             highlights: source?.highlights,
             seoTitle: source?.seoTitle,
             seoDescription: source?.seoDescription,
@@ -500,6 +552,31 @@ function AboutForm() {
     <div className="space-y-8 pb-24">
       <div className="space-y-8">
           <fieldset className="space-y-3">
+            <legend className="label-text text-muted-foreground">
+              Visibility
+            </legend>
+            <div className="flex items-start gap-3">
+              <Switch
+                id="about-published"
+                checked={source.published}
+                onCheckedChange={setPublished}
+              />
+              <div className="space-y-1">
+                <label
+                  htmlFor="about-published"
+                  className="body-text-small cursor-pointer text-foreground"
+                >
+                  Show About page on site
+                </label>
+                <p className="body-text-small text-muted-foreground">
+                  Hides the public <code>/about</code> route and the header
+                  nav link when off. Preview still shows the draft value.
+                </p>
+              </div>
+            </div>
+          </fieldset>
+
+          <fieldset className="space-y-3">
             <legend className="label-text text-muted-foreground">Hero</legend>
             <label className="block space-y-1">
               <span className="body-text-small text-muted-foreground">
@@ -529,6 +606,32 @@ function AboutForm() {
           </fieldset>
 
           <fieldset className="space-y-3">
+            <legend className="label-text text-muted-foreground">
+              Hero image
+            </legend>
+            <p className="body-text-small text-muted-foreground">
+              Pick a photo from the studio gallery or upload a bespoke
+              image just for this page. Gallery uploads are managed from
+              the{" "}
+              <a
+                href="/admin/photos"
+                className="underline underline-offset-2 hover:text-foreground"
+              >
+                Photos
+              </a>{" "}
+              admin; bespoke uploads won&rsquo;t appear in the public
+              gallery.
+            </p>
+            <HeroImagePicker
+              selectedStorageId={source.heroImageStorageId}
+              onChange={setHeroImageStorageId}
+              generateUploadUrl={generateUploadUrl}
+              uploadBusyKey={uploadBusy}
+              setUploadBusyKey={setUploadBusy}
+            />
+          </fieldset>
+
+          <fieldset className="space-y-3">
             <legend className="label-text text-muted-foreground">Body</legend>
             <p className="body-text-small text-muted-foreground">
               Rich text — toolbar or markdown shortcuts (
@@ -544,6 +647,23 @@ function AboutForm() {
               placeholder="Tell the studio's story…"
               onChange={setBodyHtml}
               resetToken={editorResetToken}
+            />
+          </fieldset>
+
+          <fieldset className="space-y-3">
+            <legend className="label-text text-muted-foreground">
+              Pull quote
+            </legend>
+            <p className="body-text-small text-muted-foreground">
+              Editorial callout rendered below the owner / studio-designer
+              headshots. Leave blank to hide the quote block.
+            </p>
+            <Textarea
+              rows={2}
+              value={source.pullQuote ?? ""}
+              onChange={(e) => setPullQuote(e.target.value)}
+              placeholder="The mountain doesn't rush. Neither should the music."
+              className="text-foreground placeholder:text-muted-foreground"
             />
           </fieldset>
 
@@ -653,6 +773,7 @@ function AboutForm() {
         busy={busy}
         inlineError={inlineError}
         autosaveStatus={autosaveStatus}
+        previewHref="/preview/about"
         onPublish={() => {
           if (issues.length > 0) {
             setInlineError("Fix the blocking issues above before publishing.");
@@ -671,6 +792,269 @@ function AboutForm() {
         }}
         onDiscardConfirm={handleDiscardConfirm}
       />
+    </div>
+  );
+}
+
+interface HeroImagePickerProps {
+  readonly selectedStorageId: Id<"_storage"> | undefined;
+  readonly onChange: (storageId: Id<"_storage"> | undefined) => void;
+  readonly generateUploadUrl: () => Promise<{ uploadUrl: string }>;
+  readonly uploadBusyKey: string | null;
+  readonly setUploadBusyKey: (key: string | null) => void;
+}
+
+/**
+ * Inline picker for the About hero image.
+ *
+ * The owner can either pick a photo from the studio gallery (sourced from
+ * `api.admin.photos.listDraftPhotos` so unpublished uploads are also
+ * selectable) or upload a bespoke image just for the About page that
+ * intentionally does NOT land in the public gallery. Both cases resolve to
+ * a Convex `_storage` id, so the public About page renders them the same
+ * way via `storage.getUrl`.
+ *
+ * When the currently selected id isn't a gallery photo we fall back to a
+ * direct URL lookup (`api.admin.about.getHeroImageUrl`) so the thumbnail
+ * still renders. Only when the underlying blob has been deleted (URL
+ * resolves to `null`) do we surface a recoverable warning.
+ */
+const HERO_IMAGE_MAX_BYTES = 50 * 1024 * 1024;
+const HERO_IMAGE_ACCEPT = "image/jpeg,image/png,image/webp";
+
+type GalleryPickerPhoto = NonNullable<
+  ReturnType<typeof useQuery<typeof api.admin.photos.listDraftPhotos>>
+>["photos"][number] & { url: string };
+
+function HeroImagePicker({
+  selectedStorageId,
+  onChange,
+  generateUploadUrl,
+  uploadBusyKey,
+  setUploadBusyKey,
+}: HeroImagePickerProps) {
+  const draft = useQuery(api.admin.photos.listDraftPhotos);
+
+  const photos = useMemo<GalleryPickerPhoto[]>(
+    () =>
+      (draft?.photos ?? []).filter(
+        (p): p is GalleryPickerPhoto =>
+          typeof p.url === "string" && p.url.length > 0,
+      ),
+    [draft],
+  );
+
+  const selectedInGallery = useMemo(
+    () => photos.find((p) => p.storageId === selectedStorageId),
+    [photos, selectedStorageId],
+  );
+
+  // Resolve a URL for bespoke (non-gallery) hero uploads so we can still
+  // show a preview. Skipped when the selected id is already in the gallery
+  // list (we reuse the gallery-provided URL) or nothing is selected.
+  const bespokeUrl = useQuery(
+    api.admin.about.getHeroImageUrl,
+    selectedStorageId !== undefined && !selectedInGallery
+      ? { storageId: selectedStorageId }
+      : "skip",
+  );
+
+  const isUploading = uploadBusyKey === "hero-image-upload";
+
+  const onUploadFile = async (file: File) => {
+    if (!file.type.startsWith("image/")) {
+      toast.error("Choose an image file (JPEG, PNG, or WebP).");
+      return;
+    }
+    if (file.size > HERO_IMAGE_MAX_BYTES) {
+      toast.error(
+        `Image must be ${Math.floor(HERO_IMAGE_MAX_BYTES / (1024 * 1024))}MB or smaller.`,
+      );
+      return;
+    }
+    setUploadBusyKey("hero-image-upload");
+    try {
+      const { uploadUrl } = await generateUploadUrl();
+      const storageId = await uploadHeadshotToConvex(uploadUrl, file);
+      onChange(storageId);
+      toast.success("Hero image uploaded.");
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Upload failed.");
+    } finally {
+      setUploadBusyKey(null);
+    }
+  };
+
+  const selectedUrl = selectedInGallery?.url ?? bespokeUrl ?? null;
+  // Only treat the selection as orphaned once we've heard back from both
+  // the gallery list and the bespoke URL query. Otherwise the first render
+  // after selection flashes a false warning.
+  const selectedIsOrphaned =
+    selectedStorageId !== undefined &&
+    draft !== undefined &&
+    !selectedInGallery &&
+    bespokeUrl === null;
+
+  const uploadButton = (
+    <>
+      <input
+        id="about-hero-upload-input"
+        type="file"
+        accept={HERO_IMAGE_ACCEPT}
+        className="hidden"
+        tabIndex={-1}
+        disabled={uploadBusyKey !== null}
+        onChange={(e) => {
+          const f = e.target.files?.[0];
+          e.target.value = "";
+          if (f) void onUploadFile(f);
+        }}
+      />
+      <Button
+        type="button"
+        variant="outline"
+        size="sm"
+        disabled={uploadBusyKey !== null}
+        onClick={() => {
+          document.getElementById("about-hero-upload-input")?.click();
+        }}
+      >
+        {isUploading
+          ? "Uploading…"
+          : selectedStorageId !== undefined
+            ? "Upload different image"
+            : "Upload new image"}
+      </Button>
+    </>
+  );
+
+  if (draft === undefined) {
+    return (
+      <p className="rounded-md border border-dashed border-border px-3 py-4 text-xs text-muted-foreground">
+        Loading gallery photos…
+      </p>
+    );
+  }
+
+  return (
+    <div className="space-y-3">
+      {selectedIsOrphaned ? (
+        <div className="flex items-start justify-between gap-3 rounded-md border border-amber-500/40 bg-amber-500/5 px-3 py-2 text-xs">
+          <p className="text-amber-800 dark:text-amber-200">
+            The previously selected image is no longer available. Pick a
+            new one, upload another, or clear the selection.
+          </p>
+          <Button
+            type="button"
+            variant="ghost"
+            size="sm"
+            className="shrink-0 text-amber-800 hover:text-amber-900 dark:text-amber-200 dark:hover:text-amber-100"
+            onClick={() => onChange(undefined)}
+          >
+            <Trash2 className="mr-1 size-3.5" aria-hidden />
+            Clear
+          </Button>
+        </div>
+      ) : null}
+
+      {selectedUrl ? (
+        <div className="flex items-center gap-3 rounded-md border border-border bg-muted/30 p-3">
+          <div className="relative size-16 shrink-0 overflow-hidden rounded-md border border-border bg-muted">
+            {/* eslint-disable-next-line @next/next/no-img-element -- signed Convex URL, not eligible for `next/image` in admin surfaces. */}
+            <img
+              src={selectedUrl}
+              alt=""
+              aria-hidden
+              className="size-full object-cover"
+            />
+          </div>
+          <div className="min-w-0 flex-1 space-y-0.5">
+            <p className="body-text-small truncate text-foreground">
+              {selectedInGallery
+                ? selectedInGallery.alt ||
+                  selectedInGallery.originalFileName ||
+                  "Selected photo"
+                : "Custom upload"}
+            </p>
+            <p className="text-xs text-muted-foreground">
+              {selectedInGallery
+                ? "This photo will appear as the About page hero."
+                : "Bespoke upload — not part of the public gallery."}
+            </p>
+          </div>
+          <Button
+            type="button"
+            variant="ghost"
+            size="sm"
+            onClick={() => onChange(undefined)}
+          >
+            <Trash2 className="mr-1 size-3.5" aria-hidden />
+            Remove
+          </Button>
+        </div>
+      ) : null}
+
+      <div className="flex items-center justify-between gap-3">
+        <p className="body-text-small text-muted-foreground">
+          {photos.length === 0
+            ? "No gallery photos yet — upload a bespoke image for the hero."
+            : "Pick from the gallery below or upload a bespoke image."}
+        </p>
+        {uploadButton}
+      </div>
+
+      {photos.length > 0 ? (
+        <div
+          role="radiogroup"
+          aria-label="Hero image"
+          className="grid grid-cols-3 gap-2 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6"
+        >
+          {photos.map((photo) => {
+            const isSelected = photo.storageId === selectedStorageId;
+            return (
+              <button
+                key={photo.stableId}
+                type="button"
+                role="radio"
+                aria-checked={isSelected}
+                aria-label={
+                  photo.alt ||
+                  photo.originalFileName ||
+                  `Use ${photo.stableId} as hero image`
+                }
+                onClick={() => {
+                  onChange(isSelected ? undefined : photo.storageId);
+                }}
+                className={cn(
+                  "group relative aspect-square overflow-hidden rounded-md border transition",
+                  "focus:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background",
+                  isSelected
+                    ? "border-primary ring-2 ring-primary/40"
+                    : "border-border hover:border-foreground/40",
+                )}
+              >
+                {/* eslint-disable-next-line @next/next/no-img-element -- admin-only thumbnail, signed Convex URL. */}
+                <img
+                  src={photo.url}
+                  alt=""
+                  aria-hidden
+                  className={cn(
+                    "size-full object-cover transition group-hover:scale-[1.02]",
+                    !isSelected && "opacity-90 group-hover:opacity-100",
+                  )}
+                />
+                {isSelected ? (
+                  <span className="pointer-events-none absolute inset-0 flex items-center justify-center bg-primary/20">
+                    <span className="inline-flex size-6 items-center justify-center rounded-full bg-primary text-primary-foreground shadow">
+                      <Check className="size-3.5" aria-hidden />
+                    </span>
+                  </span>
+                ) : null}
+              </button>
+            );
+          })}
+        </div>
+      ) : null}
     </div>
   );
 }

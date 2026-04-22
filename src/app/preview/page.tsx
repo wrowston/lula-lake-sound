@@ -12,11 +12,16 @@ function PreviewContent() {
   );
   const gearPreview = useQuery(api.gearPreviewDraft.getPreviewGear);
   const photoPreview = useQuery(api.photosPreviewDraft.getPreviewGalleryPhotos);
+  // INF-46: surface the draft About visibility in the homepage nav so owners
+  // can confirm the feature-flag toggle before publishing. Preview query is
+  // owner-only and returns `null` for non-owners.
+  const aboutPreview = useQuery(api.aboutPreviewDraft.getPreviewAbout);
 
   if (
     pricingFlags === undefined ||
     gearPreview === undefined ||
-    photoPreview === undefined
+    photoPreview === undefined ||
+    aboutPreview === undefined
   ) {
     return (
       <div className="flex min-h-screen items-center justify-center bg-washed-black">
@@ -28,7 +33,8 @@ function PreviewContent() {
   if (
     pricingFlags === null ||
     gearPreview === null ||
-    photoPreview === null
+    photoPreview === null ||
+    aboutPreview === null
   ) {
     return (
       <div className="flex min-h-screen items-center justify-center bg-washed-black">
@@ -42,7 +48,8 @@ function PreviewContent() {
   const hasDraftChanges =
     pricingFlags.hasDraftChanges ||
     gearPreview.hasDraftChanges ||
-    photoPreview.hasDraftChanges;
+    photoPreview.hasDraftChanges ||
+    aboutPreview.hasDraftChanges;
 
   return (
     <HomepageShell
@@ -52,6 +59,7 @@ function PreviewContent() {
       }}
       gear={{ categories: gearPreview.categories }}
       photos={photoPreview.photos}
+      aboutVisibility={{ published: aboutPreview.published === true }}
       banner={<PreviewBanner hasDraftChanges={hasDraftChanges} />}
     />
   );

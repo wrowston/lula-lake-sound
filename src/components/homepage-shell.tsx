@@ -1,6 +1,8 @@
 "use client";
 
+import { useQuery } from "convex/react";
 import { useState, useCallback } from "react";
+import { api } from "../../convex/_generated/api";
 import { AmenitiesNearby } from "@/components/amenities-nearby";
 import { ArtistInquiries } from "@/components/artist-inquiries";
 import { MarketingPricingSection } from "@/components/dynamic-pricing";
@@ -26,6 +28,14 @@ interface HomepageShellProps {
   readonly gear: GearPayload | null | undefined;
   /** Published (or preview) gallery payload. */
   readonly photos: GalleryPhoto[] | null | undefined;
+  /**
+   * INF-46 About-page visibility flag. `null` / `undefined` keeps the nav
+   * link hidden — the About page is opt-in via the CMS.
+   */
+  readonly aboutVisibility?:
+    | { readonly published: boolean }
+    | null
+    | undefined;
   readonly banner?: React.ReactNode;
 }
 
@@ -33,6 +43,7 @@ export function HomepageShell({
   pricingFlags,
   gear,
   photos,
+  aboutVisibility,
   banner,
 }: HomepageShellProps) {
   const [scrollY, setScrollY] = useState(0);
@@ -72,10 +83,21 @@ export function HomepageShell({
     };
   }, []);
 
+  // If the caller hasn't provided a draft/preload visibility value (the
+  // public homepage path), subscribe live so the nav updates reactively when
+  // the owner flips the INF-46 flag in the CMS.
+  const liveAboutVisibility = useQuery(
+    api.public.getPublishedAboutVisibility,
+    aboutVisibility === undefined ? {} : "skip",
+  );
+  const resolvedAboutVisibility =
+    aboutVisibility === undefined ? liveAboutVisibility : aboutVisibility;
+
   const logoScale = calculateLogoScale(scrollY);
   const showPricing =
     pricingFlags === undefined ||
     (pricingFlags !== null && pricingFlags.flags.priceTabEnabled === true);
+  const showAbout = resolvedAboutVisibility?.published === true;
 
   return (
     <div
@@ -83,7 +105,11 @@ export function HomepageShell({
       className="dark relative min-h-screen bg-washed-black text-ivory grain-overlay"
     >
       {banner}
-      <Header scrollY={scrollY} showPricing={showPricing} />
+      <Header
+        scrollY={scrollY}
+        showPricing={showPricing}
+        showAbout={showAbout}
+      />
       <Hero logoScale={logoScale} />
 
       <main className="relative z-10">

@@ -9,6 +9,13 @@ import { cn } from "@/lib/utils";
 interface HeaderProps {
   readonly scrollY: number;
   readonly showPricing?: boolean;
+  /**
+   * INF-46 — hides the primary-nav "About" link (desktop + mobile) when the
+   * CMS-controlled About page is disabled. Defaults to `false` so deploys
+   * that forget to plumb the flag keep the new About page hidden rather
+   * than quietly shipping a broken link.
+   */
+  readonly showAbout?: boolean;
 }
 
 /**
@@ -19,7 +26,11 @@ interface HeaderProps {
  * near-opaque washed-black wash once the user has committed to scrolling so
  * the nav text stays legible against hero imagery.
  */
-export function Header({ scrollY, showPricing = false }: HeaderProps) {
+export function Header({
+  scrollY,
+  showPricing = false,
+  showAbout = false,
+}: HeaderProps) {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
   const progress = Math.min(scrollY / 140, 1);
@@ -38,7 +49,16 @@ export function Header({ scrollY, showPricing = false }: HeaderProps) {
     | { kind: "hash"; id: string; label: string };
 
   const navigationItems: NavItem[] = [
-    { kind: "route", key: "about", href: "/about", label: "About" },
+    ...(showAbout
+      ? [
+          {
+            kind: "route" as const,
+            key: "about",
+            href: "/about",
+            label: "About",
+          },
+        ]
+      : []),
     { kind: "hash", id: "the-space", label: "The Studio" },
     { kind: "hash", id: "equipment-specs", label: "Gear" },
     ...(showPricing

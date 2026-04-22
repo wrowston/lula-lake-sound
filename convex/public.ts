@@ -106,6 +106,24 @@ export const getPublishedAbout = query({
 });
 
 /**
+ * Lightweight visibility check for the INF-46 About-page feature flag. Used
+ * by the header nav and other high-traffic surfaces so we don't have to load
+ * the full About snapshot (and generate signed team-headshot URLs) every
+ * time they need to decide whether to render the "About" link.
+ */
+export const getPublishedAboutVisibility = query({
+  args: {},
+  handler: async (ctx) => {
+    const row = await ctx.db
+      .query("cmsSections")
+      .withIndex("by_section", (q) => q.eq("section", "about"))
+      .unique();
+    const snapshot = publishedAboutFromRow(row);
+    return { published: snapshot.published === true };
+  },
+});
+
+/**
  * Published studio gallery photos only. Anonymous; reads `scope === "published"`.
  */
 export const getPublishedGalleryPhotos = query({
