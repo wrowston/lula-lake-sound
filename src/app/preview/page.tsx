@@ -5,6 +5,7 @@ import { Authenticated, Unauthenticated, AuthLoading } from "convex/react";
 import { api } from "../../../convex/_generated/api";
 import { HomepageShell } from "@/components/homepage-shell";
 import { PreviewBanner } from "@/components/preview-banner";
+import type { PublishedAudioTrack } from "@/components/audio-portfolio";
 
 function PreviewContent() {
   const pricingFlags = useQuery(
@@ -12,6 +13,7 @@ function PreviewContent() {
   );
   const gearPreview = useQuery(api.gearPreviewDraft.getPreviewGear);
   const photoPreview = useQuery(api.photosPreviewDraft.getPreviewGalleryPhotos);
+  const audioPreview = useQuery(api.audioPreviewDraft.getPreviewAudioTracks);
   // INF-46: surface the draft About visibility in the homepage nav so owners
   // can confirm the feature-flag toggle before publishing. Preview query is
   // owner-only and returns `null` for non-owners.
@@ -21,6 +23,7 @@ function PreviewContent() {
     pricingFlags === undefined ||
     gearPreview === undefined ||
     photoPreview === undefined ||
+    audioPreview === undefined ||
     aboutPreview === undefined
   ) {
     return (
@@ -34,6 +37,7 @@ function PreviewContent() {
     pricingFlags === null ||
     gearPreview === null ||
     photoPreview === null ||
+    audioPreview === null ||
     aboutPreview === null
   ) {
     return (
@@ -49,7 +53,21 @@ function PreviewContent() {
     pricingFlags.hasDraftChanges ||
     gearPreview.hasDraftChanges ||
     photoPreview.hasDraftChanges ||
+    audioPreview.hasDraftChanges ||
     aboutPreview.hasDraftChanges;
+
+  const audioTracks: PublishedAudioTrack[] = audioPreview.tracks
+    .filter((t): t is typeof t & { url: string } => t.url !== null)
+    .map((t) => ({
+      stableId: t.stableId,
+      url: t.url,
+      title: t.title,
+      artist: t.artist,
+      description: t.description,
+      mimeType: t.mimeType,
+      durationSec: t.durationSec,
+      sortOrder: t.sortOrder,
+    }));
 
   return (
     <HomepageShell
@@ -59,6 +77,7 @@ function PreviewContent() {
       }}
       gear={{ categories: gearPreview.categories }}
       photos={photoPreview.photos}
+      audioTracks={audioTracks}
       aboutVisibility={{ published: aboutPreview.published === true }}
       banner={<PreviewBanner hasDraftChanges={hasDraftChanges} />}
     />

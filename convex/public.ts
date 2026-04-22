@@ -8,6 +8,7 @@ import {
 import { loadGearDocs, mapSortedGearTree } from "./gearTree";
 import type { Doc } from "./_generated/dataModel";
 import { loadGalleryPhotos, materializeGalleryPhotos } from "./galleryPhotos";
+import { loadAudioTracks, materializeAudioTracks } from "./audioTracks";
 
 /**
  * **Public (anonymous) site reads** — published snapshot only.
@@ -132,5 +133,23 @@ export const getPublishedGalleryPhotos = query({
     const rows = await loadGalleryPhotos(ctx, "published");
     const photos = await materializeGalleryPhotos(ctx, rows);
     return photos.filter((photo) => photo.url !== null);
+  },
+});
+
+/**
+ * Published audio portfolio (INF-95). Anonymous; `scope === "published"` only.
+ *
+ * **Playback URL:** each track includes `url` from `ctx.storage.getUrl` — a
+ * time-limited HTTPS URL suitable for `<audio src={url} crossOrigin="anonymous">`.
+ * Convex serves stored files with CORS allowing browser fetches from any origin;
+ * if playback fails in dev, check the browser network tab for blocked mixed content
+ * or expired URLs (refresh the query to obtain a new signed URL).
+ */
+export const getPublishedAudioTracks = query({
+  args: {},
+  handler: async (ctx) => {
+    const rows = await loadAudioTracks(ctx, "published");
+    const tracks = await materializeAudioTracks(ctx, rows);
+    return tracks.filter((t) => t.url !== null);
   },
 });

@@ -1,20 +1,25 @@
 import type { Doc, Id } from "./_generated/dataModel";
 import type { MutationCtx, QueryCtx } from "./_generated/server";
-
-export const ALLOWED_GALLERY_IMAGE_TYPES = [
-  "image/jpeg",
-  "image/png",
-  "image/webp",
+export const ALLOWED_AUDIO_MIME_TYPES = [
+  "audio/mpeg",
+  "audio/mp3",
+  "audio/wav",
+  "audio/x-wav",
+  "audio/wave",
 ] as const;
 
-export const MAX_GALLERY_IMAGE_BYTES = 50 * 1024 * 1024;
-export const MAX_GALLERY_PHOTOS = 40;
-const GALLERY_QUERY_LIMIT = 128;
+export const MAX_AUDIO_FILE_BYTES = 100 * 1024 * 1024;
+export const MAX_AUDIO_TRACKS = 30;
+const AUDIO_QUERY_LIMIT = 128;
 
-export type GalleryScope = Doc<"galleryPhotos">["scope"];
-export type GalleryPhotoDoc = Doc<"galleryPhotos">;
-export type GalleryMetaDoc = Doc<"galleryPhotoMeta">;
-export type GalleryPublishIssue = { path: string; message: string };
+/** Draft rows older than this without a published reference are eligible for GC. */
+export const ABANDONED_DRAFT_AUDIO_MS = 7 * 24 * 60 * 60 * 1000;
+
+export type AudioTrackDoc = Doc<"audioTracks">;
+export type AudioScope = AudioTrackDoc["scope"];
+export type AudioMetaDoc = Doc<"audioTrackMeta">;
+export type AudioPublishIssue = { path: string; message: string };
+
 export type StorageMetadataRecord = {
   _id: Id<"_storage">;
   _creationTime: number;
@@ -23,56 +28,54 @@ export type StorageMetadataRecord = {
   size: number;
 };
 
-function comparablePhoto(row: GalleryPhotoDoc) {
+function comparableTrack(row: AudioTrackDoc) {
   return {
     stableId: row.stableId,
     storageId: row.storageId,
-    alt: row.alt,
-    caption: row.caption ?? null,
-    width: row.width ?? null,
-    height: row.height ?? null,
+    title: row.title,
+    artist: row.artist ?? null,
+    description: row.description,
+    mimeType: row.mimeType,
+    durationSec: row.durationSec ?? null,
     sortOrder: row.sortOrder,
-    contentType: row.contentType,
     sizeBytes: row.sizeBytes,
     originalFileName: row.originalFileName ?? null,
   };
 }
 
-export function galleryDraftMatchesPublished(
-  draft: GalleryPhotoDoc[],
-  published: GalleryPhotoDoc[],
+export function audioDraftMatchesPublished(
+  draft: AudioTrackDoc[],
+  published: AudioTrackDoc[],
 ): boolean {
   if (draft.length !== published.length) {
     return false;
   }
-
   for (let i = 0; i < draft.length; i++) {
     if (
-      JSON.stringify(comparablePhoto(draft[i])) !==
-      JSON.stringify(comparablePhoto(published[i]))
+      JSON.stringify(comparableTrack(draft[i])) !==
+      JSON.stringify(comparableTrack(published[i]))
     ) {
       return false;
     }
   }
-
   return true;
 }
 
-export async function loadGalleryPhotos(
+export async function loadAudioTracks(
   ctx: QueryCtx | MutationCtx,
-  scope: GalleryScope,
-): Promise<GalleryPhotoDoc[]> {
+  scope: AudioScope,
+): Promise<AudioTrackDoc[]> {
   return await ctx.db
-    .query("galleryPhotos")
+    .query("audioTracks")
     .withIndex("by_scope_and_sort", (q) => q.eq("scope", scope))
-    .take(GALLERY_QUERY_LIMIT);
+    .take(AUDIO_QUERY_LIMIT);
 }
 
-export async function ensureGalleryMeta(
+export async function ensureAudioMeta(
   ctx: MutationCtx,
-): Promise<{ id: Doc<"galleryPhotoMeta">["_id"]; row: GalleryMetaDoc }> {
+): Promise<{ id: Doc<"audioTrackMeta">["_id"]; row: AudioMetaDoc }> {
   const existing = await ctx.db
-    .query("galleryPhotoMeta")
+    .query("audioTrackMeta")
     .withIndex("by_singleton", (q) => q.eq("singletonKey", "default"))
     .unique();
 
@@ -81,7 +84,7 @@ export async function ensureGalleryMeta(
   }
 
   const now = Date.now();
-  const id = await ctx.db.insert("galleryPhotoMeta", {
+  const id = await ctx.db.insert("audioTrackMeta", {
     singletonKey: "default",
     hasDraftChanges: false,
     publishedAt: null,
@@ -89,7 +92,7 @@ export async function ensureGalleryMeta(
   });
   const row = await ctx.db.get(id);
   if (!row) {
-    throw new Error("Failed to create gallery photo meta row.");
+    throw new Error("Failed to create audio track meta row.");
   }
   return { id, row };
 }
@@ -108,7 +111,7 @@ export async function deleteStorageIfUnreferenced(
   ctx: MutationCtx,
   storageId: Id<"_storage">,
 ): Promise<boolean> {
-  const [galleryRefs, audioRefs] = await Promise.all([
+  const [galleryRef, audioRef] = await Promise.all([
     ctx.db
       .query("galleryPhotos")
       .withIndex("by_storageId", (q) => q.eq("storageId", storageId))
@@ -118,7 +121,7 @@ export async function deleteStorageIfUnreferenced(
       .withIndex("by_storageId", (q) => q.eq("storageId", storageId))
       .take(1),
   ]);
-  if (galleryRefs.length > 0 || audioRefs.length > 0) {
+  if (galleryRef.length > 0 || audioRef.length > 0) {
     return false;
   }
 
@@ -131,14 +134,14 @@ export async function deleteStorageIfUnreferenced(
   return true;
 }
 
-export async function replaceGalleryScope(
+export async function replaceAudioScope(
   ctx: MutationCtx,
-  fromScope: GalleryScope,
-  toScope: GalleryScope,
+  fromScope: AudioScope,
+  toScope: AudioScope,
 ): Promise<void> {
   const [source, target] = await Promise.all([
-    loadGalleryPhotos(ctx, fromScope),
-    loadGalleryPhotos(ctx, toScope),
+    loadAudioTracks(ctx, fromScope),
+    loadAudioTracks(ctx, toScope),
   ]);
 
   const sourceStorageIds = new Set(source.map((row) => row.storageId));
@@ -155,20 +158,21 @@ export async function replaceGalleryScope(
   }
 
   for (const row of source) {
-    await ctx.db.insert("galleryPhotos", {
+    await ctx.db.insert("audioTracks", {
       scope: toScope,
       stableId: row.stableId,
       storageId: row.storageId,
-      alt: row.alt,
-      ...(row.caption !== undefined ? { caption: row.caption } : {}),
-      ...(row.width !== undefined ? { width: row.width } : {}),
-      ...(row.height !== undefined ? { height: row.height } : {}),
+      title: row.title,
+      ...(row.artist !== undefined ? { artist: row.artist } : {}),
+      description: row.description,
+      mimeType: row.mimeType,
+      ...(row.durationSec !== undefined ? { durationSec: row.durationSec } : {}),
       sortOrder: row.sortOrder,
-      contentType: row.contentType,
       sizeBytes: row.sizeBytes,
       ...(row.originalFileName !== undefined
         ? { originalFileName: row.originalFileName }
         : {}),
+      createdAt: row.createdAt,
     });
   }
 
@@ -177,37 +181,37 @@ export async function replaceGalleryScope(
   }
 }
 
-export async function patchGalleryMetaAfterDraftChange(
+export async function patchAudioMetaAfterDraftChange(
   ctx: MutationCtx,
   updatedBy: string,
 ): Promise<void> {
   const [draft, published, meta] = await Promise.all([
-    loadGalleryPhotos(ctx, "draft"),
-    loadGalleryPhotos(ctx, "published"),
-    ensureGalleryMeta(ctx),
+    loadAudioTracks(ctx, "draft"),
+    loadAudioTracks(ctx, "published"),
+    ensureAudioMeta(ctx),
   ]);
 
   await ctx.db.patch(meta.id, {
-    hasDraftChanges: !galleryDraftMatchesPublished(draft, published),
+    hasDraftChanges: !audioDraftMatchesPublished(draft, published),
     updatedAt: Date.now(),
     updatedBy,
   });
 }
 
-export async function materializeGalleryPhotos(
+export async function materializeAudioTracks(
   ctx: QueryCtx | MutationCtx,
-  rows: GalleryPhotoDoc[],
+  rows: AudioTrackDoc[],
 ): Promise<
   Array<{
     stableId: string;
     storageId: Id<"_storage">;
     url: string | null;
-    alt: string;
-    caption: string | null;
-    width: number | null;
-    height: number | null;
+    title: string;
+    artist: string | null;
+    description: string;
+    mimeType: string;
+    durationSec: number | null;
     sortOrder: number;
-    contentType: string;
     sizeBytes: number;
     originalFileName: string | null;
   }>
@@ -217,12 +221,12 @@ export async function materializeGalleryPhotos(
       stableId: row.stableId,
       storageId: row.storageId,
       url: await ctx.storage.getUrl(row.storageId),
-      alt: row.alt,
-      caption: row.caption ?? null,
-      width: row.width ?? null,
-      height: row.height ?? null,
+      title: row.title,
+      artist: row.artist ?? null,
+      description: row.description,
+      mimeType: row.mimeType,
+      durationSec: row.durationSec ?? null,
       sortOrder: row.sortOrder,
-      contentType: row.contentType,
       sizeBytes: row.sizeBytes,
       originalFileName: row.originalFileName ?? null,
     })),

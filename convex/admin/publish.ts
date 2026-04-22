@@ -14,6 +14,7 @@ import type { Doc } from "../_generated/dataModel";
 import { requireCmsOwner } from "../lib/auth";
 import { cmsPublishValidationFailed } from "../errors";
 import { loadGalleryPhotos } from "../galleryPhotos";
+import { loadAudioTracks } from "../audioTracks";
 import { collectAboutTeamBlobIssues } from "../aboutTeamStorage";
 import type { AboutSnapshot } from "../cmsShared";
 import {
@@ -23,6 +24,7 @@ import {
   rowsWithPublishableDraft,
 } from "../cmsPublishHelpers";
 import { publishGalleryDraftCore, validateDraftForPublish } from "./photos";
+import { publishAudioDraftCore, validateDraftAudioForPublish } from "./audio";
 
 export const publish = mutation({
   args: { section: cmsSectionValidator },
@@ -55,7 +57,13 @@ export const publishSite = mutation({
       .unique();
     const galleryPending = galleryMeta?.hasDraftChanges ?? false;
 
-    if (targets.length === 0 && !galleryPending) {
+    const audioMeta = await ctx.db
+      .query("audioTrackMeta")
+      .withIndex("by_singleton", (q) => q.eq("singletonKey", "default"))
+      .unique();
+    const audioPending = audioMeta?.hasDraftChanges ?? false;
+
+    if (targets.length === 0 && !galleryPending && !audioPending) {
       return {
         ok: true as const,
         kind: "nothing_to_publish" as const,
@@ -88,6 +96,16 @@ export const publishSite = mutation({
         });
       }
     }
+    if (audioPending) {
+      const draftAudio = await loadAudioTracks(ctx, "draft");
+      const audioIssues = await validateDraftAudioForPublish(ctx, draftAudio);
+      for (const issue of audioIssues) {
+        issues.push({
+          path: `audio.${issue.path}`,
+          message: issue.message,
+        });
+      }
+    }
     if (issues.length > 0) {
       cmsPublishValidationFailed(
         "site",
@@ -113,12 +131,17 @@ export const publishSite = mutation({
       ? await publishGalleryDraftCore(ctx, { userId, updatedBy })
       : undefined;
 
+    const audioResult = audioPending
+      ? await publishAudioDraftCore(ctx, { userId, updatedBy })
+      : undefined;
+
     return {
       ok: true as const,
       kind: "published" as const,
       publishedSections: targets.map((t) => t.section),
       results,
       ...(galleryResult !== undefined ? { gallery: galleryResult } : {}),
+      ...(audioResult !== undefined ? { audio: audioResult } : {}),
     };
   },
 });

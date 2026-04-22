@@ -12,6 +12,10 @@ import { FAQ } from "@/components/faq";
 import { Header } from "@/components/header";
 import { Hero } from "@/components/hero";
 import { SiteFooter } from "@/components/site-footer";
+import {
+  AudioPortfolio,
+  type PublishedAudioTrack,
+} from "@/components/audio-portfolio";
 import { TheSpace, type GalleryPhoto } from "@/components/the-space";
 import type { PricingFlags } from "@/lib/site-settings";
 
@@ -29,6 +33,8 @@ interface HomepageShellProps {
   readonly gear: GearPayload | null | undefined;
   /** Published (or preview) gallery payload. */
   readonly photos: GalleryPhoto[] | null | undefined;
+  /** Published (or preview) audio portfolio; empty array hides the section. */
+  readonly audioTracks: PublishedAudioTrack[] | null | undefined;
   /**
    * INF-46 About-page visibility flag. `null` / `undefined` keeps the nav
    * link hidden — the About page is opt-in via the CMS.
@@ -44,6 +50,7 @@ export function HomepageShell({
   pricingFlags,
   gear,
   photos,
+  audioTracks,
   aboutVisibility,
   banner,
 }: HomepageShellProps) {
@@ -121,6 +128,7 @@ export function HomepageShell({
 
       <main className="relative z-10">
         <TheSpace photos={photos} />
+        <AudioPortfolio tracks={audioTracks} />
         <EquipmentSpecs gear={gear} />
         <MarketingPricingSection pricingFlags={pricingFlags} />
         <AmenitiesNearby />
