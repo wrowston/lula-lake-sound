@@ -2,6 +2,7 @@
 
 import Image from "next/image";
 import Link from "next/link";
+import { usePathname } from "next/navigation";
 import { useCallback, useState } from "react";
 import type {
   PublicAboutSnapshot,
@@ -137,6 +138,11 @@ interface AboutLayoutProps {
 
 export function AboutLayout({ data, showPricing, banner }: AboutLayoutProps) {
   const [scrollY, setScrollY] = useState(0);
+  const pathname = usePathname();
+  const aboutHref =
+    pathname === "/preview" || pathname.startsWith("/preview/")
+      ? "/preview/about"
+      : "/about";
 
   // Ref callback owns the scroll listener + reveal observer lifecycle so we
   // can follow the project's "no useEffect" convention (see AGENTS.md). React
@@ -200,7 +206,12 @@ export function AboutLayout({ data, showPricing, banner }: AboutLayoutProps) {
           route, and owners viewing draft see their latest toggle value
           anyway — always showing the About link here keeps the header
           self-consistent with the current page. */}
-      <Header scrollY={scrollY} showPricing={showPricing} showAbout />
+      <Header
+        scrollY={scrollY}
+        showPricing={showPricing}
+        showAbout
+        aboutHref={aboutHref}
+      />
 
       <main>
         <section className="relative" aria-labelledby="about-hero-title">

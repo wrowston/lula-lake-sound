@@ -1,6 +1,7 @@
 "use client";
 
 import { useQuery } from "convex/react";
+import { usePathname } from "next/navigation";
 import { useState, useCallback } from "react";
 import { api } from "../../convex/_generated/api";
 import { AmenitiesNearby } from "@/components/amenities-nearby";
@@ -47,6 +48,11 @@ export function HomepageShell({
   banner,
 }: HomepageShellProps) {
   const [scrollY, setScrollY] = useState(0);
+  const pathname = usePathname();
+  const aboutHref =
+    pathname === "/preview" || pathname.startsWith("/preview/")
+      ? "/preview/about"
+      : "/about";
 
   const containerRef = useCallback((node: HTMLDivElement | null) => {
     if (!node) return;
@@ -109,6 +115,7 @@ export function HomepageShell({
         scrollY={scrollY}
         showPricing={showPricing}
         showAbout={showAbout}
+        aboutHref={aboutHref}
       />
       <Hero logoScale={logoScale} />
 

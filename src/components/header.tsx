@@ -16,6 +16,12 @@ interface HeaderProps {
    * than quietly shipping a broken link.
    */
   readonly showAbout?: boolean;
+  /**
+   * Public marketing About URL, or `/preview/about` when the shell is mounted
+   * under owner preview so draft visibility does not send users to a gated
+   * `/about` 404 before publish.
+   */
+  readonly aboutHref?: string;
 }
 
 /**
@@ -30,6 +36,7 @@ export function Header({
   scrollY,
   showPricing = false,
   showAbout = false,
+  aboutHref = "/about",
 }: HeaderProps) {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
@@ -54,7 +61,7 @@ export function Header({
           {
             kind: "route" as const,
             key: "about",
-            href: "/about",
+            href: aboutHref,
             label: "About",
           },
         ]
