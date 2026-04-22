@@ -89,6 +89,7 @@ const titillium = localFont({
 });
 
 export const metadata: Metadata = {
+  metadataBase: new URL("https://lulalakesound.com"),
   title: "Lula Lake Sound | Recording Studio | Chattanooga, TN",
   description:
     "Nestled in serene mountains just outside of Chattanooga, TN - Lula Lake Sound offers artists a natural creative refuge with state-of-the-art equipment and breathtaking surroundings.",

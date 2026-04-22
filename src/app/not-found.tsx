@@ -57,7 +57,7 @@ export default function NotFound() {
         <p className="label-text text-gold/70 tracking-[0.2em] mb-3">404 &mdash; Dead Air</p>
 
         <h1 className="headline-primary text-warm-white text-[clamp(1.75rem,4vw,2.75rem)] mb-3">
-          Nothing on this channel
+          This track isn&apos;t cued
         </h1>
 
         <p className="body-text text-ivory/50 max-w-sm mx-auto mb-10">
