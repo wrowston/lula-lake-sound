@@ -387,6 +387,8 @@ function AboutForm() {
   const [localDraft, setLocalDraft] = useState<AboutContent | null>(null);
   const [busy, setBusy] = useState<string | null>(null);
   const [inlineError, setInlineError] = useState<string | null>(null);
+  const kickAutosaveRef = useRef<() => void>(() => {});
+  const cancelAutosaveRef = useRef<() => void>(() => {});
   /** Body lives in Tiptap; this flag drives autosave + merged validation. */
   const [bodyDirty, setBodyDirty] = useState(false);
   /** Debounced HTML for publish-issue panel (avoids parent re-render per key). */
@@ -415,6 +417,7 @@ function AboutForm() {
         if (!current) return prev;
         return { ...current, published: value };
       });
+      kickAutosaveRef.current();
     },
     [serverContent],
   );
@@ -427,6 +430,7 @@ function AboutForm() {
         if (!current) return prev;
         return { ...current, heroImageStorageId: value };
       });
+      kickAutosaveRef.current();
     },
     [serverContent],
   );
@@ -439,6 +443,7 @@ function AboutForm() {
         if (!current) return prev;
         return { ...current, heroTitle: value };
       });
+      kickAutosaveRef.current();
     },
     [serverContent],
   );
@@ -451,6 +456,7 @@ function AboutForm() {
         if (!current) return prev;
         return { ...current, pullQuote: trimToUndefined(value) };
       });
+      kickAutosaveRef.current();
     },
     [serverContent],
   );
@@ -463,6 +469,7 @@ function AboutForm() {
         if (!current) return prev;
         return { ...current, heroSubtitle: trimToUndefined(value) };
       });
+      kickAutosaveRef.current();
     },
     [serverContent],
   );
@@ -475,6 +482,7 @@ function AboutForm() {
         if (!current) return prev;
         return { ...current, seoTitle: trimToUndefined(value) };
       });
+      kickAutosaveRef.current();
     },
     [serverContent],
   );
@@ -487,6 +495,7 @@ function AboutForm() {
         if (!current) return prev;
         return { ...current, seoDescription: trimToUndefined(value) };
       });
+      kickAutosaveRef.current();
     },
     [serverContent],
   );
@@ -502,6 +511,7 @@ function AboutForm() {
           highlights: next.length > 0 ? next : undefined,
         };
       });
+      kickAutosaveRef.current();
     },
     [serverContent],
   );
@@ -514,6 +524,7 @@ function AboutForm() {
         if (!current) return prev;
         return { ...current, teamMembers: next };
       });
+      kickAutosaveRef.current();
     },
     [serverContent],
   );
@@ -531,6 +542,7 @@ function AboutForm() {
 
   const runAction = useCallback(
     async <A,>(label: string, program: Effect.Effect<A, CmsAppError>) => {
+      cancelAutosaveRef.current();
       setInlineError(null);
       setBusy(label);
       const outcome = await runAdminEffect(program, {
@@ -549,12 +561,16 @@ function AboutForm() {
   const hasDraftOnServer = section?.hasDraftChanges ?? false;
   const hasLocalEdits = localDraft !== null || bodyDirty;
 
-  const { status: autosaveStatus, flush: flushAutosave, kick: kickAutosave } =
-    useAutosaveDraft({
-      dirty: hasLocalEdits && base !== undefined,
-      debounceResetKey: localDraft,
-      pauseWhen: busy !== null,
-      saveEffect: () => {
+  const {
+    status: autosaveStatus,
+    flush: flushAutosave,
+    kick: kickAutosave,
+    cancel: cancelAutosave,
+    onUnmount: autosaveOnUnmount,
+  } = useAutosaveDraft({
+    isDirty: hasLocalEdits && base !== undefined,
+    pauseWhen: busy !== null,
+    saveEffect: () => {
         const contentBase = (localDraft ?? serverContent)!;
         const bodyHtml = bodyDirty
           ? (bodyRef.current?.getHTML() ?? "")
@@ -591,6 +607,8 @@ function AboutForm() {
         clearLocalBodyUiState();
       },
     });
+  kickAutosaveRef.current = kickAutosave;
+  cancelAutosaveRef.current = cancelAutosave;
 
   const handleBodyDirty = useCallback(() => {
     setBodyDirty(true);
@@ -607,6 +625,7 @@ function AboutForm() {
   }, [kickAutosave]);
 
   const handleDiscardConfirm = useCallback(async (): Promise<boolean> => {
+    cancelAutosaveRef.current();
     setInlineError(null);
     const publishedHtml =
       section !== undefined
@@ -655,7 +674,7 @@ function AboutForm() {
   const seoDescriptionValue = base.seoDescription ?? "";
 
   return (
-    <div className="space-y-8 pb-24">
+    <div className="space-y-8 pb-24" ref={autosaveOnUnmount}>
       <div className="space-y-8">
           <fieldset className="space-y-3">
             <legend className="label-text text-muted-foreground">
