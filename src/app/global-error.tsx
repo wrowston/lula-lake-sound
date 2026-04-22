@@ -2,16 +2,21 @@
 
 import * as Sentry from "@sentry/nextjs";
 import NextError from "next/error";
-import { useEffect } from "react";
+import { useRef } from "react";
 
 export default function GlobalError({
   error,
 }: {
   error: Error & { digest?: string };
 }) {
-  useEffect(() => {
+  const lastReportedError = useRef<(Error & { digest?: string }) | undefined>(
+    undefined,
+  );
+
+  if (lastReportedError.current !== error) {
+    lastReportedError.current = error;
     Sentry.captureException(error);
-  }, [error]);
+  }
 
   return (
     <html>
