@@ -1,5 +1,16 @@
 import type { Doc, Id } from "./_generated/dataModel";
 import type { MutationCtx, QueryCtx } from "./_generated/server";
+import {
+  deleteStorageIfUnreferenced,
+  getStorageMetadata,
+  type StorageMetadataRecord,
+} from "./mediaStorage";
+
+export {
+  deleteStorageIfUnreferenced,
+  getStorageMetadata,
+  type StorageMetadataRecord,
+};
 export const ALLOWED_AUDIO_MIME_TYPES = [
   "audio/mpeg",
   "audio/mp3",
@@ -19,14 +30,6 @@ export type AudioTrackDoc = Doc<"audioTracks">;
 export type AudioScope = AudioTrackDoc["scope"];
 export type AudioMetaDoc = Doc<"audioTrackMeta">;
 export type AudioPublishIssue = { path: string; message: string };
-
-export type StorageMetadataRecord = {
-  _id: Id<"_storage">;
-  _creationTime: number;
-  contentType?: string;
-  sha256: string;
-  size: number;
-};
 
 function comparableTrack(row: AudioTrackDoc) {
   return {
@@ -95,43 +98,6 @@ export async function ensureAudioMeta(
     throw new Error("Failed to create audio track meta row.");
   }
   return { id, row };
-}
-
-export async function getStorageMetadata(
-  ctx: QueryCtx | MutationCtx,
-  storageId: Id<"_storage">,
-): Promise<StorageMetadataRecord | null> {
-  return (await ctx.db.system.get(
-    "_storage",
-    storageId,
-  )) as StorageMetadataRecord | null;
-}
-
-export async function deleteStorageIfUnreferenced(
-  ctx: MutationCtx,
-  storageId: Id<"_storage">,
-): Promise<boolean> {
-  const [galleryRef, audioRef] = await Promise.all([
-    ctx.db
-      .query("galleryPhotos")
-      .withIndex("by_storageId", (q) => q.eq("storageId", storageId))
-      .take(1),
-    ctx.db
-      .query("audioTracks")
-      .withIndex("by_storageId", (q) => q.eq("storageId", storageId))
-      .take(1),
-  ]);
-  if (galleryRef.length > 0 || audioRef.length > 0) {
-    return false;
-  }
-
-  const storage = await getStorageMetadata(ctx, storageId);
-  if (!storage) {
-    return false;
-  }
-
-  await ctx.storage.delete(storageId);
-  return true;
 }
 
 export async function replaceAudioScope(
