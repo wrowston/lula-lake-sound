@@ -81,6 +81,8 @@ type ToolbarMarkState = {
   readonly isBullet: boolean;
   readonly isOrdered: boolean;
   readonly isLink: boolean;
+  readonly canUndo: boolean;
+  readonly canRedo: boolean;
 };
 
 function toolbarMarkStateEqual(
@@ -99,7 +101,9 @@ function toolbarMarkStateEqual(
     a.isQuote === b.isQuote &&
     a.isBullet === b.isBullet &&
     a.isOrdered === b.isOrdered &&
-    a.isLink === b.isLink
+    a.isLink === b.isLink &&
+    a.canUndo === b.canUndo &&
+    a.canRedo === b.canRedo
   );
 }
 
@@ -210,6 +214,8 @@ const EditorToolbar = memo(function EditorToolbar({
       isBullet: snapshot.editor.isActive("bulletList"),
       isOrdered: snapshot.editor.isActive("orderedList"),
       isLink: snapshot.editor.isActive("link"),
+      canUndo: snapshot.editor.can().undo(),
+      canRedo: snapshot.editor.can().redo(),
     }),
     equalityFn: toolbarMarkStateEqual,
   });
@@ -331,12 +337,14 @@ const EditorToolbar = memo(function EditorToolbar({
         <ToolbarButton
           label="Undo (⌘Z)"
           onClick={() => editor.chain().focus().undo().run()}
+          disabled={!t.canUndo}
         >
           <Undo2 className="size-3.5" aria-hidden />
         </ToolbarButton>
         <ToolbarButton
           label="Redo (⌘⇧Z)"
           onClick={() => editor.chain().focus().redo().run()}
+          disabled={!t.canRedo}
         >
           <Redo2 className="size-3.5" aria-hidden />
         </ToolbarButton>
