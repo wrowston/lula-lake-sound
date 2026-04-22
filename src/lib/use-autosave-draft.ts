@@ -29,6 +29,11 @@ export interface UseAutosaveDraftOptions {
   readonly delayMs?: number;
   /** How long the "saved" status lingers before returning to idle. */
   readonly savedLingerMs?: number;
+  /**
+   * When true, `kick()` does not schedule saves (e.g. while publish/discard is
+   * in flight). Updated every render via ref; read at schedule and save time.
+   */
+  readonly pauseWhen?: boolean;
 }
 
 export interface UseAutosaveDraftResult {
@@ -69,6 +74,7 @@ export function useAutosaveDraft({
   onSaved,
   delayMs = 1000,
   savedLingerMs = 1600,
+  pauseWhen = false,
 }: UseAutosaveDraftOptions): UseAutosaveDraftResult {
   const [status, setStatus] = useState<AutosaveStatus>("idle");
 
@@ -78,6 +84,8 @@ export function useAutosaveDraft({
   onSavedRef.current = onSaved;
   const isDirtyRef = useRef(isDirty);
   isDirtyRef.current = isDirty;
+  const pauseWhenRef = useRef(pauseWhen);
+  pauseWhenRef.current = pauseWhen;
 
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const lingerTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -101,6 +109,7 @@ export function useAutosaveDraft({
   const runSave = useCallback(async (): Promise<boolean> => {
     if (inFlightRef.current) return true;
     if (!isDirtyRef.current) return true;
+    if (pauseWhenRef.current) return false;
     inFlightRef.current = true;
     clearLinger();
     setStatus("saving");
@@ -121,6 +130,9 @@ export function useAutosaveDraft({
 
   const scheduleKick = useCallback(() => {
     if (!activeRef.current) {
+      return;
+    }
+    if (pauseWhenRef.current) {
       return;
     }
     clearTimer();

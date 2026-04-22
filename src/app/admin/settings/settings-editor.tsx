@@ -127,6 +127,7 @@ function SettingsForm() {
     onUnmount: autosaveOnUnmount,
   } = useAutosaveDraft({
     isDirty: hasLocalEdits && source !== undefined,
+    pauseWhen: busy !== null,
     saveEffect: () =>
       convexMutationEffect(() =>
         saveDraft({

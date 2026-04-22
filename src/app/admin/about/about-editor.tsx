@@ -569,6 +569,7 @@ function AboutForm() {
     onUnmount: autosaveOnUnmount,
   } = useAutosaveDraft({
     isDirty: hasLocalEdits && base !== undefined,
+    pauseWhen: busy !== null,
     saveEffect: () => {
         const contentBase = (localDraft ?? serverContent)!;
         const bodyHtml = bodyDirty
