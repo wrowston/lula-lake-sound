@@ -2,7 +2,6 @@
 
 import { useQuery } from "convex/react";
 import { usePathname } from "next/navigation";
-import { useState, useCallback } from "react";
 import { api } from "../../convex/_generated/api";
 import { AmenitiesNearby } from "@/components/amenities-nearby";
 import { ArtistInquiries } from "@/components/artist-inquiries";
@@ -13,6 +12,7 @@ import { Header } from "@/components/header";
 import { Hero } from "@/components/hero";
 import { SiteFooter } from "@/components/site-footer";
 import { TheSpace, type GalleryPhoto } from "@/components/the-space";
+import { useScrollAndReveal } from "@/hooks/use-scroll-and-reveal";
 import type { PricingFlags } from "@/lib/site-settings";
 
 function calculateLogoScale(scrollY: number): number {
@@ -47,47 +47,12 @@ export function HomepageShell({
   aboutVisibility,
   banner,
 }: HomepageShellProps) {
-  const [scrollY, setScrollY] = useState(0);
+  const { scrollY, containerRef } = useScrollAndReveal();
   const pathname = usePathname();
   const aboutHref =
     pathname === "/preview" || pathname.startsWith("/preview/")
       ? "/preview/about"
       : "/about";
-
-  const containerRef = useCallback((node: HTMLDivElement | null) => {
-    if (!node) return;
-
-    let ticking = false;
-    function onScroll() {
-      if (!ticking) {
-        requestAnimationFrame(() => {
-          setScrollY(window.scrollY);
-          ticking = false;
-        });
-        ticking = true;
-      }
-    }
-    window.addEventListener("scroll", onScroll, { passive: true });
-
-    const observer = new IntersectionObserver(
-      (entries) => {
-        for (const entry of entries) {
-          if (entry.isIntersecting) {
-            entry.target.classList.add("in-view");
-            observer.unobserve(entry.target);
-          }
-        }
-      },
-      { threshold: 0.15, rootMargin: "0px 0px -60px 0px" },
-    );
-    const reveals = node.querySelectorAll(".reveal");
-    reveals.forEach((el) => observer.observe(el));
-
-    return () => {
-      window.removeEventListener("scroll", onScroll);
-      observer.disconnect();
-    };
-  }, []);
 
   // If the caller hasn't provided a draft/preload visibility value (the
   // public homepage path), subscribe live so the nav updates reactively when

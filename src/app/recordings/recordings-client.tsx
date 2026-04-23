@@ -3,10 +3,12 @@
 import { Music } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
-import { useCallback, useState } from "react";
+import { useState } from "react";
 
 import { Header } from "@/components/header";
 import { SiteFooter } from "@/components/site-footer";
+import { useScrollAndReveal } from "@/hooks/use-scroll-and-reveal";
+import { MAX_REVEAL_DELAY, revealDelay } from "@/lib/reveal-delay";
 import { cn } from "@/lib/utils";
 
 import type { Recording } from "./recordings-data";
@@ -28,13 +30,6 @@ import type { Recording } from "./recordings-data";
  * since we do not preload audio to satisfy the "don't aggressively preload"
  * performance requirement.
  */
-
-const MAX_REVEAL_DELAY = 6;
-function revealDelay(step: number): string {
-  if (step <= 0) return "reveal";
-  const clamped = Math.min(step, MAX_REVEAL_DELAY);
-  return `reveal reveal-delay-${clamped}`;
-}
 
 function formatTime(seconds: number): string {
   if (!Number.isFinite(seconds) || seconds < 0) return "0:00";
@@ -467,45 +462,9 @@ interface RecordingsClientProps {
 }
 
 export function RecordingsClient({ recordings }: RecordingsClientProps) {
-  const [scrollY, setScrollY] = useState(0);
+  const { scrollY, containerRef } = useScrollAndReveal();
   const [active, setActive] = useState<ActiveTrackState | null>(null);
   const [audioEl, setAudioEl] = useState<HTMLAudioElement | null>(null);
-
-  const containerRef = useCallback((node: HTMLDivElement | null) => {
-    if (!node) return;
-
-    let ticking = false;
-    function onScroll() {
-      if (ticking) return;
-      ticking = true;
-      requestAnimationFrame(() => {
-        setScrollY(window.scrollY);
-        ticking = false;
-      });
-    }
-    window.addEventListener("scroll", onScroll, { passive: true });
-    setScrollY(window.scrollY);
-
-    const observer = new IntersectionObserver(
-      (entries) => {
-        for (const entry of entries) {
-          if (entry.isIntersecting) {
-            entry.target.classList.add("in-view");
-            observer.unobserve(entry.target);
-          }
-        }
-      },
-      { threshold: 0.15, rootMargin: "0px 0px -60px 0px" },
-    );
-    node
-      .querySelectorAll(".reveal")
-      .forEach((el) => observer.observe(el));
-
-    return () => {
-      window.removeEventListener("scroll", onScroll);
-      observer.disconnect();
-    };
-  }, []);
 
   function handleToggle(id: string) {
     if (!audioEl) return;
