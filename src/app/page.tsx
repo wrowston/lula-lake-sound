@@ -21,7 +21,14 @@ export default async function Home() {
       preloadedGear === null &&
       preloadedPhotos === null
     ) {
-      return <HomepageShell pricingFlags={null} gear={null} photos={null} />;
+      return (
+        <HomepageShell
+          pricingFlags={null}
+          marketingFeatureFlags={undefined}
+          gear={null}
+          photos={null}
+        />
+      );
     }
     return (
       <HomeClient
@@ -31,6 +38,13 @@ export default async function Home() {
       />
     );
   } catch {
-    return <HomepageShell pricingFlags={null} gear={null} photos={null} />;
+    return (
+      <HomepageShell
+        pricingFlags={null}
+        marketingFeatureFlags={undefined}
+        gear={null}
+        photos={null}
+      />
+    );
   }
 }

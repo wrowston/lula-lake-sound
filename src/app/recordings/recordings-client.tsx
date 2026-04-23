@@ -1,18 +1,17 @@
 "use client";
 
-import { useQuery } from "convex/react";
 import { Music } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { useState } from "react";
+import { useState, type ReactNode } from "react";
 
-import { api } from "../../../convex/_generated/api";
 import { Header } from "@/components/header";
 import { SiteFooter } from "@/components/site-footer";
 import { useScrollAndReveal } from "@/hooks/use-scroll-and-reveal";
 import { MAX_REVEAL_DELAY, revealDelay } from "@/lib/reveal-delay";
 import { cn } from "@/lib/utils";
+import type { MarketingFeatureFlags } from "@/lib/site-settings";
 
 import type { Recording } from "./recordings-data";
 
@@ -462,22 +461,26 @@ function TrackRow({
 
 interface RecordingsClientProps {
   readonly recordings: readonly Recording[];
+  readonly marketing: MarketingFeatureFlags;
+  /** Preview banner, aligned with `HomepageShell` / `AboutLayout`. */
+  readonly banner?: ReactNode;
 }
 
-export function RecordingsClient({ recordings }: RecordingsClientProps) {
+export function RecordingsClient({
+  recordings,
+  marketing,
+  banner,
+}: RecordingsClientProps) {
   const pathname = usePathname();
-  const pricingFlags = useQuery(api.public.getPublishedPricingFlags);
-  const resolvedAboutVisibility = useQuery(
-    api.public.getPublishedAboutVisibility,
-  );
-  const aboutHref =
-    pathname === "/preview" || pathname.startsWith("/preview/")
-      ? "/preview/about"
-      : "/about";
-  const showPricing =
-    pricingFlags === undefined ||
-    (pricingFlags !== null && pricingFlags.flags.priceTabEnabled === true);
-  const showAbout = resolvedAboutVisibility?.published === true;
+  const isPreview =
+    pathname === "/preview" || pathname.startsWith("/preview/");
+  const aboutHref = isPreview ? "/preview/about" : "/about";
+  const homeSectionBase = isPreview ? "/preview" : "/";
+  const recordingsNavHref = isPreview ? "/preview/recordings" : "/recordings";
+  const backToHomeHref = isPreview ? "/preview" : "/";
+  const showPricing = marketing.pricingSection === true;
+  const showAbout = marketing.aboutPage === true;
+  const showRecordings = marketing.recordingsPage === true;
 
   const { scrollY, containerRef } = useScrollAndReveal();
   const [active, setActive] = useState<ActiveTrackState | null>(null);
@@ -555,12 +558,15 @@ export function RecordingsClient({ recordings }: RecordingsClientProps) {
       ref={containerRef}
       className="dark min-h-screen bg-deep-forest text-ivory relative"
     >
+      {banner}
       <Header
         scrollY={scrollY}
         showPricing={showPricing}
         showAbout={showAbout}
         aboutHref={aboutHref}
-        showRecordings
+        showRecordings={showRecordings}
+        homeSectionBase={homeSectionBase}
+        recordingsHref={recordingsNavHref}
       />
 
       <main>
@@ -571,7 +577,7 @@ export function RecordingsClient({ recordings }: RecordingsClientProps) {
           <div className="mx-auto max-w-6xl">
             <nav aria-label="Breadcrumb" className={revealDelay(0)}>
               <Link
-                href="/"
+                href={backToHomeHref}
                 className="label-text text-[11px] tracking-[0.2em] text-sand/60 transition-colors hover:text-sand"
               >
                 ← Lula Lake Sound
@@ -682,7 +688,7 @@ export function RecordingsClient({ recordings }: RecordingsClientProps) {
                 </p>
               </div>
               <Link
-                href="/#artist-inquiries"
+                href={`${backToHomeHref}#artist-inquiries`}
                 className="label-text tracking-[0.2em] text-[11px] text-sand border-b border-sand/60 pb-1 self-start transition-colors hover:text-warm-white hover:border-warm-white"
               >
                 Book a session

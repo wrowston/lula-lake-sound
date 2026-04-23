@@ -10,25 +10,27 @@ const preloadPublishedAbout = cache(() =>
   preloadQuery(api.public.getPublishedAbout),
 );
 
+const preloadMarketingFeatureFlags = cache(() =>
+  preloadQuery(api.public.getPublishedMarketingFeatureFlags),
+);
+
 /**
  * Public `/about` route (INF-46).
  *
- * Renders the redesigned Variant A "Cinematic Editorial" About page when the
- * CMS-controlled `published` flag is on; returns a 404 when it is off so the
- * page stays hidden behind the feature flag as required by the client
- * acceptance criteria. Content (hero copy, body HTML, pull quote, team
- * headshots) is sourced from the Convex `about` section.
+ * Renders when `marketingFeatureFlags.aboutPage` is on; returns 404 otherwise.
+ * Content is sourced from the Convex `about` section.
  *
- * `generateMetadata` and the page share one cached preload of
- * `public.getPublishedAbout` per request. Preload failures are not caught so
- * Convex/network errors surface as request failures instead of being
- * misreported as a 404 via `notFound()`.
+ * `generateMetadata` and the page share cached preloads per request.
  */
 
 export async function generateMetadata(): Promise<Metadata> {
-  const preloaded = await preloadPublishedAbout();
-  const data = preloadedQueryResult(preloaded);
-  if (!data.published) {
+  const [aboutPreloaded, flagsPreloaded] = await Promise.all([
+    preloadPublishedAbout(),
+    preloadMarketingFeatureFlags(),
+  ]);
+  const data = preloadedQueryResult(aboutPreloaded);
+  const flags = preloadedQueryResult(flagsPreloaded);
+  if (!flags.aboutPage) {
     return { title: "About" };
   }
   const title =
@@ -55,13 +57,14 @@ export async function generateMetadata(): Promise<Metadata> {
 }
 
 export default async function AboutPage() {
-  const [aboutPreloaded, pricingPreloaded] = await Promise.all([
+  const [aboutPreloaded, pricingPreloaded, flagsPreloaded] = await Promise.all([
     preloadPublishedAbout(),
     preloadQuery(api.public.getPublishedPricingFlags),
+    preloadMarketingFeatureFlags(),
   ]);
 
-  const data = preloadedQueryResult(aboutPreloaded);
-  if (!data.published) {
+  const flags = preloadedQueryResult(flagsPreloaded);
+  if (!flags.aboutPage) {
     notFound();
   }
 
@@ -69,6 +72,7 @@ export default async function AboutPage() {
     <AboutClient
       aboutPreloaded={aboutPreloaded}
       pricingPreloaded={pricingPreloaded}
+      marketingPreloaded={flagsPreloaded}
     />
   );
 }

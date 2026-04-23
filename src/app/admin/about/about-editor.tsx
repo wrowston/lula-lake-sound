@@ -38,20 +38,23 @@ import {
   memo,
   startTransition,
 } from "react";
-import { Effect } from "effect";
 import { toast } from "sonner";
 import { ArrowDown, ArrowUp, Check, Plus, Trash2, X } from "lucide-react";
 import type { Id } from "../../../../convex/_generated/dataModel";
 import { api } from "../../../../convex/_generated/api";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Switch } from "@/components/ui/switch";
 import { Textarea } from "@/components/ui/textarea";
+import { Switch } from "@/components/ui/switch";
 import { cn } from "@/lib/utils";
-import { convexMutationEffect, type CmsAppError } from "@/lib/effect-errors";
+import { convexMutationEffect } from "@/lib/effect-errors";
 import { runAdminEffect } from "@/lib/admin-run-effect";
 import { CmsPublishToolbar } from "@/components/admin/cms-publish-toolbar";
 import { useAutosaveDraft } from "@/lib/use-autosave-draft";
+import {
+  mergeAutosaveStatus,
+  useMarketingFeatureFlagsAdmin,
+} from "@/lib/use-marketing-feature-flags-admin";
 import { RichTextEditor, type RichTextEditorHandle } from "./rich-text-editor";
 
 type AboutBlock = { type: "paragraph" | "heading"; text: string };
@@ -65,8 +68,6 @@ export type AboutTeamMemberRow = {
 };
 
 type AboutContent = {
-  /** INF-46 visibility flag — gates the public `/about` route and nav link. */
-  published: boolean;
   /**
    * INF-46 follow-up — storage id of the hero image. The owner picks from
    * the existing studio gallery; we intentionally reuse already-uploaded
@@ -208,9 +209,6 @@ function toAboutContent(raw: unknown): AboutContent {
     : [];
 
   return {
-    // INF-46: default hidden so rows saved before this field existed stay
-    // off until the owner explicitly enables the page.
-    published: typeof r.published === "boolean" ? r.published : false,
     heroImageStorageId:
       typeof r.heroImageStorageId === "string" &&
       r.heroImageStorageId.length > 0
@@ -400,6 +398,22 @@ function AboutForm() {
     typeof setTimeout
   > | null>(null);
 
+  const {
+    data: featureFlagsCms,
+    source: featureFlagsSource,
+    isLoading: featureFlagsLoading,
+    hasFFLocalEdits,
+    hasFFDraftOnServer,
+    ffAutosaveStatus,
+    flushFFAutosave,
+    cancelFFAutosave: cancelFFAutosave,
+    ffOnUnmount,
+    setAboutPage,
+    runPublishFF,
+    runDiscardFF,
+    clearFFLocal,
+  } = useMarketingFeatureFlagsAdmin(busy !== null);
+
   const serverContent: AboutContent | undefined = useMemo(() => {
     if (!section) return undefined;
     return toAboutContent(section.draftSnapshot ?? section.publishedSnapshot);
@@ -408,19 +422,6 @@ function AboutForm() {
   const base: AboutContent | undefined = localDraft ?? serverContent;
 
   const initialHtml = base?.bodyHtml ?? "";
-
-  const setPublished = useCallback(
-    (value: boolean) => {
-      setInlineError(null);
-      setLocalDraft((prev) => {
-        const current = prev ?? serverContent;
-        if (!current) return prev;
-        return { ...current, published: value };
-      });
-      kickAutosaveRef.current();
-    },
-    [serverContent],
-  );
 
   const setHeroImageStorageId = useCallback(
     (value: Id<"_storage"> | undefined) => {
@@ -540,26 +541,11 @@ function AboutForm() {
     }
   }, []);
 
-  const runAction = useCallback(
-    async <A,>(label: string, program: Effect.Effect<A, CmsAppError>) => {
-      cancelAutosaveRef.current();
-      setInlineError(null);
-      setBusy(label);
-      const outcome = await runAdminEffect(program, {
-        onErrorMessage: setInlineError,
-      });
-      if (outcome !== undefined) {
-        setLocalDraft(null);
-        clearLocalBodyUiState();
-      }
-      setBusy(null);
-      return outcome;
-    },
-    [clearLocalBodyUiState],
-  );
-
-  const hasDraftOnServer = section?.hasDraftChanges ?? false;
-  const hasLocalEdits = localDraft !== null || bodyDirty;
+  const hasAboutLocalEdits = localDraft !== null || bodyDirty;
+  const hasDraftOnServer =
+    (section?.hasDraftChanges ?? false) || hasFFDraftOnServer;
+  /** Shown in toolbar: any unpublished edits (about body or feature flags). */
+  const hasLocalEdits = hasAboutLocalEdits || hasFFLocalEdits;
 
   const {
     status: autosaveStatus,
@@ -568,7 +554,7 @@ function AboutForm() {
     cancel: cancelAutosave,
     onUnmount: autosaveOnUnmount,
   } = useAutosaveDraft({
-    isDirty: hasLocalEdits && base !== undefined,
+    isDirty: hasAboutLocalEdits && base !== undefined,
     pauseWhen: busy !== null,
     saveEffect: () => {
         const contentBase = (localDraft ?? serverContent)!;
@@ -580,7 +566,6 @@ function AboutForm() {
           saveDraft({
             section: "about",
             content: {
-              published: contentBase.published,
               ...(contentBase.heroImageStorageId !== undefined
                 ? { heroImageStorageId: contentBase.heroImageStorageId }
                 : {}),
@@ -624,14 +609,17 @@ function AboutForm() {
     }, ISSUES_BODY_HTML_DEBOUNCE_MS);
   }, [kickAutosave]);
 
+  const hasAboutDraftOnServer = section?.hasDraftChanges ?? false;
+
   const handleDiscardConfirm = useCallback(async (): Promise<boolean> => {
     cancelAutosaveRef.current();
+    cancelFFAutosave();
     setInlineError(null);
     const publishedHtml =
       section !== undefined
         ? (toAboutContent(section.publishedSnapshot).bodyHtml ?? "")
         : "";
-    if (hasDraftOnServer) {
+    if (hasAboutDraftOnServer) {
       setBusy("Discarding…");
       const outcome = await runAdminEffect(
         convexMutationEffect(() => discard({ section: "about" })),
@@ -642,18 +630,52 @@ function AboutForm() {
         return false;
       }
     }
+    if (hasFFDraftOnServer) {
+      setBusy("Discarding…");
+      const outcome = await runAdminEffect(runDiscardFF(), {
+        onErrorMessage: setInlineError,
+      });
+      setBusy(null);
+      if (outcome === undefined) {
+        return false;
+      }
+    }
     setLocalDraft(null);
+    clearFFLocal();
     clearLocalBodyUiState();
     bodyRef.current?.reset(publishedHtml);
     toast.success(
-      hasDraftOnServer
+      hasAboutDraftOnServer || hasFFDraftOnServer
         ? "Draft discarded. The editor now matches the published site."
         : "Unsaved changes discarded.",
     );
     return true;
-  }, [clearLocalBodyUiState, discard, hasDraftOnServer, section]);
+  }, [
+    clearLocalBodyUiState,
+    discard,
+    hasAboutDraftOnServer,
+    hasFFDraftOnServer,
+    runDiscardFF,
+    clearFFLocal,
+    cancelFFAutosave,
+    section,
+  ]);
 
-  if (section === undefined) {
+  const mergedPublishedAt = useMemo((): number | null => {
+    const a = section?.publishedAt;
+    const b = featureFlagsCms?.publishedAt;
+    if (a == null && b == null) return null;
+    if (a == null) return b ?? null;
+    if (b == null) return a;
+    return Math.max(a, b);
+  }, [section?.publishedAt, featureFlagsCms?.publishedAt]);
+
+  const combinedAutosaveStatus = mergeAutosaveStatus(
+    autosaveStatus,
+    ffAutosaveStatus,
+  );
+
+  if (section === undefined || featureFlagsLoading) {
     return (
       <p className="body-text text-muted-foreground">Loading About page…</p>
     );
@@ -674,28 +696,33 @@ function AboutForm() {
   const seoDescriptionValue = base.seoDescription ?? "";
 
   return (
-    <div className="space-y-8 pb-24" ref={autosaveOnUnmount}>
-      <div className="space-y-8">
-          <fieldset className="space-y-3">
+    <div
+      className="space-y-8 pb-24"
+      ref={(el) => {
+        autosaveOnUnmount(el);
+        ffOnUnmount(el);
+      }}
+    >
+        <div className="space-y-8">
+          <fieldset className="space-y-4">
             <legend className="label-text text-muted-foreground">
-              Visibility
+              Site visibility
             </legend>
             <div className="flex items-start gap-3">
               <Switch
-                id="about-published"
-                checked={base.published}
-                onCheckedChange={setPublished}
+                id="ff-about-embedded"
+                checked={featureFlagsSource?.aboutPage ?? false}
+                onCheckedChange={setAboutPage}
               />
               <div className="space-y-1">
                 <label
-                  htmlFor="about-published"
+                  htmlFor="ff-about-embedded"
                   className="body-text-small cursor-pointer text-foreground"
                 >
-                  Show About page on site
+                  About page (<code className="text-xs">/about</code>)
                 </label>
                 <p className="body-text-small text-muted-foreground">
-                  Hides the public <code>/about</code> route and the header
-                  nav link when off. Preview still shows the draft value.
+                  When off, the route returns 404 and the header link is hidden.
                 </p>
               </div>
             </div>
@@ -875,11 +902,11 @@ function AboutForm() {
         sectionLabel="the About page"
         hasDraftOnServer={hasDraftOnServer}
         hasLocalEdits={hasLocalEdits}
-        publishedAt={section.publishedAt ?? null}
+        publishedAt={mergedPublishedAt}
         publishedByLabel={publishedByLabel}
         busy={busy}
         inlineError={inlineError}
-        autosaveStatus={autosaveStatus}
+        autosaveStatus={combinedAutosaveStatus}
         previewHref="/preview/about"
         onPublish={() => {
           const liveBody = bodyDirty
@@ -895,15 +922,37 @@ function AboutForm() {
             setInlineError("Fix the blocking issues above before publishing.");
             return;
           }
-          const publishOnce = convexMutationEffect(() =>
-            publish({ section: "about" }),
-          );
           void (async () => {
-            if (hasLocalEdits) {
+            cancelAutosaveRef.current();
+            cancelFFAutosave();
+            if (hasAboutLocalEdits) {
               const flushed = await flushAutosave();
               if (!flushed) return;
             }
-            await runAction("Publishing…", publishOnce);
+            if (hasFFLocalEdits) {
+              const flushed = await flushFFAutosave();
+              if (!flushed) return;
+            }
+            setInlineError(null);
+            setBusy("Publishing…");
+            const aboutOutcome = await runAdminEffect(
+              convexMutationEffect(() => publish({ section: "about" })),
+              { onErrorMessage: setInlineError },
+            );
+            if (aboutOutcome === undefined) {
+              setBusy(null);
+              return;
+            }
+            setLocalDraft(null);
+            clearLocalBodyUiState();
+            const ffOutcome = await runAdminEffect(runPublishFF(), {
+              onErrorMessage: setInlineError,
+            });
+            setBusy(null);
+            if (ffOutcome !== undefined) {
+              clearFFLocal();
+              toast.success("Changes published.");
+            }
           })();
         }}
         onDiscardConfirm={handleDiscardConfirm}

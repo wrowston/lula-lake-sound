@@ -9,7 +9,32 @@ import { v } from "convex/values";
  * - `pricing`   — feature flags and package/rate catalog that govern pricing surfaces.
  * - `about`     — About page hero copy, body block array, optional highlights, SEO meta, optional team headshots.
  */
+/** Pricing section flags (packages + homepage pricing block visibility). */
 export const siteFlagsValidator = v.object({
+  priceTabEnabled: v.boolean(),
+  /**
+   * Legacy (pre–`marketingFeatureFlags`). Still allowed on old rows; stripped by
+   * `lib/legacyCmsFieldStrip` / `migrations/stripLegacyCmsMarketingFields`.
+   */
+  recordingsPageEnabled: v.optional(v.boolean()),
+});
+
+/**
+ * Published marketing page/section visibility. Lives on `marketingFeatureFlags` singleton.
+ * Not stored on `about` or `pricing` section snapshots.
+ */
+export const marketingFeatureFlagsSnapshotValidator = v.object({
+  aboutPage: v.boolean(),
+  recordingsPage: v.boolean(),
+  /** Homepage pricing / services section (formerly `flags.priceTabEnabled` on `pricing`). */
+  pricingSection: v.boolean(),
+});
+
+/**
+ * Optional legacy `flags` on the `settings` row (pre–pricing split). Only
+ * `priceTabEnabled` — feature visibility for About/Recordings uses `marketingFeatureFlags`.
+ */
+export const legacySiteFlagsValidator = v.object({
   priceTabEnabled: v.boolean(),
 });
 
@@ -81,7 +106,7 @@ export const pricingPackageValidator = v.object({
 export const settingsContentValidator = v.object({
   metadata: v.optional(siteMetadataValidator),
   /** @deprecated Moved to the `pricing` section. Kept optional for legacy rows. */
-  flags: v.optional(siteFlagsValidator),
+  flags: v.optional(legacySiteFlagsValidator),
 });
 
 /**
@@ -124,10 +149,7 @@ export const aboutTeamMemberValidator = v.object({
 /**
  * "about" section snapshot — About page copy (INF-70 / INF-98 / INF-46).
  *
- * - `published` — INF-46 visibility flag. Feature-flag that gates the public
- *   `/about` route and the header's "About" nav link. Treated as `false`
- *   (hidden) when absent so net-new deployments stay off until the owner
- *   explicitly enables the page from the CMS.
+ * Visibility for `/about` is on `marketingFeatureFlags` (`aboutPage`), not this snapshot.
  * - `heroImageStorageId` — optional Convex storage id of the cinematic hero
  *   image shown at the top of the public About page. The owner picks an
  *   already-uploaded photo from the studio gallery (INF-46 follow-up); the
@@ -155,6 +177,10 @@ export const aboutTeamMemberValidator = v.object({
  *   designer headshots in the Variant A layout.
  */
 export const aboutContentValidator = v.object({
+  /**
+   * Legacy (pre–`marketingFeatureFlags.aboutPage`). Still allowed on old rows;
+   * stripped by `lib/legacyCmsFieldStrip` / `migrations/stripLegacyCmsMarketingFields`.
+   */
   published: v.optional(v.boolean()),
   heroImageStorageId: v.optional(v.id("_storage")),
   heroTitle: v.string(),

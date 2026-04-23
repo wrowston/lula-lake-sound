@@ -13,6 +13,7 @@ import { Header } from "@/components/header";
 import { SiteFooter } from "@/components/site-footer";
 import { AboutBodyContent } from "./about-body-content";
 import { cn } from "@/lib/utils";
+import type { MarketingFeatureFlags } from "@/lib/site-settings";
 
 /**
  * Shared presentational layer for the public About page and the owner-only
@@ -118,6 +119,8 @@ function Headshot({ member, fallbackRole }: HeadshotProps) {
 interface AboutLayoutProps {
   readonly data: PublicAboutSnapshot;
   readonly showPricing: boolean;
+  /** Nav visibility: About / Recordings / pricing block (published or preview). */
+  readonly marketing: MarketingFeatureFlags;
   /**
    * Optional banner slot above the header (used by the preview route to show
    * "Draft" / "No unpublished changes" state).
@@ -125,13 +128,21 @@ interface AboutLayoutProps {
   readonly banner?: React.ReactNode;
 }
 
-export function AboutLayout({ data, showPricing, banner }: AboutLayoutProps) {
+export function AboutLayout({ data, showPricing, marketing, banner }: AboutLayoutProps) {
   const { scrollY, containerRef } = useScrollAndReveal();
   const pathname = usePathname();
-  const aboutHref =
-    pathname === "/preview" || pathname.startsWith("/preview/")
-      ? "/preview/about"
-      : "/about";
+  const showRecordings = marketing.recordingsPage === true;
+  const isPreview =
+    pathname === "/preview" || pathname.startsWith("/preview/");
+  // Show About in the header whenever we're on this page. Draft preview can
+  // have `aboutPage: false` to simulate the public menu, but hiding "About"
+  // while you are on the About preview is confusing; the link is not dead here.
+  const onAboutPage =
+    pathname === "/about" || pathname === "/preview/about";
+  const showAboutNav = marketing.aboutPage === true || onAboutPage;
+  const aboutHref = isPreview ? "/preview/about" : "/about";
+  const homeSectionBase = isPreview ? "/preview" : "/";
+  const recordingsNavHref = isPreview ? "/preview/recordings" : "/recordings";
 
   const team = data.teamMembers ?? [];
   // Variant A composition features exactly two circular headshots — owner +
@@ -152,16 +163,14 @@ export function AboutLayout({ data, showPricing, banner }: AboutLayoutProps) {
       className="dark min-h-screen bg-deep-forest text-ivory relative grain-overlay"
     >
       {banner}
-      {/* About page only mounts when `published === true` for the public
-          route, and owners viewing draft see their latest toggle value
-          anyway — always showing the About link here keeps the header
-          self-consistent with the current page. */}
       <Header
         scrollY={scrollY}
         showPricing={showPricing}
-        showAbout
+        showAbout={showAboutNav}
         aboutHref={aboutHref}
-        showRecordings
+        showRecordings={showRecordings}
+        homeSectionBase={homeSectionBase}
+        recordingsHref={recordingsNavHref}
       />
 
       <main>
