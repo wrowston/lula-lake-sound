@@ -28,7 +28,7 @@ Each section has its own `cmsSections` row and therefore its own independent dra
 
 > Legacy rows whose `settings.publishedSnapshot` still contains `flags` remain schema-valid thanks to an optional `flags` field on `settingsContentValidator`. Public / preview pricing queries fall back to that legacy location when the `pricing` row hasn’t been written yet, so no migration is required before deploy.
 
-> **INF-48** — Some deployments still have `published` on the `about` `publishedSnapshot` / `draftSnapshot` or `recordingsPageEnabled` inside `pricing.flags`. The schema allows these keys temporarily; run `bunx convex run migrations/stripLegacyCmsMarketingFields:stripLegacyCmsMarketingFields` once (or rely on `internal.seed.seedSiteSettingsDefaults` / `internal.marketingFeatureFlags.ensureMarketingFeatureFlagsSeeded`, which call the same stripper after backfill) to remove them from stored documents.
+> **INF-48** — Some deployments still have `published` on the `about` `publishedSnapshot` / `draftSnapshot` or `recordingsPageEnabled` inside `pricing.flags`. The schema allows these keys temporarily; `internal.marketingFeatureFlags.ensureMarketingFeatureFlagsSeeded` (or `internal.seed.seedSiteSettingsDefaults`) backfills the `marketingFeatureFlags` singleton and strips these legacy fields from `cmsSections` via `lib/legacyCmsFieldStrip`.
 
 > The `about` body uses a **block array of plain text** (`{type, text}`) for legacy rows, or **`bodyHtml`** (Tiptap HTML) for new content. Team headshots live in Convex file storage; `saveDraft` / `publishSection` / `discardDraft` prune unreferenced blobs when refs disappear from the about snapshots (see `convex/aboutTeamStorage.ts`, INF-76).
 

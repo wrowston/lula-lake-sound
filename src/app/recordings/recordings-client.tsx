@@ -11,7 +11,10 @@ import { SiteFooter } from "@/components/site-footer";
 import { useScrollAndReveal } from "@/hooks/use-scroll-and-reveal";
 import { MAX_REVEAL_DELAY, revealDelay } from "@/lib/reveal-delay";
 import { cn } from "@/lib/utils";
-import type { MarketingFeatureFlags } from "@/lib/site-settings";
+import {
+  type MarketingFeatureFlags,
+  isHomepagePricingSectionEnabled,
+} from "@/lib/site-settings";
 
 import type { Recording } from "./recordings-data";
 
@@ -478,7 +481,7 @@ export function RecordingsClient({
   const homeSectionBase = isPreview ? "/preview" : "/";
   const recordingsNavHref = isPreview ? "/preview/recordings" : "/recordings";
   const backToHomeHref = isPreview ? "/preview" : "/";
-  const showPricing = marketing.pricingSection === true;
+  const showPricing = isHomepagePricingSectionEnabled(marketing);
   const showAbout = marketing.aboutPage === true;
   const showRecordings = marketing.recordingsPage === true;
 

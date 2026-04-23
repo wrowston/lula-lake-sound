@@ -14,7 +14,7 @@ export const siteFlagsValidator = v.object({
   priceTabEnabled: v.boolean(),
   /**
    * Legacy (pre–`marketingFeatureFlags`). Still allowed on old rows; stripped by
-   * `lib/legacyCmsFieldStrip` / `migrations/stripLegacyCmsMarketingFields`.
+   * `lib/legacyCmsFieldStrip` (see `ensureMarketingFeatureFlagsSeededHandler`).
    */
   recordingsPageEnabled: v.optional(v.boolean()),
 });
@@ -179,7 +179,7 @@ export const aboutTeamMemberValidator = v.object({
 export const aboutContentValidator = v.object({
   /**
    * Legacy (pre–`marketingFeatureFlags.aboutPage`). Still allowed on old rows;
-   * stripped by `lib/legacyCmsFieldStrip` / `migrations/stripLegacyCmsMarketingFields`.
+   * stripped by `lib/legacyCmsFieldStrip` (see `ensureMarketingFeatureFlagsSeededHandler`).
    */
   published: v.optional(v.boolean()),
   heroImageStorageId: v.optional(v.id("_storage")),

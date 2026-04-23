@@ -13,7 +13,12 @@ import { Hero } from "@/components/hero";
 import { SiteFooter } from "@/components/site-footer";
 import { TheSpace, type GalleryPhoto } from "@/components/the-space";
 import { useScrollAndReveal } from "@/hooks/use-scroll-and-reveal";
-import type { MarketingFeatureFlags, PricingFlags } from "@/lib/site-settings";
+import {
+  type MarketingFeatureFlags,
+  type PricingFlags,
+  isHomepagePricingSectionEnabled,
+  previewHasActivePricingPackages,
+} from "@/lib/site-settings";
 
 function calculateLogoScale(scrollY: number): number {
   return Math.max(0.7, 1 - scrollY * 0.0006);
@@ -62,7 +67,10 @@ export function HomepageShell({
   const logoScale = calculateLogoScale(scrollY);
   const showPricing =
     marketing === undefined ||
-    (marketing !== null && marketing.pricingSection === true);
+    (marketing !== null && isHomepagePricingSectionEnabled(marketing)) ||
+    (isPreview &&
+      marketing == null &&
+      previewHasActivePricingPackages(pricingFlags));
   const showAbout = marketing === undefined
     ? false
     : marketing !== null && marketing.aboutPage === true;
@@ -94,6 +102,7 @@ export function HomepageShell({
         <MarketingPricingSection
           pricingFlags={pricingFlags}
           marketingFeatureFlags={marketing ?? null}
+          isPreviewRoute={isPreview}
         />
         <AmenitiesNearby />
         <FAQ />

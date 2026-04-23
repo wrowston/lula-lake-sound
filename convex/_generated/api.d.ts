@@ -32,7 +32,6 @@ import type * as lib_legacyCmsFieldStrip from "../lib/legacyCmsFieldStrip.js";
 import type * as lib_sentryConvex from "../lib/sentryConvex.js";
 import type * as marketingFeatureFlags from "../marketingFeatureFlags.js";
 import type * as migrations_gearFromEquipmentSpecs from "../migrations/gearFromEquipmentSpecs.js";
-import type * as migrations_stripLegacyCmsMarketingFields from "../migrations/stripLegacyCmsMarketingFields.js";
 import type * as observability from "../observability.js";
 import type * as photosPreviewDraft from "../photosPreviewDraft.js";
 import type * as pricingPreviewDraft from "../pricingPreviewDraft.js";
@@ -73,7 +72,6 @@ declare const fullApi: ApiFromModules<{
   "lib/sentryConvex": typeof lib_sentryConvex;
   marketingFeatureFlags: typeof marketingFeatureFlags;
   "migrations/gearFromEquipmentSpecs": typeof migrations_gearFromEquipmentSpecs;
-  "migrations/stripLegacyCmsMarketingFields": typeof migrations_stripLegacyCmsMarketingFields;
   observability: typeof observability;
   photosPreviewDraft: typeof photosPreviewDraft;
   pricingPreviewDraft: typeof pricingPreviewDraft;

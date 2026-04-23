@@ -46,22 +46,23 @@ export function publishedMarketingFeatureFlagsFromRow(
   if (!s || typeof s !== "object") {
     return { ...MARKETING_FEATURE_FLAGS_DEFAULTS };
   }
-  return {
-    aboutPage: typeof s.aboutPage === "boolean" ? s.aboutPage : false,
-    recordingsPage:
-      typeof s.recordingsPage === "boolean" ? s.recordingsPage : false,
-    pricingSection:
-      typeof s.pricingSection === "boolean" ? s.pricingSection : true,
-  };
+  return normalizeFlags(s as MarketingFeatureFlagsSnapshot);
 }
 
+/**
+ * Coerce any snapshot-shaped value to a full flag object. Matches
+ * `publishedMarketingFeatureFlagsFromRow` so preview/draft reads behave like
+ * the public query when older rows omit `pricingSection` (treat as default on).
+ */
 function normalizeFlags(
-  raw: MarketingFeatureFlagsSnapshot,
+  raw: MarketingFeatureFlagsSnapshot | Record<string, unknown>,
 ): MarketingFeatureFlagsSnapshot {
   return {
-    aboutPage: raw.aboutPage,
-    recordingsPage: raw.recordingsPage,
-    pricingSection: raw.pricingSection,
+    aboutPage: typeof raw.aboutPage === "boolean" ? raw.aboutPage : false,
+    recordingsPage:
+      typeof raw.recordingsPage === "boolean" ? raw.recordingsPage : false,
+    pricingSection:
+      typeof raw.pricingSection === "boolean" ? raw.pricingSection : true,
   };
 }
 
@@ -91,8 +92,9 @@ export const listDraft = query({
     await requireCmsOwner(ctx);
     const row = await getMarketingFeatureFlagsRow(ctx);
     if (!row) {
+      const base = { ...MARKETING_FEATURE_FLAGS_DEFAULTS };
       return {
-        flags: { ...MARKETING_FEATURE_FLAGS_DEFAULTS },
+        flags: base,
         hasDraftChanges: false,
         publishedAt: null as number | null,
         publishedBy: null as string | null,
@@ -102,8 +104,9 @@ export const listDraft = query({
     }
     const effective =
       row.draftSnapshot ?? row.publishedSnapshot ?? MARKETING_FEATURE_FLAGS_DEFAULTS;
+    const normalized = normalizeFlags(effective);
     return {
-      flags: normalizeFlags(effective),
+      flags: normalized,
       hasDraftChanges: row.hasDraftChanges,
       publishedAt: row.publishedAt,
       publishedBy: row.publishedBy ?? null,
@@ -125,15 +128,17 @@ export const getPreviewMarketingFeatureFlags = query({
     }
     const row = await getMarketingFeatureFlagsRow(ctx);
     if (!row) {
+      const base = { ...MARKETING_FEATURE_FLAGS_DEFAULTS };
       return {
-        ...MARKETING_FEATURE_FLAGS_DEFAULTS,
+        ...base,
         hasDraftChanges: false,
       };
     }
     const effective =
       row.draftSnapshot ?? row.publishedSnapshot ?? MARKETING_FEATURE_FLAGS_DEFAULTS;
+    const normalized = normalizeFlags(effective);
     return {
-      ...normalizeFlags(effective),
+      ...normalized,
       hasDraftChanges: row.hasDraftChanges,
     };
   },

@@ -41,6 +41,28 @@ export type MarketingFeatureFlags = {
 };
 
 /**
+ * Homepage pricing block + primary-nav "Pricing" link.
+ * Missing `pricingSection` is treated as on — matches Convex defaults and avoids
+ * `undefined === true` when query payloads omit keys that were undefined.
+ */
+export function isHomepagePricingSectionEnabled(
+  flags: MarketingFeatureFlags | null | undefined,
+): boolean {
+  if (flags == null) return false;
+  return flags.pricingSection !== false;
+}
+
+/** Owner `/preview` — show pricing block if draft catalog has any active package. */
+export function previewHasActivePricingPackages(
+  pricingFlags: PricingFlags | null | undefined,
+): boolean {
+  return (
+    pricingFlags != null &&
+    (pricingFlags.packages?.some((p) => p.isActive) ?? false)
+  );
+}
+
+/**
  * Default display label for each billing cadence.
  *
  * Re-exported from `convex/cmsShared.ts` so the convex backend tests and the
