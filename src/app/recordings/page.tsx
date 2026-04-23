@@ -8,9 +8,8 @@ import { RECORDINGS } from "./recordings-data";
  * Ships the client-approved Variant A "Cinematic Editorial" recordings list
  * with columns for track/artist, genre, year, optional cover art & streaming
  * links, and in-playback duration (progress bar) when a row is playing — no
- * idle duration column. Data is a static fixture for now — when
- * INF-49 (CMS) and INF-50 (media uploads) land, swap the import in this file
- * for a Convex `preloadQuery` and pass the resolved list into the client.
+ * idle duration column. List is populated in `recordings-data` (or replace with
+ * a Convex `preloadQuery` when CMS/media are wired).
  */
 
 export const metadata: Metadata = {

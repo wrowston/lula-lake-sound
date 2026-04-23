@@ -1,10 +1,13 @@
 "use client";
 
+import { useQuery } from "convex/react";
 import { Music } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
+import { usePathname } from "next/navigation";
 import { useState } from "react";
 
+import { api } from "../../../convex/_generated/api";
 import { Header } from "@/components/header";
 import { SiteFooter } from "@/components/site-footer";
 import { useScrollAndReveal } from "@/hooks/use-scroll-and-reveal";
@@ -462,6 +465,20 @@ interface RecordingsClientProps {
 }
 
 export function RecordingsClient({ recordings }: RecordingsClientProps) {
+  const pathname = usePathname();
+  const pricingFlags = useQuery(api.public.getPublishedPricingFlags);
+  const resolvedAboutVisibility = useQuery(
+    api.public.getPublishedAboutVisibility,
+  );
+  const aboutHref =
+    pathname === "/preview" || pathname.startsWith("/preview/")
+      ? "/preview/about"
+      : "/about";
+  const showPricing =
+    pricingFlags === undefined ||
+    (pricingFlags !== null && pricingFlags.flags.priceTabEnabled === true);
+  const showAbout = resolvedAboutVisibility?.published === true;
+
   const { scrollY, containerRef } = useScrollAndReveal();
   const [active, setActive] = useState<ActiveTrackState | null>(null);
   const [audioEl, setAudioEl] = useState<HTMLAudioElement | null>(null);
@@ -538,7 +555,13 @@ export function RecordingsClient({ recordings }: RecordingsClientProps) {
       ref={containerRef}
       className="dark min-h-screen bg-deep-forest text-ivory relative"
     >
-      <Header scrollY={scrollY} showRecordings />
+      <Header
+        scrollY={scrollY}
+        showPricing={showPricing}
+        showAbout={showAbout}
+        aboutHref={aboutHref}
+        showRecordings
+      />
 
       <main>
         <section
