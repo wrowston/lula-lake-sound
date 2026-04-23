@@ -9,6 +9,7 @@ import {
 import { api } from "../../../../convex/_generated/api";
 import { AboutLayout } from "../../about/about-layout";
 import { PreviewBanner } from "@/components/preview-banner";
+import { isHomepagePricingSectionEnabled } from "@/lib/site-settings";
 
 /**
  * Owner-only preview of the About page using the draft CMS snapshot. Mirrors
@@ -47,7 +48,7 @@ function AboutPreviewContent() {
 
   const { hasDraftChanges: _aboutDrafty, ...data } = about;
   void _aboutDrafty;
-  const showPricing = marketing.pricingSection === true;
+  const showPricing = isHomepagePricingSectionEnabled(marketing);
   const hasDraftChanges =
     about.hasDraftChanges ||
     pricingPreview.hasDraftChanges ||

@@ -2,7 +2,12 @@ import {
   ServicesAndPricing,
   ServicesAndPricingSkeleton,
 } from "@/components/services-pricing";
-import type { MarketingFeatureFlags, PricingFlags } from "@/lib/site-settings";
+import {
+  type MarketingFeatureFlags,
+  type PricingFlags,
+  isHomepagePricingSectionEnabled,
+  previewHasActivePricingPackages,
+} from "@/lib/site-settings";
 
 interface MarketingPricingSectionProps {
   /**
@@ -15,6 +20,8 @@ interface MarketingPricingSectionProps {
    * If omitted, falls back to `flags.priceTabEnabled` for back-compat.
    */
   readonly marketingFeatureFlags?: MarketingFeatureFlags | null;
+  /** When true (owner `/preview`), show block if draft has active packages. */
+  readonly isPreviewRoute?: boolean;
 }
 
 /**
@@ -24,12 +31,18 @@ interface MarketingPricingSectionProps {
 export function MarketingPricingSection({
   pricingFlags,
   marketingFeatureFlags,
+  isPreviewRoute = false,
 }: MarketingPricingSectionProps) {
   const loading = pricingFlags === undefined;
+  const previewCatalogOn =
+    isPreviewRoute && previewHasActivePricingPackages(pricingFlags);
   const sectionOn =
     marketingFeatureFlags != null
-      ? marketingFeatureFlags.pricingSection === true
-      : pricingFlags != null && pricingFlags.flags.priceTabEnabled === true;
+      ? isHomepagePricingSectionEnabled(marketingFeatureFlags) ||
+          previewCatalogOn
+      : (pricingFlags != null &&
+          pricingFlags.flags.priceTabEnabled === true) ||
+          previewCatalogOn;
   const visible = loading || (pricingFlags !== null && sectionOn);
 
   if (!visible) {

@@ -3,6 +3,7 @@
 import { usePreloadedQuery, type Preloaded } from "convex/react";
 import { api } from "../../../convex/_generated/api";
 import { AboutLayout } from "./about-layout";
+import { isHomepagePricingSectionEnabled } from "@/lib/site-settings";
 
 type PreloadedAbout = Preloaded<typeof api.public.getPublishedAbout>;
 type PreloadedMarketing = Preloaded<
@@ -23,7 +24,7 @@ export function AboutClient({
 }) {
   const data = usePreloadedQuery(aboutPreloaded);
   const marketing = usePreloadedQuery(marketingPreloaded);
-  const showPricing = marketing.pricingSection === true;
+  const showPricing = isHomepagePricingSectionEnabled(marketing);
 
   return <AboutLayout data={data} showPricing={showPricing} marketing={marketing} />;
 }
