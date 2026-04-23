@@ -57,9 +57,8 @@ export async function generateMetadata(): Promise<Metadata> {
 }
 
 export default async function AboutPage() {
-  const [aboutPreloaded, pricingPreloaded, flagsPreloaded] = await Promise.all([
+  const [aboutPreloaded, flagsPreloaded] = await Promise.all([
     preloadPublishedAbout(),
-    preloadQuery(api.public.getPublishedPricingFlags),
     preloadMarketingFeatureFlags(),
   ]);
 
@@ -71,7 +70,6 @@ export default async function AboutPage() {
   return (
     <AboutClient
       aboutPreloaded={aboutPreloaded}
-      pricingPreloaded={pricingPreloaded}
       marketingPreloaded={flagsPreloaded}
     />
   );

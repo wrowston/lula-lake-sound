@@ -5,7 +5,6 @@ import { api } from "../../../convex/_generated/api";
 import { AboutLayout } from "./about-layout";
 
 type PreloadedAbout = Preloaded<typeof api.public.getPublishedAbout>;
-type PreloadedPricing = Preloaded<typeof api.public.getPublishedPricingFlags>;
 type PreloadedMarketing = Preloaded<
   typeof api.public.getPublishedMarketingFeatureFlags
 >;
@@ -17,15 +16,12 @@ type PreloadedMarketing = Preloaded<
  */
 export function AboutClient({
   aboutPreloaded,
-  pricingPreloaded,
   marketingPreloaded,
 }: {
   readonly aboutPreloaded: PreloadedAbout;
-  readonly pricingPreloaded: PreloadedPricing;
   readonly marketingPreloaded: PreloadedMarketing;
 }) {
   const data = usePreloadedQuery(aboutPreloaded);
-  const pricingData = usePreloadedQuery(pricingPreloaded);
   const marketing = usePreloadedQuery(marketingPreloaded);
   const showPricing = marketing.pricingSection === true;
 

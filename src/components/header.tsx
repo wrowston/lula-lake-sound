@@ -28,6 +28,17 @@ interface HeaderProps {
    * callers that haven't opted in yet keep the link out of the nav.
    */
   readonly showRecordings?: boolean;
+  /**
+   * Base path for in-page section links (`#the-space`, etc.). Use `"/preview"`
+   * when the header is shown under owner preview so nav stays on draft routes.
+   * Defaults to `"/"` — links become `"/#id"`.
+   */
+  readonly homeSectionBase?: string;
+  /**
+   * Recordings nav href — `"/preview/recordings"` in preview, otherwise
+   * `"/recordings"`.
+   */
+  readonly recordingsHref?: string;
 }
 
 /**
@@ -44,6 +55,8 @@ export function Header({
   showAbout = false,
   aboutHref = "/about",
   showRecordings = false,
+  homeSectionBase = "/",
+  recordingsHref = "/recordings",
 }: HeaderProps) {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
@@ -80,7 +93,7 @@ export function Header({
           {
             kind: "route" as const,
             key: "recordings",
-            href: "/recordings",
+            href: recordingsHref,
             label: "Recordings",
           },
         ]
@@ -132,7 +145,7 @@ export function Header({
               ) : (
                 <a
                   key={item.id}
-                  href={`/#${item.id}`}
+                  href={`${homeSectionBase}#${item.id}`}
                   className="label-text group relative text-[10.5px] text-ivory/55 transition-colors duration-500 hover:text-sand"
                 >
                   {item.label}
@@ -210,7 +223,7 @@ export function Header({
                 ) : (
                   <a
                     key={item.id}
-                    href={`/#${item.id}`}
+                    href={`${homeSectionBase}#${item.id}`}
                     onClick={handleNavigation}
                     className="headline-secondary py-5 text-2xl text-ivory/85 transition-colors duration-500 hover:text-sand"
                   >
