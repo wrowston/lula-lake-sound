@@ -18,11 +18,13 @@ import { collectAboutTeamBlobIssues } from "../aboutTeamStorage";
 import type { AboutSnapshot } from "../cmsShared";
 import {
   collectAllPublishIssues,
+  collectMarketingFeatureFlagsPublishIssues,
   ensureSectionRow,
   publishSectionCore,
   rowsWithPublishableDraft,
 } from "../cmsPublishHelpers";
 import { publishGalleryDraftCore, validateDraftForPublish } from "./photos";
+import { publishMarketingFeatureFlagsCore } from "../marketingFeatureFlags";
 
 export const publish = mutation({
   args: { section: cmsSectionValidator },
@@ -55,7 +57,13 @@ export const publishSite = mutation({
       .unique();
     const galleryPending = galleryMeta?.hasDraftChanges ?? false;
 
-    if (targets.length === 0 && !galleryPending) {
+    const marketingRow = await ctx.db
+      .query("marketingFeatureFlags")
+      .withIndex("by_singleton", (q) => q.eq("singletonKey", "default"))
+      .unique();
+    const marketingPending = marketingRow?.hasDraftChanges ?? false;
+
+    if (targets.length === 0 && !galleryPending && !marketingPending) {
       return {
         ok: true as const,
         kind: "nothing_to_publish" as const,
@@ -64,6 +72,16 @@ export const publishSite = mutation({
     }
 
     const issues = collectAllPublishIssues(targets);
+    if (marketingPending && marketingRow?.draftSnapshot) {
+      for (const issue of collectMarketingFeatureFlagsPublishIssues(
+        marketingRow.draftSnapshot,
+      )) {
+        issues.push({
+          path: `marketingFeatureFlags.${issue.path}`,
+          message: issue.message,
+        });
+      }
+    }
     for (const row of targets) {
       if (row.section === "about" && row.draftSnapshot) {
         const blobIssues = await collectAboutTeamBlobIssues(
@@ -113,12 +131,19 @@ export const publishSite = mutation({
       ? await publishGalleryDraftCore(ctx, { userId, updatedBy })
       : undefined;
 
+    const marketingResult = marketingPending
+      ? await publishMarketingFeatureFlagsCore(ctx, { userId, updatedBy })
+      : undefined;
+
     return {
       ok: true as const,
       kind: "published" as const,
       publishedSections: targets.map((t) => t.section),
       results,
       ...(galleryResult !== undefined ? { gallery: galleryResult } : {}),
+      ...(marketingResult !== undefined && marketingResult.kind === "published"
+        ? { marketingFeatureFlags: { publishedAt: marketingResult.publishedAt } }
+        : {}),
     };
   },
 });

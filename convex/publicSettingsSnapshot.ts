@@ -17,13 +17,14 @@ import {
 type SettingsFlags = PricingSnapshot["flags"];
 type SettingsMetadata = NonNullable<SettingsSnapshot["metadata"]>;
 
-function isValidFlags(value: unknown): value is SettingsFlags {
-  return (
-    typeof value === "object" &&
-    value !== null &&
-    "priceTabEnabled" in value &&
-    typeof (value as { priceTabEnabled: unknown }).priceTabEnabled === "boolean"
-  );
+/** Legacy rows may only store `priceTabEnabled`. */
+function normalizeSiteFlags(raw: unknown): SettingsFlags | null {
+  if (typeof raw !== "object" || raw === null) return null;
+  const r = raw as { priceTabEnabled?: unknown };
+  if (typeof r.priceTabEnabled !== "boolean") return null;
+  return {
+    priceTabEnabled: r.priceTabEnabled,
+  };
 }
 
 const VALID_CADENCES = new Set<PricingPackage["billingCadence"]>([
@@ -126,8 +127,9 @@ export function publishedPricingFromRows(
   const pricingSnap = pricingRow?.publishedSnapshot as unknown;
   if (pricingSnap && typeof pricingSnap === "object") {
     const rawFlags = (pricingSnap as { flags?: unknown }).flags;
-    if (isValidFlags(rawFlags)) {
-      flags = rawFlags;
+    const normalized = normalizeSiteFlags(rawFlags);
+    if (normalized !== null) {
+      flags = normalized;
     }
     packages = sanitizePricingPackages(
       (pricingSnap as { packages?: unknown }).packages,
@@ -138,8 +140,9 @@ export function publishedPricingFromRows(
     const settingsSnap = settingsRow?.publishedSnapshot as unknown;
     if (settingsSnap && typeof settingsSnap === "object") {
       const rawFlags = (settingsSnap as { flags?: unknown }).flags;
-      if (isValidFlags(rawFlags)) {
-        flags = rawFlags;
+      const normalized = normalizeSiteFlags(rawFlags);
+      if (normalized !== null) {
+        flags = normalized;
       }
     }
   }
@@ -191,7 +194,6 @@ export function publishedAboutFromRow(
   }
 
   const s = snap as {
-    published?: unknown;
     heroImageStorageId?: unknown;
     heroTitle?: unknown;
     heroSubtitle?: unknown;
@@ -204,10 +206,6 @@ export function publishedAboutFromRow(
     teamMembers?: unknown;
   };
 
-  // INF-46: hidden by default. Missing flag on legacy rows is treated as
-  // `false` so shipping the feature doesn't unexpectedly expose the page;
-  // the owner must toggle it on explicitly from the CMS.
-  const published = typeof s.published === "boolean" ? s.published : false;
   const heroImageStorageId =
     typeof s.heroImageStorageId === "string" && s.heroImageStorageId.length > 0
       ? (s.heroImageStorageId as Id<"_storage">)
@@ -251,7 +249,6 @@ export function publishedAboutFromRow(
     : undefined;
 
   return {
-    published,
     ...(heroImageStorageId !== undefined ? { heroImageStorageId } : {}),
     heroTitle,
     ...(heroSubtitle !== undefined ? { heroSubtitle } : {}),

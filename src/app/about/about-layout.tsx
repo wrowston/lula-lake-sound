@@ -3,7 +3,8 @@
 import Image from "next/image";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { useCallback, useState } from "react";
+import { useScrollAndReveal } from "@/hooks/use-scroll-and-reveal";
+import { MAX_REVEAL_DELAY, revealDelay } from "@/lib/reveal-delay";
 import type {
   PublicAboutSnapshot,
   PublicAboutTeamMember,
@@ -12,6 +13,7 @@ import { Header } from "@/components/header";
 import { SiteFooter } from "@/components/site-footer";
 import { AboutBodyContent } from "./about-body-content";
 import { cn } from "@/lib/utils";
+import type { MarketingFeatureFlags } from "@/lib/site-settings";
 
 /**
  * Shared presentational layer for the public About page and the owner-only
@@ -37,18 +39,6 @@ import { cn } from "@/lib/utils";
  */
 const HERO_IMAGE_FALLBACK_SRC =
   "https://g3ik3pexma.ufs.sh/f/Ans4G8qtRkcnAhUWTJqtRkcnhBTMlYH2mZ96dp7NjQyvSeA8";
-
-/**
- * Reuses the site-wide `.reveal` + `.reveal-delay-N` CSS (see
- * `src/app/globals.css`). A container-level IntersectionObserver toggles
- * `.in-view` on each observed element when it scrolls into view.
- */
-const MAX_REVEAL_DELAY = 6;
-function aboutRevealDelay(step: number): string {
-  if (step <= 0) return "reveal";
-  const clamped = Math.min(step, MAX_REVEAL_DELAY);
-  return `reveal reveal-delay-${clamped}`;
-}
 
 function BodyCopy({ data }: { readonly data: PublicAboutSnapshot }) {
   const html = data.bodyHtml?.trim();
@@ -129,6 +119,8 @@ function Headshot({ member, fallbackRole }: HeadshotProps) {
 interface AboutLayoutProps {
   readonly data: PublicAboutSnapshot;
   readonly showPricing: boolean;
+  /** Nav visibility: About / Recordings / pricing block (published or preview). */
+  readonly marketing: MarketingFeatureFlags;
   /**
    * Optional banner slot above the header (used by the preview route to show
    * "Draft" / "No unpublished changes" state).
@@ -136,52 +128,21 @@ interface AboutLayoutProps {
   readonly banner?: React.ReactNode;
 }
 
-export function AboutLayout({ data, showPricing, banner }: AboutLayoutProps) {
-  const [scrollY, setScrollY] = useState(0);
+export function AboutLayout({ data, showPricing, marketing, banner }: AboutLayoutProps) {
+  const { scrollY, containerRef } = useScrollAndReveal();
   const pathname = usePathname();
-  const aboutHref =
-    pathname === "/preview" || pathname.startsWith("/preview/")
-      ? "/preview/about"
-      : "/about";
-
-  // Ref callback owns the scroll listener + reveal observer lifecycle so we
-  // can follow the project's "no effect hook" convention (see AGENTS.md). React
-  // 19 runs the cleanup returned here when the node detaches, matching the
-  // pattern in `src/components/homepage-shell.tsx`.
-  const containerRef = useCallback((node: HTMLDivElement | null) => {
-    if (!node) return;
-
-    let ticking = false;
-    function onScroll() {
-      if (ticking) return;
-      ticking = true;
-      requestAnimationFrame(() => {
-        setScrollY(window.scrollY);
-        ticking = false;
-      });
-    }
-    window.addEventListener("scroll", onScroll, { passive: true });
-    setScrollY(window.scrollY);
-
-    const observer = new IntersectionObserver(
-      (entries) => {
-        for (const entry of entries) {
-          if (entry.isIntersecting) {
-            entry.target.classList.add("in-view");
-            observer.unobserve(entry.target);
-          }
-        }
-      },
-      { threshold: 0.15, rootMargin: "0px 0px -60px 0px" },
-    );
-    const reveals = node.querySelectorAll(".reveal");
-    reveals.forEach((el) => observer.observe(el));
-
-    return () => {
-      window.removeEventListener("scroll", onScroll);
-      observer.disconnect();
-    };
-  }, []);
+  const showRecordings = marketing.recordingsPage === true;
+  const isPreview =
+    pathname === "/preview" || pathname.startsWith("/preview/");
+  // Show About in the header whenever we're on this page. Draft preview can
+  // have `aboutPage: false` to simulate the public menu, but hiding "About"
+  // while you are on the About preview is confusing; the link is not dead here.
+  const onAboutPage =
+    pathname === "/about" || pathname === "/preview/about";
+  const showAboutNav = marketing.aboutPage === true || onAboutPage;
+  const aboutHref = isPreview ? "/preview/about" : "/about";
+  const homeSectionBase = isPreview ? "/preview" : "/";
+  const recordingsNavHref = isPreview ? "/preview/recordings" : "/recordings";
 
   const team = data.teamMembers ?? [];
   // Variant A composition features exactly two circular headshots — owner +
@@ -202,15 +163,14 @@ export function AboutLayout({ data, showPricing, banner }: AboutLayoutProps) {
       className="dark min-h-screen bg-deep-forest text-ivory relative grain-overlay"
     >
       {banner}
-      {/* About page only mounts when `published === true` for the public
-          route, and owners viewing draft see their latest toggle value
-          anyway — always showing the About link here keeps the header
-          self-consistent with the current page. */}
       <Header
         scrollY={scrollY}
         showPricing={showPricing}
-        showAbout
+        showAbout={showAboutNav}
         aboutHref={aboutHref}
+        showRecordings={showRecordings}
+        homeSectionBase={homeSectionBase}
+        recordingsHref={recordingsNavHref}
       />
 
       <main>
@@ -232,7 +192,7 @@ export function AboutLayout({ data, showPricing, banner }: AboutLayoutProps) {
             />
             <div className="absolute inset-0 flex items-end">
               <div className="mx-auto w-full max-w-7xl px-6 pb-16 md:px-16 md:pb-24">
-                <nav aria-label="Breadcrumb" className={aboutRevealDelay(0)}>
+                <nav aria-label="Breadcrumb" className={revealDelay(0)}>
                   <Link
                     href="/"
                     className="label-text text-sand/60 hover:text-sand transition-colors text-[11px] tracking-[0.2em]"
@@ -243,7 +203,7 @@ export function AboutLayout({ data, showPricing, banner }: AboutLayoutProps) {
                 <h1
                   id="about-hero-title"
                   className={cn(
-                    aboutRevealDelay(2),
+                    revealDelay(2),
                     "headline-primary text-warm-white leading-[1.05] mt-6 text-balance",
                   )}
                   style={{ fontSize: "clamp(2.5rem, 6vw, 5.5rem)" }}
@@ -253,7 +213,7 @@ export function AboutLayout({ data, showPricing, banner }: AboutLayoutProps) {
                 {data.heroSubtitle ? (
                   <p
                     className={cn(
-                      aboutRevealDelay(3),
+                      revealDelay(3),
                       "body-text text-ivory/75 mt-6 max-w-2xl text-lg md:text-xl leading-[1.6]",
                     )}
                   >
@@ -270,12 +230,12 @@ export function AboutLayout({ data, showPricing, banner }: AboutLayoutProps) {
           aria-label="About Lula Lake Sound"
         >
           <div className="mx-auto grid max-w-7xl grid-cols-1 gap-16 lg:grid-cols-12 lg:gap-24">
-            <div className={cn(aboutRevealDelay(0), "lg:col-span-7")}>
+            <div className={cn(revealDelay(0), "lg:col-span-7")}>
               <BodyCopy data={data} />
               {pullQuote ? (
                 <blockquote
                   className={cn(
-                    aboutRevealDelay(1),
+                    revealDelay(1),
                     "mt-10 lg:mt-12 border-l-2 border-gold/50 pl-8 py-2",
                   )}
                 >
@@ -292,7 +252,7 @@ export function AboutLayout({ data, showPricing, banner }: AboutLayoutProps) {
             <div className="flex flex-col gap-12 lg:col-span-5">
               <div
                 className={cn(
-                  aboutRevealDelay(2),
+                  revealDelay(2),
                   "grid grid-cols-1 gap-10 sm:grid-cols-2 sm:gap-8",
                 )}
               >
@@ -311,7 +271,7 @@ export function AboutLayout({ data, showPricing, banner }: AboutLayoutProps) {
             <div className="mx-auto max-w-7xl">
               <p
                 className={cn(
-                  aboutRevealDelay(0),
+                  revealDelay(0),
                   "label-text mb-10 tracking-[0.2em] text-sand/50 text-[11px]",
                 )}
               >
@@ -322,7 +282,7 @@ export function AboutLayout({ data, showPricing, banner }: AboutLayoutProps) {
                   <li
                     key={`${i}-${highlight.slice(0, 12)}`}
                     className={cn(
-                      aboutRevealDelay(Math.min(i + 1, MAX_REVEAL_DELAY)),
+                      revealDelay(Math.min(i + 1, MAX_REVEAL_DELAY)),
                       "body-text text-ivory/75 text-lg leading-[1.6] border-l border-sand/10 pl-5",
                     )}
                   >
@@ -341,7 +301,7 @@ export function AboutLayout({ data, showPricing, banner }: AboutLayoutProps) {
           <div className="mx-auto max-w-3xl text-center">
             <p
               className={cn(
-                aboutRevealDelay(0),
+                revealDelay(0),
                 "label-text mb-4 tracking-[0.2em] text-sand/60 text-[11px]",
               )}
             >
@@ -349,7 +309,7 @@ export function AboutLayout({ data, showPricing, banner }: AboutLayoutProps) {
             </p>
             <h2
               className={cn(
-                aboutRevealDelay(1),
+                revealDelay(1),
                 "headline-primary text-warm-white leading-[1.1] text-balance text-3xl md:text-5xl",
               )}
             >
@@ -357,7 +317,7 @@ export function AboutLayout({ data, showPricing, banner }: AboutLayoutProps) {
             </h2>
             <p
               className={cn(
-                aboutRevealDelay(2),
+                revealDelay(2),
                 "body-text text-ivory/70 mt-6 text-lg leading-[1.7]",
               )}
             >
@@ -366,7 +326,7 @@ export function AboutLayout({ data, showPricing, banner }: AboutLayoutProps) {
             </p>
             <div
               className={cn(
-                aboutRevealDelay(3),
+                revealDelay(3),
                 "mt-10 flex flex-wrap items-center justify-center gap-6",
               )}
             >

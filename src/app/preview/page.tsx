@@ -16,12 +16,16 @@ function PreviewContent() {
   // can confirm the feature-flag toggle before publishing. Preview query is
   // owner-only and returns `null` for non-owners.
   const aboutPreview = useQuery(api.aboutPreviewDraft.getPreviewAbout);
+  const marketingPreview = useQuery(
+    api.marketingFeatureFlags.getPreviewMarketingFeatureFlags,
+  );
 
   if (
     pricingFlags === undefined ||
     gearPreview === undefined ||
     photoPreview === undefined ||
-    aboutPreview === undefined
+    aboutPreview === undefined ||
+    marketingPreview === undefined
   ) {
     return (
       <div className="flex min-h-screen items-center justify-center bg-washed-black">
@@ -34,7 +38,8 @@ function PreviewContent() {
     pricingFlags === null ||
     gearPreview === null ||
     photoPreview === null ||
-    aboutPreview === null
+    aboutPreview === null ||
+    marketingPreview === null
   ) {
     return (
       <div className="flex min-h-screen items-center justify-center bg-washed-black">
@@ -49,7 +54,8 @@ function PreviewContent() {
     pricingFlags.hasDraftChanges ||
     gearPreview.hasDraftChanges ||
     photoPreview.hasDraftChanges ||
-    aboutPreview.hasDraftChanges;
+    aboutPreview.hasDraftChanges ||
+    marketingPreview.hasDraftChanges;
 
   return (
     <HomepageShell
@@ -57,9 +63,13 @@ function PreviewContent() {
         flags: pricingFlags.flags,
         packages: pricingFlags.packages,
       }}
+      marketingFeatureFlags={{
+        aboutPage: marketingPreview.aboutPage,
+        recordingsPage: marketingPreview.recordingsPage,
+        pricingSection: marketingPreview.pricingSection,
+      }}
       gear={{ categories: gearPreview.categories }}
       photos={photoPreview.photos}
-      aboutVisibility={{ published: aboutPreview.published === true }}
       banner={<PreviewBanner hasDraftChanges={hasDraftChanges} />}
     />
   );

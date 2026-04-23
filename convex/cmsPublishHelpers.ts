@@ -9,6 +9,7 @@ import {
   type AboutSnapshot,
   type CmsSection,
   type CmsSnapshot,
+  type MarketingFeatureFlagsSnapshot,
   type PricingSnapshot,
   type SettingsSnapshot,
 } from "./cmsShared";
@@ -50,7 +51,10 @@ async function initialSnapshotForSection(
     const legacyFlags = (legacy?.publishedSnapshot as SettingsSnapshot | undefined)
       ?.flags;
     return {
-      flags: legacyFlags ?? PRICING_DEFAULTS.flags,
+      flags: {
+        ...PRICING_DEFAULTS.flags,
+        ...(legacyFlags && typeof legacyFlags === "object" ? legacyFlags : {}),
+      },
       packages: [],
     } satisfies PricingSnapshot;
   }
@@ -423,6 +427,31 @@ export function rowsWithPublishableDraft(
       row.draftSnapshot !== undefined &&
       !cmsSnapshotsEqual(row.draftSnapshot, row.publishedSnapshot),
   );
+}
+
+export function collectMarketingFeatureFlagsPublishIssues(
+  draft: MarketingFeatureFlagsSnapshot,
+): PublishIssue[] {
+  const issues: PublishIssue[] = [];
+  if (typeof draft.aboutPage !== "boolean") {
+    issues.push({
+      path: "aboutPage",
+      message: "About page visibility must be a boolean.",
+    });
+  }
+  if (typeof draft.recordingsPage !== "boolean") {
+    issues.push({
+      path: "recordingsPage",
+      message: "Recordings page visibility must be a boolean.",
+    });
+  }
+  if (typeof draft.pricingSection !== "boolean") {
+    issues.push({
+      path: "pricingSection",
+      message: "Pricing section visibility must be a boolean.",
+    });
+  }
+  return issues;
 }
 
 /** Aggregate validation issues across sections (preflight for `publishSite`). */

@@ -7,6 +7,7 @@ import {
   type CmsSection,
   type CmsSnapshot,
 } from "./cmsShared";
+import { ensureMarketingFeatureFlagsSeededHandler } from "./marketingFeatureFlags";
 import { LEGACY_EQUIPMENT_SEED } from "./gearEquipmentSeed";
 import { insertLegacyEquipmentSeedDraft } from "./gearLegacySeed";
 import { deleteAllGearForScope, loadGearDocs } from "./gearTree";
@@ -50,8 +51,11 @@ export const seedSiteSettingsDefaults = internalMutation({
       ensureSeeded("about", ABOUT_DEFAULTS),
     ]);
 
+    const marketingResult = await ensureMarketingFeatureFlagsSeededHandler(ctx);
+
     return {
       results,
+      marketingFeatureFlags: marketingResult,
     };
   },
 });

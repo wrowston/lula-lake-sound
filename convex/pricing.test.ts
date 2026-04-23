@@ -27,7 +27,7 @@ describe("collectPublishIssues(pricing)", () => {
 
   test("detects duplicate package ids", () => {
     const snapshot: PricingSnapshot = {
-      flags: { priceTabEnabled: true },
+      flags: { ...PRICING_DEFAULTS.flags, priceTabEnabled: true },
       packages: [validPackage(), { ...validPackage(), name: "Dup" }],
     };
     const issues = collectPublishIssues("pricing", snapshot);
@@ -38,7 +38,7 @@ describe("collectPublishIssues(pricing)", () => {
 
   test("detects missing name and negative price", () => {
     const snapshot: PricingSnapshot = {
-      flags: { priceTabEnabled: true },
+      flags: { ...PRICING_DEFAULTS.flags, priceTabEnabled: true },
       packages: [
         {
           ...validPackage(),
@@ -59,7 +59,7 @@ describe("collectPublishIssues(pricing)", () => {
 
   test("detects non-integer cent values", () => {
     const snapshot: PricingSnapshot = {
-      flags: { priceTabEnabled: true },
+      flags: { ...PRICING_DEFAULTS.flags, priceTabEnabled: true },
       packages: [{ ...validPackage(), priceCents: 99.5 }],
     };
     const issues = collectPublishIssues("pricing", snapshot);
@@ -68,7 +68,7 @@ describe("collectPublishIssues(pricing)", () => {
 
   test("missing packages array is treated as empty", () => {
     const snapshot: PricingSnapshot = {
-      flags: { priceTabEnabled: true },
+      flags: { ...PRICING_DEFAULTS.flags, priceTabEnabled: true },
     };
     const issues = collectPublishIssues("pricing", snapshot);
     expect(issues).toEqual([]);
@@ -76,7 +76,7 @@ describe("collectPublishIssues(pricing)", () => {
 
   test("custom cadence without unitLabel is an issue", () => {
     const snapshot: PricingSnapshot = {
-      flags: { priceTabEnabled: true },
+      flags: { ...PRICING_DEFAULTS.flags, priceTabEnabled: true },
       packages: [
         {
           ...validPackage(),
@@ -93,7 +93,7 @@ describe("collectPublishIssues(pricing)", () => {
 
   test("custom cadence with unitLabel passes validation", () => {
     const snapshot: PricingSnapshot = {
-      flags: { priceTabEnabled: true },
+      flags: { ...PRICING_DEFAULTS.flags, priceTabEnabled: true },
       packages: [
         {
           ...validPackage(),

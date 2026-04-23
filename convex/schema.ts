@@ -5,6 +5,7 @@ import {
   cmsSnapshotValidator,
   gearScopeValidator,
   gearSpecsValidator,
+  marketingFeatureFlagsSnapshotValidator,
 } from "./schema.shared";
 
 // Draft/publish model: see docs/cms-publish.md (INF-70).
@@ -44,6 +45,21 @@ export default defineSchema({
     draftSnapshot: v.optional(cmsSnapshotValidator),
     hasDraftChanges: v.boolean(),
   }).index("by_section", ["section"]),
+
+  /**
+   * Marketing site visibility: About page, Recordings page, homepage pricing block.
+   * Draft/publish matches `cmsSections` semantics; singleton row only.
+   */
+  marketingFeatureFlags: defineTable({
+    singletonKey: v.literal("default"),
+    publishedSnapshot: marketingFeatureFlagsSnapshotValidator,
+    draftSnapshot: v.optional(marketingFeatureFlagsSnapshotValidator),
+    hasDraftChanges: v.boolean(),
+    publishedAt: v.union(v.number(), v.null()),
+    publishedBy: v.optional(v.string()),
+    updatedAt: v.number(),
+    updatedBy: v.optional(v.string()),
+  }).index("by_singleton", ["singletonKey"]),
 
   /**
    * Studio gear CMS (INF-86): separate rows per scope so we can index by category

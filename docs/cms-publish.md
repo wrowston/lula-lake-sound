@@ -8,22 +8,27 @@
 | Audience | Data |
 |----------|------|
 | Anonymous / marketing site — metadata | `publishedSnapshot` only (`api.public.getPublishedSiteSettings`) |
-| Anonymous / marketing site — pricing flags | `publishedSnapshot` only (`api.public.getPublishedPricingFlags`) |
+| Anonymous / marketing site — pricing packages (flags are legacy) | `publishedSnapshot` only (`api.public.getPublishedPricingFlags`) |
+| Anonymous / marketing site — marketing visibility | `marketingFeatureFlags` table (`api.public.getPublishedMarketingFeatureFlags`) — About page, Recordings page, homepage pricing **section** |
 | Anonymous / marketing site — About copy + team | `publishedSnapshot` only (`api.public.getPublishedAbout` — resolves headshot URLs; no raw `_storage` ids in the payload) |
 | Studio / preview — metadata | `api.siteSettingsPreviewDraft.getPreviewSiteSettings` (draft when present, else published; owner-gated) |
 | Studio / preview — pricing flags | `api.pricingPreviewDraft.getPreviewPricingFlags` (draft when present, else published; owner-gated) |
+| Studio / preview — marketing visibility | `api.marketingFeatureFlags.getPreviewMarketingFeatureFlags` (owner-gated) |
 
 ### Sections
 
 | Section | Shape | Admin editor |
 |---------|-------|--------------|
 | `settings` | `{ metadata?: { title, description } }` | `/admin/settings` |
-| `pricing`  | `{ flags: { priceTabEnabled } }`         | `/admin/pricing` |
-| `about`    | `{ heroTitle, heroSubtitle?, bodyHtml?, body: Block[], highlights?, seoTitle?, seoDescription?, teamMembers? }` — blocks as above; `teamMembers` is an optional array of `{ id, name, title, storageId? }` (`storageId` is a Convex `_storage` id; optional while drafting, required to publish). Headshots use the same upload limits as the gallery (JPEG/PNG/WebP). | `/admin/about` |
+| `pricing`  | `{ flags: { priceTabEnabled }, packages? }` — visibility for the public site is `marketingFeatureFlags`, not this flag. | `/admin/pricing` |
+| `about`    | Same copy shape **without** a `published` field; route visibility is `marketingFeatureFlags.aboutPage`. | `/admin/about` |
+| (singleton) | `marketingFeatureFlags` table — `{ aboutPage, recordingsPage, pricingSection }` with draft/publish like `gearMeta` | `/admin/feature-flags` |
 
-Each section has its own `cmsSections` row and therefore its own independent draft / publish lifecycle. Publishing one section never publishes another (except via `api.admin.publish.publishSite`, which explicitly iterates all `cmsSections` rows with pending drafts **and** the studio gallery when `galleryPhotoMeta.hasDraftChanges` is true).
+Each section has its own `cmsSections` row and therefore its own independent draft / publish lifecycle. Publishing one section never publishes another (except via `api.admin.publish.publishSite`, which explicitly iterates all `cmsSections` rows with pending drafts, the `marketingFeatureFlags` singleton when it has draft changes, **and** the studio gallery when `galleryPhotoMeta.hasDraftChanges` is true).
 
 > Legacy rows whose `settings.publishedSnapshot` still contains `flags` remain schema-valid thanks to an optional `flags` field on `settingsContentValidator`. Public / preview pricing queries fall back to that legacy location when the `pricing` row hasn’t been written yet, so no migration is required before deploy.
+
+> **INF-48** — Some deployments still have `published` on the `about` `publishedSnapshot` / `draftSnapshot` or `recordingsPageEnabled` inside `pricing.flags`. The schema allows these keys temporarily; run `bunx convex run migrations/stripLegacyCmsMarketingFields:stripLegacyCmsMarketingFields` once (or rely on `internal.seed.seedSiteSettingsDefaults` / `internal.marketingFeatureFlags.ensureMarketingFeatureFlagsSeeded`, which call the same stripper after backfill) to remove them from stored documents.
 
 > The `about` body uses a **block array of plain text** (`{type, text}`) for legacy rows, or **`bodyHtml`** (Tiptap HTML) for new content. Team headshots live in Convex file storage; `saveDraft` / `publishSection` / `discardDraft` prune unreferenced blobs when refs disappear from the about snapshots (see `convex/aboutTeamStorage.ts`, INF-76).
 
@@ -42,7 +47,7 @@ Publish flushes any pending autosave first, so fast-clicking Publish after an ed
 | `api.cms.saveDraft` | Writes `draftSnapshot`, updates `hasDraftChanges` vs `publishedSnapshot`. Called by the editor's autosave hook on each debounced change. |
 | `api.cms.publishSection` | Validates, then copies `draftSnapshot` → `publishedSnapshot`, sets `publishedAt` + `publishedBy` (Clerk user id), clears draft in **one** transaction. Idempotent when there is nothing to publish. |
 | `api.admin.publish.publish` | Same as `publishSection` (owner-gated; see `convex/admin/publish.ts`). |
-| `api.admin.publish.publishSite` | Validates **all** `cmsSections` rows with pending drafts **and** the gallery draft (when the gallery has pending changes) first; if any fail, **nothing** is published. Otherwise publishes every pending section **and** the gallery (when applicable) in the same transaction. |
+| `api.admin.publish.publishSite` | Validates **all** `cmsSections` rows with pending drafts, **marketing feature flags** (if pending), **and** the gallery draft (when the gallery has pending changes) first; if any fail, **nothing** is published. Otherwise publishes every pending part in one transaction. |
 | `api.cms.validatePublishSection` | Read-only preflight validation for the effective draft snapshot. |
 | `api.cms.discardDraft` | Clears `draftSnapshot` and `hasDraftChanges` with `patch` (optional field removed). No-op if there was nothing to discard. `publishedSnapshot`, `publishedAt`, and `publishedBy` are unchanged. |
 

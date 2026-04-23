@@ -4,6 +4,7 @@ import type {
   aboutBlockValidator,
   aboutContentValidator,
   aboutTeamMemberValidator,
+  marketingFeatureFlagsSnapshotValidator,
   pricingBillingCadenceValidator,
   pricingContentValidator,
   pricingPackageValidator,
@@ -19,6 +20,9 @@ export type PricingBillingCadence = Infer<typeof pricingBillingCadenceValidator>
 export type AboutSnapshot = Infer<typeof aboutContentValidator>;
 export type AboutBlock = Infer<typeof aboutBlockValidator>;
 export type AboutTeamMember = Infer<typeof aboutTeamMemberValidator>;
+export type MarketingFeatureFlagsSnapshot = Infer<
+  typeof marketingFeatureFlagsSnapshotValidator
+>;
 
 /** Team row as returned to anonymous public callers (no raw storage id). */
 export type PublicAboutTeamMember = {
@@ -115,15 +119,22 @@ export const PRICING_DEFAULTS: PricingSnapshot = {
 };
 
 /**
+ * Default marketing visibility (About / Recordings / pricing block on homepage).
+ * Seeded on `marketingFeatureFlags`; route-level 404s read published snapshot.
+ */
+export const MARKETING_FEATURE_FLAGS_DEFAULTS: MarketingFeatureFlagsSnapshot = {
+  aboutPage: false,
+  recordingsPage: false,
+  pricingSection: true,
+};
+
+/**
  * Default About page copy shipped with a brand-new deployment. Seeded so the
  * public route renders before the owner has made their first publish. Kept
  * intentionally short — real copy goes in via the admin editor.
- *
- * `published` defaults to `false` (INF-46): the About page is hidden behind
- * a feature flag until the owner explicitly enables it from the CMS.
+ * Page visibility is controlled in `marketingFeatureFlags` (`aboutPage`).
  */
 export const ABOUT_DEFAULTS: AboutSnapshot = {
-  published: false,
   heroTitle: "About Lula Lake Sound",
   heroSubtitle: "A creative space for music production and recording.",
   body: [
