@@ -38,8 +38,7 @@ export function MarketingPricingSection({
     isPreviewRoute && previewHasActivePricingPackages(pricingFlags);
   const sectionOn =
     marketingFeatureFlags != null
-      ? isHomepagePricingSectionEnabled(marketingFeatureFlags) ||
-          previewCatalogOn
+      ? isHomepagePricingSectionEnabled(marketingFeatureFlags)
       : (pricingFlags != null &&
           pricingFlags.flags.priceTabEnabled === true) ||
           previewCatalogOn;

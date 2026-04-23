@@ -68,7 +68,9 @@ export function HomepageShell({
   const showPricing =
     marketing === undefined ||
     (marketing !== null && isHomepagePricingSectionEnabled(marketing)) ||
-    (isPreview && previewHasActivePricingPackages(pricingFlags));
+    (isPreview &&
+      marketing == null &&
+      previewHasActivePricingPackages(pricingFlags));
   const showAbout = marketing === undefined
     ? false
     : marketing !== null && marketing.aboutPage === true;
