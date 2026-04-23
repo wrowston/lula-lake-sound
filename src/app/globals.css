@@ -471,6 +471,35 @@ html.light {
 }
 
 /* ————————————————————————————————
+ * Recordings table — waveform bars while audio is playing
+ * ———————————————————————————————— */
+
+@keyframes recordings-waveform-bar-pulse {
+  0%,
+  100% {
+    transform: scaleY(0.35);
+  }
+  50% {
+    transform: scaleY(1);
+  }
+}
+
+.recordings-waveform-bar--playing {
+  animation-name: recordings-waveform-bar-pulse;
+  animation-timing-function: ease-in-out;
+  animation-iteration-count: infinite;
+  animation-direction: alternate;
+  transform-origin: bottom center;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .recordings-waveform-bar--playing {
+    animation: none;
+    transform: none;
+  }
+}
+
+/* ————————————————————————————————
  * Atmospheric textures
  *
  * Low-opacity, earthy gradients layered under section content. Nothing in

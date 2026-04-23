@@ -1,5 +1,7 @@
 "use client";
 
+import { Music } from "lucide-react";
+import Image from "next/image";
 import Link from "next/link";
 import { useCallback, useState } from "react";
 
@@ -15,8 +17,10 @@ import type { Recording } from "./recordings-data";
  * Based on the client-approved Variant A "Cinematic Editorial" row treatment
  * from `inf-45/design-exploration-variants` (see
  * `src/app/design/variant-a/sections.tsx` → `RecordingsSection`). Adds the
- * launch-required columns — title, artist, genre, year — and the in-playback
- * duration UX (elapsed / total + progress bar) for the active row.
+ * launch-required columns — title, artist, genre, year — optional cover art,
+ * streaming links — and in-playback duration UX (elapsed / total + progress
+ * bar) for the active
+ * row only — no standalone duration column.
  *
  * Playback model: **one track at a time**. Switching tracks pauses the
  * current `<audio>`, swaps its `src`, and resumes from the start. Scrubbing
@@ -74,9 +78,10 @@ function PlayPauseIcon({ isActive, className }: PlayPauseIconProps) {
 interface WaveformProps {
   readonly seed: number;
   readonly isActive: boolean;
+  readonly isPlaying: boolean;
 }
 
-function Waveform({ seed, isActive }: WaveformProps) {
+function Waveform({ seed, isActive, isPlaying }: WaveformProps) {
   const bars = Array.from({ length: 48 });
   return (
     <div
@@ -94,11 +99,55 @@ function Waveform({ seed, isActive }: WaveformProps) {
             className={cn(
               "w-[2px] rounded-full transition-colors duration-300",
               isActive ? "bg-gold/60" : "bg-sand/15 group-hover:bg-sand/25",
+              isPlaying && isActive && "recordings-waveform-bar--playing",
             )}
-            style={{ height: `${Math.min(h, 95)}%` }}
+            style={{
+              height: `${Math.min(h, 95)}%`,
+              ...(isPlaying && isActive
+                ? {
+                    animationDuration: `${0.4 + (j % 5) * 0.07 + (seed % 3) * 0.05}s`,
+                    animationDelay: `${-((j * 11 + seed * 3) % 100) / 250}s`,
+                  }
+                : {}),
+            }}
           />
         );
       })}
+    </div>
+  );
+}
+
+function AlbumThumbnail({
+  track,
+  className,
+}: {
+  readonly track: Recording;
+  readonly className?: string;
+}) {
+  return (
+    <div
+      className={cn(
+        "relative h-11 w-11 shrink-0 overflow-hidden rounded-md border border-sand/20 bg-charcoal/50",
+        className,
+      )}
+    >
+      {track.coverImageUrl ? (
+        <Image
+          src={track.coverImageUrl}
+          alt=""
+          width={44}
+          height={44}
+          className="object-cover"
+          sizes="44px"
+        />
+      ) : (
+        <span
+          className="flex h-full w-full items-center justify-center text-sand/30"
+          aria-hidden
+        >
+          <Music className="h-5 w-5" strokeWidth={1.25} />
+        </span>
+      )}
     </div>
   );
 }
@@ -108,6 +157,65 @@ interface ActiveTrackState {
   readonly duration: number;
   readonly currentTime: number;
   readonly isPlaying: boolean;
+}
+
+function SpotifyGlyph({ className }: { readonly className?: string }) {
+  return (
+    <svg
+      aria-hidden
+      viewBox="0 0 24 24"
+      className={className}
+      fill="currentColor"
+    >
+      <path d="M12 0C5.4 0 0 5.4 0 12s5.4 12 12 12 12-5.4 12-12S18.66 0 12 0zm5.521 17.34c-.24.359-.66.48-1.021.24-2.82-1.74-6.36-2.101-10.561-1.141-.418.122-.779-.179-.899-.539-.12-.421.18-.78.54-.9 4.56-1.021 8.52-.6 11.64 1.32.42.18.479.659.301 1.02zm1.44-3.3c-.301.42-.841.6-1.262.3-3.239-1.98-8.159-2.58-11.939-1.38-.479.12-1.02-.12-1.14-.6-.12-.48.12-1.021.6-1.141C9.6 9.9 15 10.561 18.72 12.84c.361.181.54.78.241 1.2zm.12-3.42C15.24 8.4 8.82 8.4 5.16 9.301c-.6.179-1.2-.181-1.38-.721-.18-.601.18-1.2.72-1.381 4.26-1.26 11.28-1.02 15.721 1.621.539.3.719 1.02.42 1.56-.299.421-1.02.599-1.559.3z" />
+    </svg>
+  );
+}
+
+function StreamingLinks({
+  track,
+  className,
+}: {
+  readonly track: Recording;
+  readonly className?: string;
+}) {
+  const linkClass =
+    "inline-flex text-ivory/45 transition-colors hover:text-gold focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-gold/60 focus-visible:ring-offset-0 focus-visible:ring-offset-washed-black rounded-sm";
+  if (!track.spotifyUrl && !track.appleMusicUrl) {
+    return (
+      <span className="label-text text-[10px] text-ivory/45 tabular-nums">
+        —
+      </span>
+    );
+  }
+  return (
+    <span
+      className={cn("inline-flex items-center justify-center gap-2.5", className)}
+    >
+      {track.spotifyUrl ? (
+        <a
+          href={track.spotifyUrl}
+          target="_blank"
+          rel="noopener noreferrer"
+          className={linkClass}
+          aria-label={`${track.title} — listen on Spotify`}
+        >
+          <SpotifyGlyph className="h-4 w-4" />
+        </a>
+      ) : null}
+      {track.appleMusicUrl ? (
+        <a
+          href={track.appleMusicUrl}
+          target="_blank"
+          rel="noopener noreferrer"
+          className={linkClass}
+          aria-label={`${track.title} — listen on Apple Music`}
+        >
+          <Music className="h-4 w-4" strokeWidth={1.75} aria-hidden />
+        </a>
+      ) : null}
+    </span>
+  );
 }
 
 interface TrackRowProps {
@@ -151,22 +259,25 @@ function TrackRow({
           isActive ? "bg-charcoal/60" : "hover:bg-charcoal/30",
         )}
       >
-        {/* Desktop row */}
-        <button
-          type="button"
-          onClick={() => onToggle(track.id)}
-          aria-label={rowLabel}
-          aria-pressed={isPlaying}
-          className={cn(
-            "hidden md:grid w-full items-center px-4 py-5 text-left",
-            "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-gold/60 focus-visible:ring-offset-0",
-          )}
+        {/* Desktop row — play control is separate from streaming links so
+            anchors are not nested inside a button. */}
+        <div
+          className="hidden md:grid w-full items-stretch gap-x-4 px-4 lg:gap-x-5"
           style={{
             gridTemplateColumns:
-              "44px minmax(0,1fr) minmax(0,160px) 120px 80px 90px",
+              "44px 48px minmax(0,1fr) minmax(0,160px) minmax(8.75rem, 13rem) minmax(5.5rem, 6rem) minmax(5.75rem, 7.25rem)",
           }}
         >
-          <span className="flex items-center justify-center">
+          <button
+            type="button"
+            onClick={() => onToggle(track.id)}
+            aria-label={rowLabel}
+            aria-pressed={isPlaying}
+            className={cn(
+              "flex items-center justify-center self-stretch",
+              "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-gold/60 focus-visible:ring-inset",
+            )}
+          >
             <span
               className={cn(
                 "flex h-9 w-9 items-center justify-center rounded-full border transition-all duration-300",
@@ -180,47 +291,71 @@ function TrackRow({
                 className="h-3.5 w-3.5"
               />
             </span>
-          </span>
+          </button>
 
-          <span className="min-w-0 pl-3">
-            <span
-              className={cn(
-                "headline-secondary block truncate text-lg leading-tight transition-colors",
-                isActive
-                  ? "text-gold"
-                  : "text-warm-white group-hover:text-sand",
-              )}
-              title={track.title}
-            >
-              {track.title}
-            </span>
-            <span
-              className="body-text-small mt-0.5 block truncate text-ivory/55"
-              title={track.artist}
-            >
-              {track.artist}
-            </span>
-          </span>
+          <div className="flex items-center justify-center py-5">
+            <AlbumThumbnail track={track} />
+          </div>
 
-          <span className="hidden lg:flex items-center">
-            <Waveform seed={(index + 1) * 7} isActive={isActive} />
-          </span>
-
-          <span
-            className="label-text truncate text-right text-[10px] text-ivory/45"
-            title={track.genre}
+          <button
+            type="button"
+            tabIndex={-1}
+            onClick={() => onToggle(track.id)}
+            aria-label={rowLabel}
+            aria-pressed={isPlaying}
+            className={cn(
+              "col-start-3 col-span-4 grid w-full items-center gap-x-4 py-5 text-left lg:gap-x-5",
+              "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-gold/60 focus-visible:ring-offset-0",
+            )}
+            style={{
+              gridTemplateColumns:
+                "minmax(0,1fr) minmax(0,160px) minmax(8.75rem, 13rem) minmax(5.5rem, 6rem)",
+            }}
           >
-            {track.genre}
-          </span>
+            <span className="min-w-0 pl-3">
+              <span
+                className={cn(
+                  "headline-secondary block truncate text-lg leading-tight transition-colors",
+                  isActive
+                    ? "text-gold"
+                    : "text-warm-white group-hover:text-sand",
+                )}
+                title={track.title}
+              >
+                {track.title}
+              </span>
+              <span
+                className="body-text-small mt-0.5 block truncate text-ivory/55"
+                title={track.artist}
+              >
+                {track.artist}
+              </span>
+            </span>
 
-          <span className="label-text text-right text-[10px] tabular-nums text-ivory/45">
-            {track.year}
-          </span>
+            <span className="hidden lg:flex items-center">
+              <Waveform
+                seed={(index + 1) * 7}
+                isActive={isActive}
+                isPlaying={isPlaying}
+              />
+            </span>
 
-          <span className="body-text-small text-right tabular-nums text-ivory/55">
-            {isActive && duration > 0 ? formatTime(duration) : "—"}
-          </span>
-        </button>
+            <span
+              className="label-text truncate pr-1 text-right text-[10px] tracking-[0.12em] text-ivory/45"
+              title={track.genre}
+            >
+              {track.genre}
+            </span>
+
+            <span className="label-text pl-1 text-right text-[10px] tabular-nums tracking-[0.12em] text-ivory/45">
+              {track.year}
+            </span>
+          </button>
+
+          <div className="flex items-center justify-center py-5 pl-2 pr-2">
+            <StreamingLinks track={track} />
+          </div>
+        </div>
 
         {/* Mobile row */}
         <button
@@ -240,6 +375,7 @@ function TrackRow({
           >
             <PlayPauseIcon isActive={isPlaying} className="h-3.5 w-3.5" />
           </span>
+          <AlbumThumbnail track={track} />
           <span className="min-w-0 flex-1">
             <span
               className={cn(
@@ -257,10 +393,19 @@ function TrackRow({
               {track.artist} · {track.genre} · {track.year}
             </span>
           </span>
-          <span className="body-text-small flex-shrink-0 tabular-nums text-ivory/45">
-            {isActive && duration > 0 ? formatTime(duration) : "—"}
-          </span>
         </button>
+
+        {track.spotifyUrl || track.appleMusicUrl ? (
+          <div className="md:hidden flex items-center gap-3 border-t border-sand/10 px-3 py-3 pl-[7.25rem]">
+            <span className="label-text shrink-0 text-[9px] tracking-[0.2em] text-sand/45">
+              Stream
+            </span>
+            <StreamingLinks
+              track={track}
+              className="justify-start gap-3"
+            />
+          </div>
+        ) : null}
 
         {/* In-playback duration UX — elapsed / total + progress bar, shown
             only for the active row so the required duration context is
@@ -500,25 +645,26 @@ export function RecordingsClient({ recordings }: RecordingsClientProps) {
                 {/* Column headers — desktop only */}
                 <div
                   aria-hidden
-                  className="hidden md:grid items-center border-b border-sand/15 px-4 pb-3"
+                  className="hidden md:grid items-center gap-x-4 border-b border-sand/15 px-4 pb-3 lg:gap-x-5"
                   style={{
                     gridTemplateColumns:
-                      "44px minmax(0,1fr) minmax(0,160px) 120px 80px 90px",
+                      "44px 48px minmax(0,1fr) minmax(0,160px) minmax(8.75rem, 13rem) minmax(5.5rem, 6rem) minmax(5.75rem, 7.25rem)",
                   }}
                 >
+                  <span />
                   <span />
                   <span className="label-text pl-3 text-[10px] tracking-[0.2em] text-sand/45">
                     Track · Artist
                   </span>
                   <span className="hidden lg:block" />
-                  <span className="label-text text-right text-[10px] tracking-[0.2em] text-sand/45">
+                  <span className="label-text pr-1 text-right text-[10px] tracking-[0.2em] text-sand/45">
                     Genre
                   </span>
-                  <span className="label-text text-right text-[10px] tracking-[0.2em] text-sand/45">
+                  <span className="label-text pl-1 text-right text-[10px] tracking-[0.2em] text-sand/45">
                     Year
                   </span>
-                  <span className="label-text text-right text-[10px] tracking-[0.2em] text-sand/45">
-                    Duration
+                  <span className="label-text px-1 text-center text-[10px] tracking-[0.2em] text-sand/45">
+                    Stream
                   </span>
                 </div>
 

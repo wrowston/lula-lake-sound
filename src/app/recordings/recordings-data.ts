@@ -4,8 +4,9 @@
  * Fields are a superset of the four primary columns the client approved
  * (`title`, `artist`, `genre`, `year`) plus metadata we want to keep
  * available when the list is wired up to Convex (`id`, `order`, `role`,
- * `audioUrl`). Extended fields stay optional so the table layout continues
- * to work if CMS entries omit them.
+ * `audioUrl`, `coverImageUrl`, `spotifyUrl`, `appleMusicUrl`). Extended
+ * fields stay optional so the table layout continues to work if CMS entries
+ * omit them.
  *
  * `audioUrl` currently points at the public SoundHelix sample catalogue so
  * playback and duration UI can be exercised end-to-end before uploaded
@@ -20,9 +21,14 @@ export interface Recording {
   readonly genre: string;
   readonly year: number;
   readonly audioUrl: string;
+  /** Album / single artwork — shown as a row thumbnail when set. */
+  readonly coverImageUrl?: string;
   readonly order?: number;
   /** Optional engineering credit — kept as secondary metadata per client direction. */
   readonly role?: string;
+  /** Optional streaming links — shown in the table when set. */
+  readonly spotifyUrl?: string;
+  readonly appleMusicUrl?: string;
 }
 
 export const RECORDINGS: readonly Recording[] = [
@@ -34,6 +40,7 @@ export const RECORDINGS: readonly Recording[] = [
     year: 2024,
     role: "Recorded & Mixed",
     audioUrl: "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-1.mp3",
+    coverImageUrl: "/Textured Backgrounds/LLS_Texture_Emerald.jpg",
     order: 1,
   },
   {
@@ -44,6 +51,7 @@ export const RECORDINGS: readonly Recording[] = [
     year: 2024,
     role: "Tracked",
     audioUrl: "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-2.mp3",
+    coverImageUrl: "/Textured Backgrounds/LLS_Texture_Seafoam.jpg",
     order: 2,
   },
   {
@@ -54,6 +62,7 @@ export const RECORDINGS: readonly Recording[] = [
     year: 2023,
     role: "Mixed & Mastered",
     audioUrl: "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-3.mp3",
+    coverImageUrl: "/Textured Backgrounds/LLS_Texture_Sagebrush.jpg",
     order: 3,
   },
   {
@@ -64,6 +73,7 @@ export const RECORDINGS: readonly Recording[] = [
     year: 2023,
     role: "Recorded",
     audioUrl: "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-4.mp3",
+    coverImageUrl: "/Textured Backgrounds/LLS_Texture_Sunset.jpg",
     order: 4,
   },
   {
@@ -74,6 +84,7 @@ export const RECORDINGS: readonly Recording[] = [
     year: 2023,
     role: "Recorded & Mixed",
     audioUrl: "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-5.mp3",
+    coverImageUrl: "/Textured Backgrounds/LLS_Texture_GoldenHour.jpg",
     order: 5,
   },
   {
@@ -84,6 +95,7 @@ export const RECORDINGS: readonly Recording[] = [
     year: 2022,
     role: "Tracked & Mixed",
     audioUrl: "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-6.mp3",
+    coverImageUrl: "/Textured Backgrounds/LLS_Texture_Starburst.jpg",
     order: 6,
   },
   {
@@ -94,6 +106,7 @@ export const RECORDINGS: readonly Recording[] = [
     year: 2022,
     role: "Mixed",
     audioUrl: "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-7.mp3",
+    coverImageUrl: "/Textured Backgrounds/LLS_Texture_Coral.jpg",
     order: 7,
   },
   {
@@ -104,6 +117,7 @@ export const RECORDINGS: readonly Recording[] = [
     year: 2021,
     role: "Recorded",
     audioUrl: "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-8.mp3",
+    coverImageUrl: "/Chladni/CHLADNI_clean.png",
     order: 8,
   },
 ];

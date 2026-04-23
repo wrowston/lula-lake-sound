@@ -6,8 +6,9 @@ import { RECORDINGS } from "./recordings-data";
  * Public `/recordings` route (INF-48).
  *
  * Ships the client-approved Variant A "Cinematic Editorial" recordings list
- * with the four primary columns (title, artist, genre, year) and in-playback
- * duration UX required at launch. Data is a static fixture for now — when
+ * with columns for track/artist, genre, year, optional cover art & streaming
+ * links, and in-playback duration (progress bar) when a row is playing — no
+ * idle duration column. Data is a static fixture for now — when
  * INF-49 (CMS) and INF-50 (media uploads) land, swap the import in this file
  * for a Convex `preloadQuery` and pass the resolved list into the client.
  */
