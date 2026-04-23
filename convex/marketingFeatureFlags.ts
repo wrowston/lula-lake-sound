@@ -24,42 +24,6 @@ import { publishedPricingFromRows } from "./publicSettingsSnapshot";
 
 const SINGLETON = "default" as const;
 
-/** Draft- or published-effective `flags.priceTabEnabled` from the pricing CMS row. */
-async function priceTabEnabledFromPricingRow(
-  ctx: QueryCtx,
-  mode: "draftEffective" | "publishedOnly",
-): Promise<boolean> {
-  const [pricingRow, settingsRow] = await Promise.all([
-    ctx.db
-      .query("cmsSections")
-      .withIndex("by_section", (q) => q.eq("section", "pricing"))
-      .unique(),
-    ctx.db
-      .query("cmsSections")
-      .withIndex("by_section", (q) => q.eq("section", "settings"))
-      .unique(),
-  ]);
-  if (mode === "publishedOnly") {
-    return publishedPricingFromRows(pricingRow, settingsRow).flags.priceTabEnabled;
-  }
-  const effectivePricing = pricingRow
-    ? {
-        ...pricingRow,
-        publishedSnapshot:
-          pricingRow.draftSnapshot ?? pricingRow.publishedSnapshot,
-      }
-    : null;
-  return publishedPricingFromRows(effectivePricing, settingsRow).flags
-    .priceTabEnabled;
-}
-
-function mergeHomepagePricingSection(
-  normalizedMarketing: MarketingFeatureFlagsSnapshot,
-  priceTabEnabled: boolean,
-): boolean {
-  return normalizedMarketing.pricingSection || priceTabEnabled;
-}
-
 function flagsEqual(
   a: MarketingFeatureFlagsSnapshot,
   b: MarketingFeatureFlagsSnapshot,
@@ -115,12 +79,7 @@ export const getPublishedMarketingFeatureFlags = query({
   args: {},
   handler: async (ctx) => {
     const row = await getMarketingFeatureFlagsRow(ctx);
-    const base = publishedMarketingFeatureFlagsFromRow(row);
-    const priceTab = await priceTabEnabledFromPricingRow(ctx, "publishedOnly");
-    return {
-      ...base,
-      pricingSection: mergeHomepagePricingSection(base, priceTab),
-    };
+    return publishedMarketingFeatureFlagsFromRow(row);
   },
 });
 
@@ -131,15 +90,11 @@ export const listDraft = query({
   args: {},
   handler: async (ctx) => {
     await requireCmsOwner(ctx);
-    const priceTab = await priceTabEnabledFromPricingRow(ctx, "draftEffective");
     const row = await getMarketingFeatureFlagsRow(ctx);
     if (!row) {
       const base = { ...MARKETING_FEATURE_FLAGS_DEFAULTS };
       return {
-        flags: {
-          ...base,
-          pricingSection: mergeHomepagePricingSection(base, priceTab),
-        },
+        flags: base,
         hasDraftChanges: false,
         publishedAt: null as number | null,
         publishedBy: null as string | null,
@@ -151,10 +106,7 @@ export const listDraft = query({
       row.draftSnapshot ?? row.publishedSnapshot ?? MARKETING_FEATURE_FLAGS_DEFAULTS;
     const normalized = normalizeFlags(effective);
     return {
-      flags: {
-        ...normalized,
-        pricingSection: mergeHomepagePricingSection(normalized, priceTab),
-      },
+      flags: normalized,
       hasDraftChanges: row.hasDraftChanges,
       publishedAt: row.publishedAt,
       publishedBy: row.publishedBy ?? null,
@@ -175,12 +127,10 @@ export const getPreviewMarketingFeatureFlags = query({
       return null;
     }
     const row = await getMarketingFeatureFlagsRow(ctx);
-    const priceTab = await priceTabEnabledFromPricingRow(ctx, "draftEffective");
     if (!row) {
       const base = { ...MARKETING_FEATURE_FLAGS_DEFAULTS };
       return {
         ...base,
-        pricingSection: mergeHomepagePricingSection(base, priceTab),
         hasDraftChanges: false,
       };
     }
@@ -189,7 +139,6 @@ export const getPreviewMarketingFeatureFlags = query({
     const normalized = normalizeFlags(effective);
     return {
       ...normalized,
-      pricingSection: mergeHomepagePricingSection(normalized, priceTab),
       hasDraftChanges: row.hasDraftChanges,
     };
   },
