@@ -40,6 +40,9 @@ function comparableTrack(row: AudioTrackDoc) {
     description: row.description,
     mimeType: row.mimeType,
     durationSec: row.durationSec ?? null,
+    albumThumbnailUrl: row.albumThumbnailUrl ?? null,
+    spotifyUrl: row.spotifyUrl ?? null,
+    appleMusicUrl: row.appleMusicUrl ?? null,
     sortOrder: row.sortOrder,
     sizeBytes: row.sizeBytes,
     originalFileName: row.originalFileName ?? null,
@@ -133,6 +136,13 @@ export async function replaceAudioScope(
       description: row.description,
       mimeType: row.mimeType,
       ...(row.durationSec !== undefined ? { durationSec: row.durationSec } : {}),
+      ...(row.albumThumbnailUrl !== undefined
+        ? { albumThumbnailUrl: row.albumThumbnailUrl }
+        : {}),
+      ...(row.spotifyUrl !== undefined ? { spotifyUrl: row.spotifyUrl } : {}),
+      ...(row.appleMusicUrl !== undefined
+        ? { appleMusicUrl: row.appleMusicUrl }
+        : {}),
       sortOrder: row.sortOrder,
       sizeBytes: row.sizeBytes,
       ...(row.originalFileName !== undefined
@@ -180,6 +190,9 @@ export async function materializeAudioTracks(
     sortOrder: number;
     sizeBytes: number;
     originalFileName: string | null;
+    albumThumbnailUrl: string | null;
+    spotifyUrl: string | null;
+    appleMusicUrl: string | null;
   }>
 > {
   return await Promise.all(
@@ -195,6 +208,9 @@ export async function materializeAudioTracks(
       sortOrder: row.sortOrder,
       sizeBytes: row.sizeBytes,
       originalFileName: row.originalFileName ?? null,
+      albumThumbnailUrl: row.albumThumbnailUrl ?? null,
+      spotifyUrl: row.spotifyUrl ?? null,
+      appleMusicUrl: row.appleMusicUrl ?? null,
     })),
   );
 }

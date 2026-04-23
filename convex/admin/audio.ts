@@ -24,6 +24,64 @@ const MAX_TITLE_LENGTH = 200;
 const MAX_ARTIST_LENGTH = 200;
 const MAX_DESCRIPTION_LENGTH = 2000;
 const MAX_FILENAME_LENGTH = 255;
+const MAX_EXTERNAL_URL_LENGTH = 2048;
+
+function hostnameOfHttpsUrl(raw: string): string | null {
+  try {
+    const u = new URL(raw);
+    if (u.protocol !== "https:") {
+      return null;
+    }
+    return u.hostname.toLowerCase();
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Optional HTTPS URL for streaming / artwork. Empty or null clears the field.
+ */
+function normalizeOptionalExternalUrl(
+  raw: string | null | undefined,
+  field: "albumThumbnailUrl" | "spotifyUrl" | "appleMusicUrl",
+): string | undefined {
+  if (raw === undefined || raw === null) {
+    return undefined;
+  }
+  const trimmed = raw.trim();
+  if (trimmed.length === 0) {
+    return undefined;
+  }
+  if (trimmed.length > MAX_EXTERNAL_URL_LENGTH) {
+    cmsValidationError(
+      `URL must be at most ${MAX_EXTERNAL_URL_LENGTH} characters.`,
+      field,
+    );
+  }
+  const host = hostnameOfHttpsUrl(trimmed);
+  if (!host) {
+    cmsValidationError("URL must be a valid https:// link.", field);
+  }
+  if (field === "spotifyUrl") {
+    if (!host.endsWith("spotify.com")) {
+      cmsValidationError("Spotify URL must be on spotify.com.", field);
+    }
+  }
+  if (field === "appleMusicUrl") {
+    const okApple =
+      host === "music.apple.com" ||
+      host.endsWith(".music.apple.com") ||
+      host === "itunes.apple.com" ||
+      host.endsWith(".itunes.apple.com");
+    if (!okApple) {
+      cmsValidationError(
+        "Apple Music URL must be on music.apple.com or itunes.apple.com.",
+        field,
+      );
+    }
+  }
+  return trimmed;
+}
 
 function isAllowedAudioMimeType(
   contentType: string,
@@ -189,6 +247,71 @@ function collectTrackIssues(
         message: "Duration must be between 0 and 86400 seconds.",
       });
     }
+
+    const thumb = row.albumThumbnailUrl?.trim() ?? "";
+    if (thumb.length > 0) {
+      if (thumb.length > MAX_EXTERNAL_URL_LENGTH) {
+        issues.push({
+          path: `${base}.albumThumbnailUrl`,
+          message: `URL must be at most ${MAX_EXTERNAL_URL_LENGTH} characters.`,
+        });
+      } else if (!hostnameOfHttpsUrl(thumb)) {
+        issues.push({
+          path: `${base}.albumThumbnailUrl`,
+          message: "Album thumbnail must be a valid https:// URL.",
+        });
+      }
+    }
+
+    const spotify = row.spotifyUrl?.trim() ?? "";
+    if (spotify.length > 0) {
+      if (spotify.length > MAX_EXTERNAL_URL_LENGTH) {
+        issues.push({
+          path: `${base}.spotifyUrl`,
+          message: `URL must be at most ${MAX_EXTERNAL_URL_LENGTH} characters.`,
+        });
+      } else {
+        const h = hostnameOfHttpsUrl(spotify);
+        if (!h || !h.endsWith("spotify.com")) {
+          issues.push({
+            path: `${base}.spotifyUrl`,
+            message: "Spotify URL must be a valid https link on spotify.com.",
+          });
+        }
+      }
+    }
+
+    const apple = row.appleMusicUrl?.trim() ?? "";
+    if (apple.length > 0) {
+      if (apple.length > MAX_EXTERNAL_URL_LENGTH) {
+        issues.push({
+          path: `${base}.appleMusicUrl`,
+          message: `URL must be at most ${MAX_EXTERNAL_URL_LENGTH} characters.`,
+        });
+      } else {
+        const h = hostnameOfHttpsUrl(apple);
+        if (!h) {
+          issues.push({
+            path: `${base}.appleMusicUrl`,
+            message: "Apple Music URL must be a valid https link.",
+          });
+        } else {
+          const okApple =
+            h === "music.apple.com" ||
+            h.endsWith(".music.apple.com") ||
+            h === "itunes.apple.com" ||
+            h.endsWith(".itunes.apple.com");
+          if (!okApple) {
+            issues.push({
+              path: `${base}.appleMusicUrl`,
+              message:
+                "Apple Music URL must be on music.apple.com or itunes.apple.com.",
+            });
+          }
+        }
+      }
+    }
+
     if (stableIds.has(row.stableId)) {
       issues.push({
         path: `${base}.stableId`,
@@ -306,6 +429,9 @@ export const saveUploadedTrack = mutation({
     description: v.string(),
     durationSec: v.optional(v.union(v.number(), v.null())),
     originalFileName: v.optional(v.union(v.string(), v.null())),
+    albumThumbnailUrl: v.optional(v.union(v.string(), v.null())),
+    spotifyUrl: v.optional(v.union(v.string(), v.null())),
+    appleMusicUrl: v.optional(v.union(v.string(), v.null())),
   },
   handler: async (ctx, args) => {
     const { updatedBy } = await requireCmsOwner(ctx);
@@ -331,6 +457,15 @@ export const saveUploadedTrack = mutation({
       const description = normalizeDescription(args.description);
       const durationSec = normalizeDurationSec(args.durationSec ?? undefined);
       const originalFileName = normalizeFileName(args.originalFileName);
+      const albumThumbnailUrl = normalizeOptionalExternalUrl(
+        args.albumThumbnailUrl,
+        "albumThumbnailUrl",
+      );
+      const spotifyUrl = normalizeOptionalExternalUrl(args.spotifyUrl, "spotifyUrl");
+      const appleMusicUrl = normalizeOptionalExternalUrl(
+        args.appleMusicUrl,
+        "appleMusicUrl",
+      );
 
       const sortOrder =
         draft.length === 0
@@ -346,6 +481,11 @@ export const saveUploadedTrack = mutation({
         description,
         mimeType,
         ...(durationSec !== undefined ? { durationSec } : {}),
+        ...(albumThumbnailUrl !== undefined
+          ? { albumThumbnailUrl }
+          : {}),
+        ...(spotifyUrl !== undefined ? { spotifyUrl } : {}),
+        ...(appleMusicUrl !== undefined ? { appleMusicUrl } : {}),
         sortOrder,
         sizeBytes: storage.size,
         ...(originalFileName !== undefined ? { originalFileName } : {}),
@@ -368,6 +508,9 @@ export const updateDraftTrack = mutation({
     artist: v.optional(v.union(v.string(), v.null())),
     description: v.string(),
     durationSec: v.optional(v.union(v.number(), v.null())),
+    albumThumbnailUrl: v.optional(v.union(v.string(), v.null())),
+    spotifyUrl: v.optional(v.union(v.string(), v.null())),
+    appleMusicUrl: v.optional(v.union(v.string(), v.null())),
   },
   handler: async (ctx, args) => {
     const { updatedBy } = await requireCmsOwner(ctx);
@@ -397,6 +540,39 @@ export const updateDraftTrack = mutation({
       durationSec = row.durationSec;
     }
 
+    let nextAlbumThumbnailUrl: string | undefined;
+    if (args.albumThumbnailUrl === null) {
+      nextAlbumThumbnailUrl = undefined;
+    } else if (args.albumThumbnailUrl !== undefined) {
+      nextAlbumThumbnailUrl = normalizeOptionalExternalUrl(
+        args.albumThumbnailUrl,
+        "albumThumbnailUrl",
+      );
+    } else {
+      nextAlbumThumbnailUrl = row.albumThumbnailUrl;
+    }
+
+    let nextSpotifyUrl: string | undefined;
+    if (args.spotifyUrl === null) {
+      nextSpotifyUrl = undefined;
+    } else if (args.spotifyUrl !== undefined) {
+      nextSpotifyUrl = normalizeOptionalExternalUrl(args.spotifyUrl, "spotifyUrl");
+    } else {
+      nextSpotifyUrl = row.spotifyUrl;
+    }
+
+    let nextAppleMusicUrl: string | undefined;
+    if (args.appleMusicUrl === null) {
+      nextAppleMusicUrl = undefined;
+    } else if (args.appleMusicUrl !== undefined) {
+      nextAppleMusicUrl = normalizeOptionalExternalUrl(
+        args.appleMusicUrl,
+        "appleMusicUrl",
+      );
+    } else {
+      nextAppleMusicUrl = row.appleMusicUrl;
+    }
+
     await ctx.db.replace(row._id, {
       scope: row.scope,
       stableId: row.stableId,
@@ -409,6 +585,13 @@ export const updateDraftTrack = mutation({
       createdAt: row.createdAt,
       ...(nextArtist !== undefined ? { artist: nextArtist } : {}),
       ...(durationSec !== undefined ? { durationSec } : {}),
+      ...(nextAlbumThumbnailUrl !== undefined
+        ? { albumThumbnailUrl: nextAlbumThumbnailUrl }
+        : {}),
+      ...(nextSpotifyUrl !== undefined ? { spotifyUrl: nextSpotifyUrl } : {}),
+      ...(nextAppleMusicUrl !== undefined
+        ? { appleMusicUrl: nextAppleMusicUrl }
+        : {}),
       ...(row.originalFileName !== undefined ? { originalFileName: row.originalFileName } : {}),
     });
 

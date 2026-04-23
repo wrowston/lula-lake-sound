@@ -1,6 +1,8 @@
 "use client";
 
-import { Button } from "@/components/ui/button";
+import Image from "next/image";
+import { Button, buttonVariants } from "@/components/ui/button";
+import { cn } from "@/lib/utils";
 
 export type PublishedAudioTrack = {
   stableId: string;
@@ -11,6 +13,9 @@ export type PublishedAudioTrack = {
   mimeType: string;
   durationSec: number | null;
   sortOrder: number;
+  albumThumbnailUrl: string | null;
+  spotifyUrl: string | null;
+  appleMusicUrl: string | null;
 };
 
 function formatDuration(sec: number | null): string {
@@ -78,7 +83,25 @@ export function AudioPortfolio({
               key={track.stableId}
               className="rounded-sm border border-sage/30 bg-washed-black/60 p-6 transition-colors hover:border-sand/50"
             >
-              <div className="mb-4 aspect-square rounded-sm bg-sage/20" aria-hidden />
+              <div className="relative mb-4 aspect-square overflow-hidden rounded-sm bg-sage/20">
+                {track.albumThumbnailUrl ? (
+                  <Image
+                    src={track.albumThumbnailUrl}
+                    alt=""
+                    fill
+                    className="object-cover"
+                    sizes="(max-width: 768px) 100vw, 33vw"
+                    unoptimized
+                  />
+                ) : (
+                  <div
+                    className="flex h-full w-full items-center justify-center font-titillium text-sm text-sage/60"
+                    aria-hidden
+                  >
+                    Album art
+                  </div>
+                )}
+              </div>
 
               <div className="mb-4">
                 <h3 className="mb-1 font-acumin text-lg font-bold text-sand">
@@ -97,6 +120,37 @@ export function AudioPortfolio({
               <p className="mb-4 font-titillium text-sm leading-relaxed text-ivory/60">
                 {track.description}
               </p>
+
+              {(track.spotifyUrl ?? track.appleMusicUrl) ? (
+                <div className="mb-4 flex flex-wrap gap-2">
+                  {track.spotifyUrl ? (
+                    <a
+                      href={track.spotifyUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className={cn(
+                        buttonVariants({ variant: "outline", size: "sm" }),
+                        "h-8 no-underline hover:no-underline",
+                      )}
+                    >
+                      Spotify
+                    </a>
+                  ) : null}
+                  {track.appleMusicUrl ? (
+                    <a
+                      href={track.appleMusicUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className={cn(
+                        buttonVariants({ variant: "outline", size: "sm" }),
+                        "h-8 no-underline hover:no-underline",
+                      )}
+                    >
+                      Apple Music
+                    </a>
+                  ) : null}
+                </div>
+              ) : null}
 
               <div className="rounded-sm border border-sage/30 bg-sage/10 p-3">
                 <audio

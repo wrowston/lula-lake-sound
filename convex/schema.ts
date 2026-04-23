@@ -135,6 +135,12 @@ export default defineSchema({
     description: v.string(),
     mimeType: v.string(),
     durationSec: v.optional(v.number()),
+    /** HTTPS URL to album/track artwork (e.g. CDN). */
+    albumThumbnailUrl: v.optional(v.string()),
+    /** Public Spotify page for this release or track. */
+    spotifyUrl: v.optional(v.string()),
+    /** Public Apple Music page for this release or track. */
+    appleMusicUrl: v.optional(v.string()),
     sortOrder: v.number(),
     sizeBytes: v.number(),
     originalFileName: v.optional(v.string()),

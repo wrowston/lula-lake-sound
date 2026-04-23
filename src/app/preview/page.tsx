@@ -67,6 +67,9 @@ function PreviewContent() {
       mimeType: t.mimeType,
       durationSec: t.durationSec,
       sortOrder: t.sortOrder,
+      albumThumbnailUrl: t.albumThumbnailUrl,
+      spotifyUrl: t.spotifyUrl,
+      appleMusicUrl: t.appleMusicUrl,
     }));
 
   return (

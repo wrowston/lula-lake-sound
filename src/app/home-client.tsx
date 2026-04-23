@@ -54,6 +54,9 @@ function materializePublishedAudio(
     mimeType: string;
     durationSec: number | null;
     sortOrder: number;
+    albumThumbnailUrl: string | null;
+    spotifyUrl: string | null;
+    appleMusicUrl: string | null;
   }>,
 ): PublishedAudioTrack[] {
   return rows
@@ -67,6 +70,9 @@ function materializePublishedAudio(
       mimeType: t.mimeType,
       durationSec: t.durationSec,
       sortOrder: t.sortOrder,
+      albumThumbnailUrl: t.albumThumbnailUrl,
+      spotifyUrl: t.spotifyUrl,
+      appleMusicUrl: t.appleMusicUrl,
     }));
 }
 

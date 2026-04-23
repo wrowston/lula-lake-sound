@@ -1,5 +1,6 @@
 "use client";
 
+import Image from "next/image";
 import {
   Authenticated,
   AuthLoading,
@@ -64,6 +65,9 @@ type TrackItem = {
   sortOrder: number;
   sizeBytes: number;
   originalFileName: string | null;
+  albumThumbnailUrl: string | null;
+  spotifyUrl: string | null;
+  appleMusicUrl: string | null;
 };
 
 type TrackEdits = Record<
@@ -72,6 +76,9 @@ type TrackEdits = Record<
     title: string;
     artist: string;
     description: string;
+    albumThumbnailUrl: string;
+    spotifyUrl: string;
+    appleMusicUrl: string;
   }
 >;
 
@@ -130,6 +137,76 @@ function validateTrackFields(
     return `Description must be at most ${MAX_DESCRIPTION_LENGTH} characters.`;
   }
   return null;
+}
+
+function validateOptionalHttpsUrl(raw: string, label: string): string | null {
+  const s = raw.trim();
+  if (s.length === 0) return null;
+  try {
+    const u = new URL(s);
+    if (u.protocol !== "https:") {
+      return `${label} must use https://.`;
+    }
+    return null;
+  } catch {
+    return `${label} must be a valid URL.`;
+  }
+}
+
+function validateStreamingUrls(
+  albumThumbnailUrl: string,
+  spotifyUrl: string,
+  appleMusicUrl: string,
+): string | null {
+  const thumbErr = validateOptionalHttpsUrl(albumThumbnailUrl, "Album art URL");
+  if (thumbErr) return thumbErr;
+
+  const spotify = spotifyUrl.trim();
+  if (spotify.length > 0) {
+    const e = validateOptionalHttpsUrl(spotify, "Spotify URL");
+    if (e) return e;
+    try {
+      const h = new URL(spotify).hostname.toLowerCase();
+      if (!h.endsWith("spotify.com")) {
+        return "Spotify URL must be on spotify.com.";
+      }
+    } catch {
+      return "Spotify URL must be a valid URL.";
+    }
+  }
+
+  const apple = appleMusicUrl.trim();
+  if (apple.length > 0) {
+    const e = validateOptionalHttpsUrl(apple, "Apple Music URL");
+    if (e) return e;
+    try {
+      const h = new URL(apple).hostname.toLowerCase();
+      const ok =
+        h === "music.apple.com" ||
+        h.endsWith(".music.apple.com") ||
+        h === "itunes.apple.com" ||
+        h.endsWith(".itunes.apple.com");
+      if (!ok) {
+        return "Apple Music URL must be on music.apple.com or itunes.apple.com.";
+      }
+    } catch {
+      return "Apple Music URL must be a valid URL.";
+    }
+  }
+
+  return null;
+}
+
+function httpsImagePreviewUrl(raw: string): string | null {
+  const u = raw.trim();
+  if (u.length === 0) return null;
+  try {
+    const parsed = new URL(u);
+    if (parsed.protocol !== "https:") return null;
+    return u;
+  } catch {
+    return null;
+  }
 }
 
 function sequentialEffects(
@@ -293,6 +370,12 @@ function AudioEditorForm() {
       title: edits[track.stableId]?.title ?? track.title,
       artist: edits[track.stableId]?.artist ?? (track.artist ?? ""),
       description: edits[track.stableId]?.description ?? track.description,
+      albumThumbnailUrl:
+        edits[track.stableId]?.albumThumbnailUrl ??
+        (track.albumThumbnailUrl ?? ""),
+      spotifyUrl: edits[track.stableId]?.spotifyUrl ?? (track.spotifyUrl ?? ""),
+      appleMusicUrl:
+        edits[track.stableId]?.appleMusicUrl ?? (track.appleMusicUrl ?? ""),
     }),
     [edits],
   );
@@ -300,23 +383,43 @@ function AudioEditorForm() {
   const updateTrackEdit = useCallback(
     (
       track: TrackItem,
-      patch: Partial<{ title: string; artist: string; description: string }>,
+      patch: Partial<{
+        title: string;
+        artist: string;
+        description: string;
+        albumThumbnailUrl: string;
+        spotifyUrl: string;
+        appleMusicUrl: string;
+      }>,
     ) => {
       setEdits((current) => {
         const base = {
           title: current[track.stableId]?.title ?? track.title,
           artist: current[track.stableId]?.artist ?? (track.artist ?? ""),
           description: current[track.stableId]?.description ?? track.description,
+          albumThumbnailUrl:
+            current[track.stableId]?.albumThumbnailUrl ??
+            (track.albumThumbnailUrl ?? ""),
+          spotifyUrl:
+            current[track.stableId]?.spotifyUrl ?? (track.spotifyUrl ?? ""),
+          appleMusicUrl:
+            current[track.stableId]?.appleMusicUrl ?? (track.appleMusicUrl ?? ""),
         };
         const next = {
           title: patch.title ?? base.title,
           artist: patch.artist ?? base.artist,
           description: patch.description ?? base.description,
+          albumThumbnailUrl: patch.albumThumbnailUrl ?? base.albumThumbnailUrl,
+          spotifyUrl: patch.spotifyUrl ?? base.spotifyUrl,
+          appleMusicUrl: patch.appleMusicUrl ?? base.appleMusicUrl,
         };
         if (
           next.title === track.title &&
           next.artist === (track.artist ?? "") &&
-          next.description === track.description
+          next.description === track.description &&
+          next.albumThumbnailUrl === (track.albumThumbnailUrl ?? "") &&
+          next.spotifyUrl === (track.spotifyUrl ?? "") &&
+          next.appleMusicUrl === (track.appleMusicUrl ?? "")
         ) {
           const rest = { ...current };
           delete rest[track.stableId];
@@ -349,6 +452,16 @@ function AudioEditorForm() {
         toast.error(validationError);
         return false;
       }
+      const urlErr = validateStreamingUrls(
+        fields.albumThumbnailUrl,
+        fields.spotifyUrl,
+        fields.appleMusicUrl,
+      );
+      if (urlErr) {
+        setInlineError(urlErr);
+        toast.error(urlErr);
+        return false;
+      }
 
       setInlineError(null);
       setRowAction(track.stableId, "saving");
@@ -360,6 +473,18 @@ function AudioEditorForm() {
             artist:
               fields.artist.trim().length > 0 ? fields.artist.trim() : null,
             description: fields.description.trim(),
+            albumThumbnailUrl:
+              fields.albumThumbnailUrl.trim().length > 0
+                ? fields.albumThumbnailUrl.trim()
+                : null,
+            spotifyUrl:
+              fields.spotifyUrl.trim().length > 0
+                ? fields.spotifyUrl.trim()
+                : null,
+            appleMusicUrl:
+              fields.appleMusicUrl.trim().length > 0
+                ? fields.appleMusicUrl.trim()
+                : null,
           }),
         ),
         { onErrorMessage: setInlineError },
@@ -395,6 +520,16 @@ function AudioEditorForm() {
         toast.error(`${track.title}: ${err}`);
         return false;
       }
+      const urlErr = validateStreamingUrls(
+        fields.albumThumbnailUrl,
+        fields.spotifyUrl,
+        fields.appleMusicUrl,
+      );
+      if (urlErr) {
+        setInlineError(urlErr);
+        toast.error(`${track.title}: ${urlErr}`);
+        return false;
+      }
     }
 
     const effects = dirty.map((track) => {
@@ -406,6 +541,18 @@ function AudioEditorForm() {
           artist:
             fields.artist.trim().length > 0 ? fields.artist.trim() : null,
           description: fields.description.trim(),
+          albumThumbnailUrl:
+            fields.albumThumbnailUrl.trim().length > 0
+              ? fields.albumThumbnailUrl.trim()
+              : null,
+          spotifyUrl:
+            fields.spotifyUrl.trim().length > 0
+              ? fields.spotifyUrl.trim()
+              : null,
+          appleMusicUrl:
+            fields.appleMusicUrl.trim().length > 0
+              ? fields.appleMusicUrl.trim()
+              : null,
         }),
       );
     });
@@ -514,6 +661,9 @@ function AudioEditorForm() {
               "Studio recording sample — edit this description before publishing.",
             durationSec: durationSec ?? null,
             originalFileName: file.name,
+            albumThumbnailUrl: null,
+            spotifyUrl: null,
+            appleMusicUrl: null,
           });
 
           setUploadQueue((q) =>
@@ -710,7 +860,8 @@ function AudioEditorForm() {
             </h2>
             <p className="body-text-small max-w-2xl text-foreground/85">
               Upload MP3 or WAV samples for the homepage “Studio portfolio”
-              section. Playback uses Convex signed URLs (
+              section. Add optional album art (HTTPS image URL), Spotify, and Apple
+              Music links per track. Playback uses Convex signed URLs (
               <code className="rounded bg-muted px-1 py-0.5 text-xs">
                 &lt;audio src&gt;
               </code>
@@ -929,6 +1080,68 @@ function AudioEditorForm() {
                       }
                       rows={3}
                       maxLength={MAX_DESCRIPTION_LENGTH + 50}
+                    />
+                  </div>
+                  <div className="space-y-1">
+                    <label className="body-text-small font-medium text-foreground">
+                      Album art URL (optional, https)
+                    </label>
+                    <Input
+                      value={fields.albumThumbnailUrl}
+                      onChange={(e) =>
+                        updateTrackEdit(track, {
+                          albumThumbnailUrl: e.target.value,
+                        })
+                      }
+                      placeholder="https://…"
+                      inputMode="url"
+                      autoComplete="off"
+                    />
+                    {(() => {
+                      const preview = httpsImagePreviewUrl(
+                        fields.albumThumbnailUrl,
+                      );
+                      return preview ? (
+                        <div className="relative mt-2 aspect-square w-full max-w-[140px] overflow-hidden rounded-sm border border-border bg-muted">
+                          <Image
+                            src={preview}
+                            alt=""
+                            fill
+                            className="object-cover"
+                            unoptimized
+                          />
+                        </div>
+                      ) : null;
+                    })()}
+                  </div>
+                  <div className="space-y-1">
+                    <label className="body-text-small font-medium text-foreground">
+                      Spotify (optional)
+                    </label>
+                    <Input
+                      value={fields.spotifyUrl}
+                      onChange={(e) =>
+                        updateTrackEdit(track, { spotifyUrl: e.target.value })
+                      }
+                      placeholder="https://open.spotify.com/…"
+                      inputMode="url"
+                      autoComplete="off"
+                    />
+                  </div>
+                  <div className="space-y-1">
+                    <label className="body-text-small font-medium text-foreground">
+                      Apple Music (optional)
+                    </label>
+                    <Input
+                      value={fields.appleMusicUrl}
+                      onChange={(e) =>
+                        updateTrackEdit(track, {
+                          appleMusicUrl: e.target.value,
+                        })
+                      }
+                      placeholder="https://music.apple.com/…"
+                      inputMode="url"
+                      autoComplete="off"
                     />
                   </div>
                 </div>
