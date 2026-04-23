@@ -1,22 +1,28 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useSyncExternalStore } from "react";
 import { Moon, Sun } from "lucide-react";
 import { useTheme } from "next-themes";
 import { Button } from "@/components/ui/button";
 
+const emptySubscribe = () => () => {};
+
+function useIsClient() {
+  return useSyncExternalStore(
+    emptySubscribe,
+    () => true,
+    () => false,
+  );
+}
+
 export function ThemeToggle() {
-  const [mounted, setMounted] = useState(false);
+  const isClient = useIsClient();
   const { resolvedTheme, setTheme } = useTheme();
   const isDark = resolvedTheme === "dark";
 
-  useEffect(() => {
-    setMounted(true);
-  }, []);
-
   // Avoid hydration mismatch: resolved theme differs between SSR and first client paint.
   const ariaLabel =
-    !mounted
+    !isClient
       ? "Toggle theme"
       : resolvedTheme === "light" || resolvedTheme === "dark"
         ? isDark
