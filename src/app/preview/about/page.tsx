@@ -23,9 +23,7 @@ function AboutPreviewContent() {
   const pricingPreview = useQuery(
     api.pricingPreviewDraft.getPreviewPricingFlags,
   );
-  const marketing = useQuery(
-    api.marketingFeatureFlags.getPreviewMarketingFeatureFlags,
-  );
+  const marketing = useQuery(api.cms.getPreviewMarketingFeatureFlags);
 
   if (about === undefined || pricingPreview === undefined || marketing === undefined) {
     return (

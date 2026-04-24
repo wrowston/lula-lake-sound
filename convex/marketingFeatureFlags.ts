@@ -1,121 +1,130 @@
 /**
- * Marketing site visibility: About page, Recordings page, homepage pricing block.
- * Singleton `marketingFeatureFlags` table; draft/publish matches cmsSections.
+ * Backward-compat shim for the pre-refactor `marketingFeatureFlags:*` module.
+ *
+ * Before commit 9427f2e all marketing visibility queries/mutations lived in
+ * `convex/marketingFeatureFlags.ts` (e.g. `marketingFeatureFlags:listDraft`,
+ * `marketingFeatureFlags:getPreviewMarketingFeatureFlags`). The refactor moved
+ * them into `convex/cms.ts` under new names. Browser tabs that were open
+ * against the old deploy still hold compiled JS that targets the old function
+ * paths; once Convex is redeployed, every call from those stale tabs throws
+ * `Could not find public function for 'marketingFeatureFlags:…'` and React
+ * crashes the admin / preview page. Reloading the tab fixes it, but nothing
+ * on the page ever updates until the user does.
+ *
+ * This shim re-creates the four legacy endpoints so long-lived admin tabs and
+ * preview tabs keep working until they're manually reloaded. Every function
+ * here is a thin adapter that delegates to the per-section helpers in
+ * `cms.ts` / `cmsMeta.ts` and reshapes the response to the historical
+ * singleton-snapshot shape.
+ *
+ * Safe to delete once enough time has passed that no one could still have a
+ * pre-refactor tab open.
  */
-import { v } from "convex/values";
-import {
-  internalMutation,
-  type MutationCtx,
-  type QueryCtx,
-  mutation,
-  query,
-} from "./_generated/server";
+import { mutation, query } from "./_generated/server";
 import { marketingFeatureFlagsSnapshotValidator } from "./schema.shared";
 import {
-  MARKETING_FEATURE_FLAGS_DEFAULTS,
-  type MarketingFeatureFlagsSnapshot,
-} from "./cmsShared";
+  anyMarketingFlagDraftPending,
+  effectiveIsEnabled,
+  ensureSectionMetaRow,
+  getSectionMetaRow,
+  publishedIsEnabled,
+  recomputeSectionHasDraftChanges,
+} from "./cmsMeta";
+import { publishSectionCore } from "./cmsPublishHelpers";
 import { requireCmsOwner } from "./lib/auth";
-import { stripLegacyCmsMarketingFieldsFromDb } from "./lib/legacyCmsFieldStrip";
-import type { Doc, Id } from "./_generated/dataModel";
-import { collectMarketingFeatureFlagsPublishIssues } from "./cmsPublishHelpers";
-import { cmsPublishValidationFailed } from "./errors";
-import { publishedPricingFromRows } from "./publicSettingsSnapshot";
+import type { CmsSection } from "./cmsShared";
 
-const SINGLETON = "default" as const;
+const SECTIONS: Array<"about" | "recordings" | "pricing"> = [
+  "about",
+  "recordings",
+  "pricing",
+];
 
-function flagsEqual(
-  a: MarketingFeatureFlagsSnapshot,
-  b: MarketingFeatureFlagsSnapshot,
-): boolean {
-  return (
-    a.aboutPage === b.aboutPage &&
-    a.recordingsPage === b.recordingsPage &&
-    a.pricingSection === b.pricingSection
-  );
-}
-
-/** Safe published read; tolerates partial stored rows. */
-export function publishedMarketingFeatureFlagsFromRow(
-  row: Doc<"marketingFeatureFlags"> | null,
-): MarketingFeatureFlagsSnapshot {
-  if (!row) {
-    return { ...MARKETING_FEATURE_FLAGS_DEFAULTS };
+function latestTimestamp(values: Array<number | null | undefined>): number | null {
+  let out: number | null = null;
+  for (const v of values) {
+    if (v === null || v === undefined) continue;
+    if (out === null || v > out) out = v;
   }
-  const s = row.publishedSnapshot;
-  if (!s || typeof s !== "object") {
-    return { ...MARKETING_FEATURE_FLAGS_DEFAULTS };
-  }
-  return normalizeFlags(s as MarketingFeatureFlagsSnapshot);
+  return out;
 }
 
 /**
- * Coerce any snapshot-shaped value to a full flag object. Matches
- * `publishedMarketingFeatureFlagsFromRow` so preview/draft reads behave like
- * the public query when older rows omit `pricingSection` (treat as default on).
+ * Legacy `marketingFeatureFlags:getPublishedMarketingFeatureFlags`. Same
+ * shape as the new `public:getPublishedMarketingFeatureFlags`.
  */
-function normalizeFlags(
-  raw: MarketingFeatureFlagsSnapshot | Record<string, unknown>,
-): MarketingFeatureFlagsSnapshot {
-  return {
-    aboutPage: typeof raw.aboutPage === "boolean" ? raw.aboutPage : false,
-    recordingsPage:
-      typeof raw.recordingsPage === "boolean" ? raw.recordingsPage : false,
-    pricingSection:
-      typeof raw.pricingSection === "boolean" ? raw.pricingSection : true,
-  };
-}
-
-export async function getMarketingFeatureFlagsRow(
-  ctx: QueryCtx,
-): Promise<Doc<"marketingFeatureFlags"> | null> {
-  return await ctx.db
-    .query("marketingFeatureFlags")
-    .withIndex("by_singleton", (q) => q.eq("singletonKey", SINGLETON))
-    .unique();
-}
-
 export const getPublishedMarketingFeatureFlags = query({
   args: {},
   handler: async (ctx) => {
-    const row = await getMarketingFeatureFlagsRow(ctx);
-    return publishedMarketingFeatureFlagsFromRow(row);
+    const [aboutRow, recordingsRow, pricingRow] = await Promise.all(
+      SECTIONS.map((section) => getSectionMetaRow(ctx, section)),
+    );
+    return {
+      aboutPage: publishedIsEnabled(aboutRow, "about"),
+      recordingsPage: publishedIsEnabled(recordingsRow, "recordings"),
+      pricingSection: publishedIsEnabled(pricingRow, "pricing"),
+    };
   },
 });
 
 /**
- * Owner-only draft for the marketing feature flags singleton (same shape as preview).
+ * Legacy `marketingFeatureFlags:listDraft` — owner-only view of the draft
+ * flag singleton. Maps the per-section rows back onto
+ * `{ flags, hasDraftChanges, publishedAt, publishedBy, updatedAt, updatedBy }`.
  */
 export const listDraft = query({
   args: {},
   handler: async (ctx) => {
     await requireCmsOwner(ctx);
-    const row = await getMarketingFeatureFlagsRow(ctx);
-    if (!row) {
-      const base = { ...MARKETING_FEATURE_FLAGS_DEFAULTS };
-      return {
-        flags: base,
-        hasDraftChanges: false,
-        publishedAt: null as number | null,
-        publishedBy: null as string | null,
-        updatedAt: null as number | null,
-        updatedBy: null as string | null,
-      };
-    }
-    const effective =
-      row.draftSnapshot ?? row.publishedSnapshot ?? MARKETING_FEATURE_FLAGS_DEFAULTS;
-    const normalized = normalizeFlags(effective);
+    const [aboutRow, recordingsRow, pricingRow] = await Promise.all(
+      SECTIONS.map((section) => getSectionMetaRow(ctx, section)),
+    );
+    const flags = {
+      aboutPage: effectiveIsEnabled(aboutRow, "about"),
+      recordingsPage: effectiveIsEnabled(recordingsRow, "recordings"),
+      pricingSection: effectiveIsEnabled(pricingRow, "pricing"),
+    };
+    const hasDraftChanges = anyMarketingFlagDraftPending(
+      aboutRow,
+      recordingsRow,
+      pricingRow,
+    );
+
+    const publishedAt = latestTimestamp([
+      aboutRow?.publishedAt ?? null,
+      recordingsRow?.publishedAt ?? null,
+      pricingRow?.publishedAt ?? null,
+    ]);
+    const updatedAt = latestTimestamp([
+      aboutRow?.updatedAt,
+      recordingsRow?.updatedAt,
+      pricingRow?.updatedAt,
+    ]);
+
     return {
-      flags: normalized,
-      hasDraftChanges: row.hasDraftChanges,
-      publishedAt: row.publishedAt,
-      publishedBy: row.publishedBy ?? null,
-      updatedAt: row.updatedAt,
-      updatedBy: row.updatedBy ?? null,
+      flags,
+      hasDraftChanges,
+      publishedAt,
+      publishedBy:
+        aboutRow?.publishedBy ??
+        recordingsRow?.publishedBy ??
+        pricingRow?.publishedBy ??
+        null,
+      updatedAt,
+      updatedBy:
+        aboutRow?.updatedBy ??
+        recordingsRow?.updatedBy ??
+        pricingRow?.updatedBy ??
+        null,
     };
   },
 });
 
+/**
+ * Legacy `marketingFeatureFlags:getPreviewMarketingFeatureFlags`. Same shape
+ * as the new `cms:getPreviewMarketingFeatureFlags`; returns `null` for
+ * unauthenticated / non-owner callers.
+ */
 export const getPreviewMarketingFeatureFlags = query({
   args: {},
   handler: async (ctx) => {
@@ -126,198 +135,120 @@ export const getPreviewMarketingFeatureFlags = query({
     } catch {
       return null;
     }
-    const row = await getMarketingFeatureFlagsRow(ctx);
-    if (!row) {
-      const base = { ...MARKETING_FEATURE_FLAGS_DEFAULTS };
-      return {
-        ...base,
-        hasDraftChanges: false,
-      };
-    }
-    const effective =
-      row.draftSnapshot ?? row.publishedSnapshot ?? MARKETING_FEATURE_FLAGS_DEFAULTS;
-    const normalized = normalizeFlags(effective);
+
+    const [aboutRow, recordingsRow, pricingRow] = await Promise.all(
+      SECTIONS.map((section) => getSectionMetaRow(ctx, section)),
+    );
+    const hasDraftChanges = anyMarketingFlagDraftPending(
+      aboutRow,
+      recordingsRow,
+      pricingRow,
+    );
+
     return {
-      ...normalized,
-      hasDraftChanges: row.hasDraftChanges,
+      aboutPage: effectiveIsEnabled(aboutRow, "about"),
+      recordingsPage: effectiveIsEnabled(recordingsRow, "recordings"),
+      pricingSection: effectiveIsEnabled(pricingRow, "pricing"),
+      hasDraftChanges,
     };
   },
 });
 
+/**
+ * Legacy `marketingFeatureFlags:saveMarketingFeatureFlagsDraft`. Accepts the
+ * full snapshot `{ aboutPage, recordingsPage, pricingSection }` and writes
+ * each value onto the matching section's `isEnabledDraft`, mirroring what
+ * the new `cms:saveSectionIsEnabledDraft` mutation does per-section.
+ */
 export const saveMarketingFeatureFlagsDraft = mutation({
   args: { snapshot: marketingFeatureFlagsSnapshotValidator },
   handler: async (ctx, args) => {
     const { updatedBy } = await requireCmsOwner(ctx);
-    const id = await ensureMarketingFeatureFlagsRowId(ctx, updatedBy);
-    const row = (await ctx.db.get(id))!;
-    const content = normalizeFlags(args.snapshot);
-    const hasDraftChanges = !flagsEqual(content, row.publishedSnapshot);
-    const now = Date.now();
-    await ctx.db.patch(id, {
-      draftSnapshot: content,
-      hasDraftChanges,
-      updatedAt: now,
-      updatedBy,
-    });
+    const entries: Array<[CmsSection, boolean]> = [
+      ["about", args.snapshot.aboutPage],
+      ["recordings", args.snapshot.recordingsPage],
+      ["pricing", args.snapshot.pricingSection],
+    ];
+    let hasDraftChanges = false;
+    for (const [section, value] of entries) {
+      const { id } = await ensureSectionMetaRow(ctx, section, updatedBy);
+      await ctx.db.patch(id, {
+        isEnabledDraft: value,
+        updatedAt: Date.now(),
+        updatedBy,
+      });
+      await recomputeSectionHasDraftChanges(ctx, section, updatedBy);
+      const row = await getSectionMetaRow(ctx, section);
+      if (row?.hasDraftChanges) hasDraftChanges = true;
+    }
     return { ok: true as const, hasDraftChanges };
   },
 });
 
-export async function publishMarketingFeatureFlagsCore(
-  ctx: MutationCtx,
-  args: { userId: string; updatedBy: string | undefined },
-): Promise<
-  { kind: "nothing_to_publish" } | { kind: "published"; publishedAt: number }
-> {
-  const id = await ensureMarketingFeatureFlagsRowId(ctx, args.updatedBy);
-  const row = (await ctx.db.get(id))!;
-  const draft = row.draftSnapshot;
-  if (!draft || !row.hasDraftChanges) {
-    return { kind: "nothing_to_publish" };
-  }
-  const issues = collectMarketingFeatureFlagsPublishIssues(draft);
-  if (issues.length > 0) {
-    cmsPublishValidationFailed(
-      "marketingFeatureFlags",
-      "Marketing feature flags failed publish validation.",
-      issues,
-    );
-  }
-  const now = Date.now();
-  await ctx.db.patch(id, {
-    publishedSnapshot: draft,
-    publishedAt: now,
-    publishedBy: args.userId,
-    draftSnapshot: undefined,
-    hasDraftChanges: false,
-    updatedAt: now,
-    updatedBy: args.updatedBy,
-  });
-  return { kind: "published", publishedAt: now };
-}
-
+/**
+ * Legacy `marketingFeatureFlags:publishMarketingFeatureFlags`. Delegates to
+ * the per-section publish helper for any section that still has a pending
+ * flag draft.
+ */
 export const publishMarketingFeatureFlags = mutation({
   args: {},
   handler: async (ctx) => {
     const { userId, updatedBy } = await requireCmsOwner(ctx);
-    const out = await publishMarketingFeatureFlagsCore(ctx, { userId, updatedBy });
-    if (out.kind === "nothing_to_publish") {
+    const published: Array<
+      Awaited<ReturnType<typeof publishSectionCore>>
+    > = [];
+    for (const section of SECTIONS) {
+      const row = await getSectionMetaRow(ctx, section);
+      if (!row) continue;
+      const flagPending =
+        row.isEnabledDraft !== undefined &&
+        row.isEnabledDraft !== publishedIsEnabled(row, section);
+      if (!flagPending) continue;
+      const result = await publishSectionCore(ctx, {
+        section,
+        id: row._id,
+        row,
+        publishedByUserId: userId,
+        updatedByTokenId: updatedBy,
+      });
+      published.push(result);
+    }
+    if (published.length === 0) {
       return { ok: true as const, kind: "nothing_to_publish" as const };
     }
+    const latest = Math.max(
+      ...published
+        .filter((r) => r.kind === "published")
+        .map((r) => (r.kind === "published" ? r.publishedAt : 0)),
+    );
     return {
       ok: true as const,
       kind: "published" as const,
-      publishedAt: out.publishedAt,
+      publishedAt: latest,
     };
   },
 });
 
+/**
+ * Legacy `marketingFeatureFlags:discardMarketingFeatureFlagsDraft`. Clears
+ * `isEnabledDraft` on every section without touching their content drafts.
+ */
 export const discardMarketingFeatureFlagsDraft = mutation({
   args: {},
   handler: async (ctx) => {
     const { updatedBy } = await requireCmsOwner(ctx);
-    const row = await getMarketingFeatureFlagsRow(ctx);
-    if (!row) {
-      return { ok: true as const, discarded: false };
+    let discarded = false;
+    for (const section of SECTIONS) {
+      const row = await getSectionMetaRow(ctx, section);
+      if (!row || row.isEnabledDraft === undefined) continue;
+      await ctx.db.patch(row._id, {
+        isEnabledDraft: undefined,
+        updatedAt: Date.now(),
+        updatedBy,
+      });
+      await recomputeSectionHasDraftChanges(ctx, section, updatedBy);
+      discarded = true;
     }
-    if (!row.draftSnapshot || !row.hasDraftChanges) {
-      return { ok: true as const, discarded: false };
-    }
-    const now = Date.now();
-    await ctx.db.patch(row._id, {
-      draftSnapshot: undefined,
-      hasDraftChanges: false,
-      updatedAt: now,
-      updatedBy,
-    });
-    return { ok: true as const, discarded: true };
-  },
-});
-
-async function ensureMarketingFeatureFlagsRowId(
-  ctx: MutationCtx,
-  updatedBy: string | undefined,
-): Promise<Id<"marketingFeatureFlags">> {
-  const existing = await getMarketingFeatureFlagsRow(ctx);
-  if (existing) {
-    return existing._id;
-  }
-  const now = Date.now();
-  return await ctx.db.insert("marketingFeatureFlags", {
-    singletonKey: SINGLETON,
-    publishedSnapshot: { ...MARKETING_FEATURE_FLAGS_DEFAULTS },
-    hasDraftChanges: false,
-    publishedAt: now,
-    updatedAt: now,
-    updatedBy,
-  });
-}
-
-/**
- * Internal: ensure row exists and backfill from legacy `about.published` and
- * `pricing.flags` on first run after deploy. Shared with `seed:seedSiteSettingsDefaults`.
- */
-export async function ensureMarketingFeatureFlagsSeededHandler(
-  ctx: MutationCtx,
-): Promise<
-  | { status: "already_seeded"; id: Id<"marketingFeatureFlags"> }
-  | { status: "inserted"; id: Id<"marketingFeatureFlags"> }
-> {
-  const now = Date.now();
-  const existing = await getMarketingFeatureFlagsRow(ctx);
-  if (existing) {
-    await stripLegacyCmsMarketingFieldsFromDb(ctx);
-    return { status: "already_seeded" as const, id: existing._id };
-  }
-  const [aboutRow, pricingRow, settingsRow] = await Promise.all([
-    ctx.db
-      .query("cmsSections")
-      .withIndex("by_section", (q) => q.eq("section", "about"))
-      .unique(),
-    ctx.db
-      .query("cmsSections")
-      .withIndex("by_section", (q) => q.eq("section", "pricing"))
-      .unique(),
-    ctx.db
-      .query("cmsSections")
-      .withIndex("by_section", (q) => q.eq("section", "settings"))
-      .unique(),
-  ]);
-  const aboutSnap = aboutRow?.publishedSnapshot as
-    | { published?: boolean }
-    | undefined;
-  const legacyAboutPublished =
-    aboutSnap && typeof aboutSnap.published === "boolean"
-      ? aboutSnap.published
-      : false;
-  const pricing = publishedPricingFromRows(pricingRow, settingsRow);
-  const rawPricing = pricingRow?.publishedSnapshot as
-    | { flags?: { recordingsPageEnabled?: boolean } }
-    | undefined;
-  const rec =
-    rawPricing?.flags &&
-    typeof rawPricing.flags.recordingsPageEnabled === "boolean"
-      ? rawPricing.flags.recordingsPageEnabled
-      : false;
-  const snapshot: MarketingFeatureFlagsSnapshot = {
-    aboutPage: legacyAboutPublished,
-    recordingsPage: rec,
-    pricingSection: pricing.flags.priceTabEnabled,
-  };
-  const id = await ctx.db.insert("marketingFeatureFlags", {
-    singletonKey: SINGLETON,
-    publishedSnapshot: snapshot,
-    hasDraftChanges: false,
-    publishedAt: now,
-    updatedAt: now,
-  });
-  await stripLegacyCmsMarketingFieldsFromDb(ctx);
-  return { status: "inserted" as const, id };
-}
-
-export const ensureMarketingFeatureFlagsSeeded = internalMutation({
-  args: {},
-  handler: async (ctx) => {
-    return await ensureMarketingFeatureFlagsSeededHandler(ctx);
+    return { ok: true as const, discarded };
   },
 });

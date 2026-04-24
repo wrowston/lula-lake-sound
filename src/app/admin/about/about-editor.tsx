@@ -675,6 +675,22 @@ function AboutForm() {
     ffAutosaveStatus,
   );
 
+  // The wrapping `<div>` needs a *stable* ref callback. An inline arrow is a
+  // new function on every render, which makes React detach (call old ref with
+  // `null`) and reattach (call new ref with the element) every time. The
+  // detach path runs `dispose()` inside `useAutosaveDraft`, clearing the
+  // pending debounce timer — so a one-shot edit (e.g. flipping the visibility
+  // toggle) never gets to fire its autosave because the next render kills the
+  // timer before the 1s debounce elapses. Wrapping in `useCallback` keeps the
+  // ref identity stable so detach only happens at real unmount.
+  const handleEditorRef = useCallback(
+    (el: HTMLDivElement | null) => {
+      autosaveOnUnmount(el);
+      ffOnUnmount(el);
+    },
+    [autosaveOnUnmount, ffOnUnmount],
+  );
+
   if (section === undefined || featureFlagsLoading) {
     return (
       <p className="body-text text-muted-foreground">Loading About page…</p>
@@ -696,13 +712,7 @@ function AboutForm() {
   const seoDescriptionValue = base.seoDescription ?? "";
 
   return (
-    <div
-      className="space-y-8 pb-24"
-      ref={(el) => {
-        autosaveOnUnmount(el);
-        ffOnUnmount(el);
-      }}
-    >
+    <div className="space-y-8 pb-24" ref={handleEditorRef}>
         <div className="space-y-8">
           <fieldset className="space-y-4">
             <legend className="label-text text-muted-foreground">

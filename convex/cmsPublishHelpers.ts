@@ -1,111 +1,64 @@
-import type { MutationCtx } from "./_generated/server";
+import type { MutationCtx, QueryCtx } from "./_generated/server";
 import type { Doc, Id } from "./_generated/dataModel";
-import {
-  ABOUT_DEFAULTS,
-  PRICING_DEFAULTS,
-  SETTINGS_DEFAULTS,
-  cmsSnapshotsEqual,
-  defaultSnapshotForSection,
-  type AboutSnapshot,
-  type CmsSection,
-  type CmsSnapshot,
-  type MarketingFeatureFlagsSnapshot,
-  type PricingSnapshot,
-  type SettingsSnapshot,
-} from "./cmsShared";
+import type { CmsSection } from "./cmsShared";
+import { defaultSnapshotForSection } from "./cmsShared";
 import { cmsPublishValidationFailed } from "./errors";
 import {
   MAX_ABOUT_TEAM_MEMBERS,
-  collectAboutTeamBlobIssues,
-  pruneAboutTeamBlobsAfterPublish,
+  collectAboutTeamBlobIssuesForTree,
+  pruneAboutTeamBlobsAfterPublishScoped,
 } from "./aboutTeamStorage";
+import {
+  copyAboutScope,
+  loadAboutTree,
+  type AboutTree,
+} from "./aboutTree";
+import {
+  copyPricingScope,
+  loadPricingPackages,
+} from "./pricingTree";
+import { copySettingsScope, loadSettingsContent } from "./settingsTree";
+import {
+  DEFAULT_IS_ENABLED,
+  effectiveIsEnabled,
+  ensureSectionMetaRow,
+  getSectionMetaRow,
+  publishedIsEnabled,
+  sectionHasContentDraftDiff,
+} from "./cmsMeta";
 
 export type PublishIssue = { path: string; message: string };
 
-export async function getSectionRow(
-  ctx: MutationCtx,
-  section: CmsSection,
-): Promise<Doc<"cmsSections"> | null> {
-  return await ctx.db
-    .query("cmsSections")
-    .withIndex("by_section", (q) => q.eq("section", section))
-    .unique();
-}
+/**
+ * @deprecated Use {@link getSectionMetaRow}. Kept so callers that imported
+ * the old name keep compiling.
+ */
+export const getSectionRow = getSectionMetaRow;
 
 /**
- * Resolve the initial published snapshot for a brand new row.
- *
- * For `pricing`, we opportunistically backfill from any legacy `flags`
- * stored on the existing `settings` row so the first write doesn’t reset
- * the user’s previously-published value. Packages always start empty so
- * that creating the row from a draft save never leaks default packages
- * to the public site — the owner must explicitly publish to populate
- * `packages`.
+ * @deprecated Use {@link ensureSectionMetaRow}. The previous implementation
+ * also synthesised a `publishedSnapshot`; rows no longer need that column
+ * because content lives in the per-section scoped tables.
  */
-async function initialSnapshotForSection(
-  ctx: MutationCtx,
-  section: CmsSection,
-): Promise<CmsSnapshot> {
-  if (section === "pricing") {
-    const legacy = await getSectionRow(ctx, "settings");
-    const legacyFlags = (legacy?.publishedSnapshot as SettingsSnapshot | undefined)
-      ?.flags;
-    return {
-      flags: {
-        ...PRICING_DEFAULTS.flags,
-        ...(legacyFlags && typeof legacyFlags === "object" ? legacyFlags : {}),
-      },
-      packages: [],
-    } satisfies PricingSnapshot;
-  }
-  if (section === "about") {
-    return ABOUT_DEFAULTS;
-  }
-  return SETTINGS_DEFAULTS;
-}
+export const ensureSectionRow = ensureSectionMetaRow;
 
-export async function ensureSectionRow(
-  ctx: MutationCtx,
-  section: CmsSection,
-  updatedBy: string | undefined,
-): Promise<{ row: Doc<"cmsSections">; id: Id<"cmsSections"> }> {
-  const existing = await getSectionRow(ctx, section);
+const trimOrEmpty = (s: string | undefined | null): string =>
+  s === undefined || s === null ? "" : s.trim();
 
-  if (existing) {
-    return { row: existing, id: existing._id };
-  }
-
-  const now = Date.now();
-  const publishedSnapshot = await initialSnapshotForSection(ctx, section);
-
-  const id = await ctx.db.insert("cmsSections", {
-    section,
-    updatedAt: now,
-    updatedBy,
-    publishedSnapshot,
-    publishedAt: now,
-    hasDraftChanges: false,
-  });
-  const row = await ctx.db.get(id);
-  if (!row) {
-    throw new Error("Failed to load cmsSections row after insert");
-  }
-  return { row, id };
-}
-
-const trimOrEmpty = (s: string | undefined): string =>
-  s === undefined ? "" : s.trim();
-
-function collectSettingsIssues(draft: SettingsSnapshot): PublishIssue[] {
+async function collectSettingsIssues(
+  ctx: QueryCtx | MutationCtx,
+): Promise<PublishIssue[]> {
   const issues: PublishIssue[] = [];
-  const title = trimOrEmpty(draft.metadata?.title);
+  const draft = await loadSettingsContent(ctx, "draft");
+  const source = draft ?? (await loadSettingsContent(ctx, "published"));
+  const title = trimOrEmpty(source?.title);
   if (title.length === 0) {
     issues.push({
       path: "metadata.title",
       message: "Site title is required to publish.",
     });
   }
-  const description = trimOrEmpty(draft.metadata?.description);
+  const description = trimOrEmpty(source?.description);
   if (description.length === 0) {
     issues.push({
       path: "metadata.description",
@@ -115,32 +68,40 @@ function collectSettingsIssues(draft: SettingsSnapshot): PublishIssue[] {
   return issues;
 }
 
-function collectPricingIssues(draft: PricingSnapshot): PublishIssue[] {
+/**
+ * Pure package-array validator. Exported so unit tests can exercise it
+ * directly without a Convex DB harness. Every row is expected to expose
+ * `stableId` (the historical `id`), `name`, `priceCents`, `currency`,
+ * `billingCadence`, `sortOrder`, and `unitLabel` for custom cadences.
+ */
+export function validatePricingPackageArray(
+  packages: ReadonlyArray<{
+    stableId: string;
+    name: string;
+    priceCents: number;
+    currency: string;
+    billingCadence: string;
+    unitLabel?: string;
+    sortOrder: number;
+  }>,
+): PublishIssue[] {
   const issues: PublishIssue[] = [];
-  if (typeof draft.flags?.priceTabEnabled !== "boolean") {
-    issues.push({
-      path: "flags.priceTabEnabled",
-      message: "Pricing visibility flag must be a boolean.",
-    });
-  }
-
-  const packages = draft.packages ?? [];
   const seenIds = new Set<string>();
   for (let i = 0; i < packages.length; i++) {
     const pkg = packages[i];
     const base = `packages[${i}]`;
-    if (typeof pkg.id !== "string" || pkg.id.trim().length === 0) {
+    if (typeof pkg.stableId !== "string" || pkg.stableId.trim().length === 0) {
       issues.push({
         path: `${base}.id`,
         message: "Each pricing package requires a stable id.",
       });
-    } else if (seenIds.has(pkg.id)) {
+    } else if (seenIds.has(pkg.stableId)) {
       issues.push({
         path: `${base}.id`,
-        message: `Duplicate package id: ${pkg.id}`,
+        message: `Duplicate package id: ${pkg.stableId}`,
       });
     } else {
-      seenIds.add(pkg.id);
+      seenIds.add(pkg.stableId);
     }
 
     if (typeof pkg.name !== "string" || pkg.name.trim().length === 0) {
@@ -183,12 +144,25 @@ function collectPricingIssues(draft: PricingSnapshot): PublishIssue[] {
       issues.push({
         path: `${base}.unitLabel`,
         message:
-          "Custom cadence requires a unit label (e.g. \"per weekend\").",
+          'Custom cadence requires a unit label (e.g. "per weekend").',
       });
     }
   }
-
   return issues;
+}
+
+async function collectPricingIssues(
+  ctx: QueryCtx | MutationCtx,
+): Promise<PublishIssue[]> {
+  const draft = await loadPricingPackages(ctx, "draft");
+  if (draft.length > 0) {
+    return validatePricingPackageArray(draft);
+  }
+  if (await sectionHasContentDraftDiff(ctx, "pricing")) {
+    return validatePricingPackageArray(draft);
+  }
+  const published = await loadPricingPackages(ctx, "published");
+  return validatePricingPackageArray(published);
 }
 
 /** Very small HTML-to-plaintext helper — good enough for emptiness checks. */
@@ -202,10 +176,14 @@ function htmlToPlaintext(html: string): string {
     .trim();
 }
 
-function collectAboutIssues(draft: AboutSnapshot): PublishIssue[] {
+async function collectAboutIssuesFromTree(
+  ctx: QueryCtx | MutationCtx,
+  tree: AboutTree,
+): Promise<PublishIssue[]> {
   const issues: PublishIssue[] = [];
 
-  const heroTitle = trimOrEmpty(draft.heroTitle);
+  const content = tree.content;
+  const heroTitle = trimOrEmpty(content?.heroTitle);
   if (heroTitle.length === 0) {
     issues.push({
       path: "heroTitle",
@@ -213,21 +191,20 @@ function collectAboutIssues(draft: AboutSnapshot): PublishIssue[] {
     });
   }
 
-  // Rich-text body (INF-98) is preferred. When present and non-empty it
-  // satisfies the "has body" requirement without needing legacy `body` blocks.
   const hasRichBody =
-    typeof draft.bodyHtml === "string" &&
-    htmlToPlaintext(draft.bodyHtml).length > 0;
+    typeof content?.bodyHtml === "string" &&
+    htmlToPlaintext(content.bodyHtml).length > 0;
 
   if (!hasRichBody) {
-    if (!Array.isArray(draft.body) || draft.body.length === 0) {
+    const body = content?.bodyBlocks ?? [];
+    if (body.length === 0) {
       issues.push({
         path: "bodyHtml",
         message: "Body content is required to publish.",
       });
     } else {
-      for (let i = 0; i < draft.body.length; i++) {
-        const block = draft.body[i];
+      for (let i = 0; i < body.length; i++) {
+        const block = body[i];
         const base = `body[${i}]`;
         if (block.type !== "paragraph" && block.type !== "heading") {
           issues.push({
@@ -245,22 +222,17 @@ function collectAboutIssues(draft: AboutSnapshot): PublishIssue[] {
     }
   }
 
-  if (draft.highlights !== undefined) {
-    for (let i = 0; i < draft.highlights.length; i++) {
-      if (
-        typeof draft.highlights[i] !== "string" ||
-        draft.highlights[i].trim().length === 0
-      ) {
-        issues.push({
-          path: `highlights[${i}]`,
-          message: `Highlight ${i + 1} cannot be empty.`,
-        });
-      }
+  for (let i = 0; i < tree.highlights.length; i++) {
+    if (tree.highlights[i].text.trim().length === 0) {
+      issues.push({
+        path: `highlights[${i}]`,
+        message: `Highlight ${i + 1} cannot be empty.`,
+      });
     }
   }
 
-  const team = draft.teamMembers;
-  if (team !== undefined && team.length > 0) {
+  const team = tree.teamMembers;
+  if (team.length > 0) {
     if (team.length > MAX_ABOUT_TEAM_MEMBERS) {
       issues.push({
         path: "teamMembers",
@@ -270,15 +242,13 @@ function collectAboutIssues(draft: AboutSnapshot): PublishIssue[] {
     for (let i = 0; i < team.length; i++) {
       const base = `teamMembers[${i}]`;
       const who = `Team member ${i + 1}`;
-      const name = trimOrEmpty(team[i].name);
-      const title = trimOrEmpty(team[i].title);
-      if (name.length === 0) {
+      if (team[i].name.trim().length === 0) {
         issues.push({
           path: `${base}.name`,
           message: `${who} needs a name.`,
         });
       }
-      if (title.length === 0) {
+      if (team[i].title.trim().length === 0) {
         issues.push({
           path: `${base}.title`,
           message: `${who} needs a title.`,
@@ -296,28 +266,32 @@ function collectAboutIssues(draft: AboutSnapshot): PublishIssue[] {
   return issues;
 }
 
-/** Best-effort checks before promoting `draft` to published (INF-75). */
-export function collectPublishIssues(
+/**
+ * Preflight validation for a section's draft scope. Reads directly from the
+ * scoped tables so UI preflight and publish share one code path.
+ */
+export async function collectPublishIssues(
+  ctx: QueryCtx | MutationCtx,
   section: CmsSection,
-  draft: CmsSnapshot,
-): PublishIssue[] {
+): Promise<PublishIssue[]> {
   if (section === "settings") {
-    return collectSettingsIssues(draft as SettingsSnapshot);
+    return collectSettingsIssues(ctx);
+  }
+  if (section === "pricing") {
+    return collectPricingIssues(ctx);
   }
   if (section === "about") {
-    return collectAboutIssues(draft as AboutSnapshot);
+    const draftTree = await loadAboutTree(ctx, "draft");
+    const draftHasContent =
+      draftTree.content !== null ||
+      draftTree.highlights.length > 0 ||
+      draftTree.teamMembers.length > 0;
+    const tree = draftHasContent
+      ? draftTree
+      : await loadAboutTree(ctx, "published");
+    return collectAboutIssuesFromTree(ctx, tree);
   }
-  return collectPricingIssues(draft as PricingSnapshot);
-}
-
-/**
- * @deprecated Kept for back-compat with older callers. Prefer
- * {@link collectPublishIssues} with an explicit section.
- */
-export function collectSettingsPublishIssues(
-  draft: SettingsSnapshot,
-): PublishIssue[] {
-  return collectSettingsIssues(draft);
+  return [];
 }
 
 export type PublishSectionResult =
@@ -337,7 +311,9 @@ export type PublishSectionResult =
     };
 
 /**
- * Single-transaction promote draft → published, or no-op when there is no draft and nothing pending.
+ * Atomically promote the section's draft-scope content (and any pending
+ * `isEnabledDraft`) onto the published scope. Idempotent: when there is
+ * nothing pending returns `already_current` without writes.
  */
 export async function publishSectionCore(
   ctx: MutationCtx,
@@ -347,20 +323,12 @@ export async function publishSectionCore(
     row: Doc<"cmsSections">;
     /** Clerk `subject` — stored as `publishedBy` for audit. */
     publishedByUserId: string;
-    updatedByTokenId: string;
+    updatedByTokenId: string | undefined;
   },
 ): Promise<PublishSectionResult> {
   const { section, id, row, publishedByUserId, updatedByTokenId } = args;
-  const draft = row.draftSnapshot;
 
-  if (!draft) {
-    if (row.hasDraftChanges) {
-      cmsPublishValidationFailed(
-        section,
-        "Draft data is missing but changes are flagged. Save a draft again, then publish.",
-        [{ path: "_state", message: "Inconsistent draft state." }],
-      );
-    }
+  if (!row.hasDraftChanges) {
     return {
       ok: true,
       kind: "already_current",
@@ -370,38 +338,62 @@ export async function publishSectionCore(
     };
   }
 
-  const issues = collectPublishIssues(section, draft);
-  if (issues.length > 0) {
-    cmsPublishValidationFailed(section, "Publish validation failed.", issues);
-  }
+  // Only run content validation and scope-copy when the draft scope actually
+  // differs from the published scope. Flag-only toggles (the draft scope is
+  // empty) must NOT wipe the published content — they only patch
+  // `isEnabled` on the metadata row below.
+  const hasContentDraft = await sectionHasContentDraftDiff(ctx, section);
 
-  if (section === "about") {
-    const blobIssues = await collectAboutTeamBlobIssues(
-      ctx,
-      draft as AboutSnapshot,
-    );
-    if (blobIssues.length > 0) {
-      cmsPublishValidationFailed(section, "Publish validation failed.", blobIssues);
+  if (hasContentDraft) {
+    const issues = await collectPublishIssues(ctx, section);
+    if (issues.length > 0) {
+      cmsPublishValidationFailed(section, "Publish validation failed.", issues);
     }
   }
 
-  const previousPublished =
-    section === "about" ? row.publishedSnapshot : undefined;
+  let previousAboutTree: AboutTree | null = null;
+  if (hasContentDraft && section === "about") {
+    const draftTree = await loadAboutTree(ctx, "draft");
+    const blobIssues = await collectAboutTeamBlobIssuesForTree(ctx, draftTree);
+    if (blobIssues.length > 0) {
+      cmsPublishValidationFailed(section, "Publish validation failed.", blobIssues);
+    }
+    previousAboutTree = await loadAboutTree(ctx, "published");
+  }
+
+  if (hasContentDraft) {
+    if (section === "about") {
+      await copyAboutScope(ctx, "draft", "published");
+    } else if (section === "pricing") {
+      await copyPricingScope(ctx, "draft", "published");
+    } else if (section === "settings") {
+      await copySettingsScope(ctx, "draft", "published");
+    }
+  }
 
   const now = Date.now();
+  const nextIsEnabled =
+    typeof row.isEnabledDraft === "boolean"
+      ? row.isEnabledDraft
+      : publishedIsEnabled(row, section);
 
   await ctx.db.patch(id, {
-    publishedSnapshot: draft,
+    isEnabled: nextIsEnabled,
+    isEnabledDraft: undefined,
+    hasDraftChanges: false,
     publishedAt: now,
     publishedBy: publishedByUserId,
-    draftSnapshot: undefined,
-    hasDraftChanges: false,
     updatedAt: now,
     updatedBy: updatedByTokenId,
   });
 
-  if (section === "about" && previousPublished !== undefined) {
-    await pruneAboutTeamBlobsAfterPublish(ctx, previousPublished, draft);
+  if (hasContentDraft && section === "about" && previousAboutTree !== null) {
+    const newPublished = await loadAboutTree(ctx, "published");
+    await pruneAboutTeamBlobsAfterPublishScoped(
+      ctx,
+      previousAboutTree,
+      newPublished,
+    );
   }
 
   return {
@@ -418,51 +410,28 @@ export async function publishSectionCore(
  */
 export const publishSettingsSectionCore = publishSectionCore;
 
-/** Rows that have a draft different from published (site-wide publish targets). */
+/**
+ * Rows that have a pending draft (content or flag). Callers use this to
+ * decide which sections to publish during the site-wide publish.
+ */
 export function rowsWithPublishableDraft(
   rows: Doc<"cmsSections">[],
 ): Doc<"cmsSections">[] {
-  return rows.filter(
-    (row) =>
-      row.draftSnapshot !== undefined &&
-      !cmsSnapshotsEqual(row.draftSnapshot, row.publishedSnapshot),
-  );
+  return rows.filter((row) => row.hasDraftChanges === true);
 }
 
-export function collectMarketingFeatureFlagsPublishIssues(
-  draft: MarketingFeatureFlagsSnapshot,
-): PublishIssue[] {
-  const issues: PublishIssue[] = [];
-  if (typeof draft.aboutPage !== "boolean") {
-    issues.push({
-      path: "aboutPage",
-      message: "About page visibility must be a boolean.",
-    });
-  }
-  if (typeof draft.recordingsPage !== "boolean") {
-    issues.push({
-      path: "recordingsPage",
-      message: "Recordings page visibility must be a boolean.",
-    });
-  }
-  if (typeof draft.pricingSection !== "boolean") {
-    issues.push({
-      path: "pricingSection",
-      message: "Pricing section visibility must be a boolean.",
-    });
-  }
-  return issues;
-}
-
-/** Aggregate validation issues across sections (preflight for `publishSite`). */
-export function collectAllPublishIssues(
+/**
+ * Aggregate validation issues across sections (preflight for `publishSite`).
+ * Reads directly from the draft-scope rows for each pending section so the
+ * checks match what `publishSectionCore` will run.
+ */
+export async function collectAllPublishIssues(
+  ctx: QueryCtx | MutationCtx,
   targets: Doc<"cmsSections">[],
-): PublishIssue[] {
+): Promise<PublishIssue[]> {
   const issues: PublishIssue[] = [];
   for (const row of targets) {
-    const d = row.draftSnapshot;
-    if (!d) continue;
-    for (const issue of collectPublishIssues(row.section, d)) {
+    for (const issue of await collectPublishIssues(ctx, row.section)) {
       issues.push({
         path: `${row.section}.${issue.path}`,
         message: issue.message,
@@ -472,5 +441,11 @@ export function collectAllPublishIssues(
   return issues;
 }
 
-// Preserve legacy default re-exports for callers that imported from this module.
-export { defaultSnapshotForSection };
+// Preserve legacy re-exports so callers that imported from this module
+// keep compiling.
+export {
+  defaultSnapshotForSection,
+  effectiveIsEnabled,
+  publishedIsEnabled,
+  DEFAULT_IS_ENABLED,
+};

@@ -12,9 +12,7 @@ import { RECORDINGS } from "../../recordings/recordings-data";
 import { PreviewBanner } from "@/components/preview-banner";
 
 function RecordingsPreviewContent() {
-  const marketing = useQuery(
-    api.marketingFeatureFlags.getPreviewMarketingFeatureFlags,
-  );
+  const marketing = useQuery(api.cms.getPreviewMarketingFeatureFlags);
 
   if (marketing === undefined) {
     return (
