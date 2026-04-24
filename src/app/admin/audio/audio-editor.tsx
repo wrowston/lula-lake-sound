@@ -172,7 +172,8 @@ function validateStreamingUrls(
     if (e) return e;
     try {
       const h = new URL(spotify).hostname.toLowerCase();
-      if (!h.endsWith("spotify.com")) {
+      const spotifyOk = h === "spotify.com" || h.endsWith(".spotify.com");
+      if (!spotifyOk) {
         return "Spotify URL must be on spotify.com.";
       }
     } catch {
