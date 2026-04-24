@@ -95,7 +95,7 @@ function generateItemId(): string {
   return `item_${Math.random().toString(36).slice(2)}${Date.now().toString(36)}`;
 }
 
-function specsPreview(specs: GearSpecs): string {
+export function specsPreview(specs: GearSpecs): string {
   if (specs.kind === "markdown") {
     const t = specs.text.trim().replace(/\s+/g, " ");
     return t.length > SPECS_PREVIEW_LEN
@@ -110,18 +110,18 @@ function specsPreview(specs: GearSpecs): string {
     : joined || "—";
 }
 
-function validateItemName(name: string): string | null {
+export function validateItemName(name: string): string | null {
   const t = name.trim();
   if (t.length === 0) return "Name is required.";
   if (t.length > MAX_NAME_LEN) return `Name must be at most ${MAX_NAME_LEN} characters.`;
   return null;
 }
 
-function validateCategoryName(name: string): string | null {
+export function validateCategoryName(name: string): string | null {
   return validateItemName(name);
 }
 
-function validateSpecs(specs: GearSpecs): string | null {
+export function validateSpecs(specs: GearSpecs): string | null {
   if (specs.kind === "markdown") {
     if (specs.text.length > MAX_MARKDOWN_LEN) {
       return `Details must be at most ${MAX_MARKDOWN_LEN} characters.`;
@@ -143,7 +143,7 @@ function validateSpecs(specs: GearSpecs): string | null {
   return null;
 }
 
-function validateUrl(url: string): string | null {
+export function validateUrl(url: string): string | null {
   const t = url.trim();
   if (t.length === 0) return null;
   if (t.length > MAX_URL_LEN) return `URL must be at most ${MAX_URL_LEN} characters.`;
@@ -158,20 +158,20 @@ function validateUrl(url: string): string | null {
   return null;
 }
 
-function sortCategories(cats: GearCategoryPayload[]): GearCategoryPayload[] {
+export function sortCategories(cats: GearCategoryPayload[]): GearCategoryPayload[] {
   return [...cats].sort(
     (a, b) => a.sort - b.sort || a.stableId.localeCompare(b.stableId),
   );
 }
 
-function sortItems(items: GearItemPayload[]): GearItemPayload[] {
+export function sortItems(items: GearItemPayload[]): GearItemPayload[] {
   return [...items].sort(
     (a, b) => a.sort - b.sort || a.stableId.localeCompare(b.stableId),
   );
 }
 
 /** Next sort for a new row at the end; avoids colliding with gaps after deletes. */
-function nextAppendSort(sorts: readonly number[]): number {
+export function nextAppendSort(sorts: readonly number[]): number {
   if (sorts.length === 0) return 0;
   return Math.max(...sorts) + 1;
 }

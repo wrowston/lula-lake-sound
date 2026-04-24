@@ -87,7 +87,7 @@ const CADENCE_LABELS: Record<BillingCadence, string> = {
 const PRICING_FIELD_INPUT_CLASS =
   "text-foreground placeholder:text-muted-foreground";
 
-function isCadence(value: string): value is BillingCadence {
+export function isCadence(value: string): value is BillingCadence {
   return (VALID_CADENCES as readonly string[]).includes(value);
 }
 
@@ -98,7 +98,7 @@ function generateId(): string {
   return `pkg_${Math.random().toString(36).slice(2)}${Date.now().toString(36)}`;
 }
 
-function toPricingContent(raw: {
+export function toPricingContent(raw: {
   flags?: { priceTabEnabled?: boolean };
   packages: PricingPackage[];
 }): PricingContent {
@@ -119,16 +119,16 @@ function toPricingContent(raw: {
   };
 }
 
-function renumberSortOrder(packages: PricingPackage[]): PricingPackage[] {
+export function renumberSortOrder(packages: PricingPackage[]): PricingPackage[] {
   return packages.map((p, idx) => ({ ...p, sortOrder: idx }));
 }
 
-function priceCentsToDisplay(cents: number): string {
+export function priceCentsToDisplay(cents: number): string {
   if (!Number.isFinite(cents)) return "";
   return (cents / 100).toFixed(2);
 }
 
-function parsePriceInput(value: string): number | null {
+export function parsePriceInput(value: string): number | null {
   const trimmed = value.trim();
   if (trimmed.length === 0) return null;
   const num = Number(trimmed);
