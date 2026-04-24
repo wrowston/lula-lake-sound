@@ -14,7 +14,7 @@ import { Effect } from "effect";
 import { toast } from "sonner";
 import { convexMutationEffect, type CmsAppError } from "@/lib/effect-errors";
 import { runAdminEffect } from "@/lib/admin-run-effect";
-import { CmsPublishToolbar } from "@/components/admin/cms-publish-toolbar";
+import { useRegisterCmsEditor } from "@/components/admin/cms-workspace";
 import { useAutosaveDraft } from "@/lib/use-autosave-draft";
 
 type SettingsContent = {
@@ -163,6 +163,48 @@ function SettingsForm() {
     return true;
   }, [discard, hasDraftOnServer]);
 
+  const handlePublish = useCallback(() => {
+    const publishOnce = convexMutationEffect(() =>
+      publish({ section: "settings" }),
+    );
+    void (async () => {
+      if (hasLocalEdits) {
+        const flushed = await flushAutosave();
+        if (!flushed) return;
+      }
+      await runAction("Publishing…", publishOnce);
+    })();
+  }, [flushAutosave, hasLocalEdits, publish, runAction]);
+
+  const publishedByLabel =
+    section?.publishedBy && user?.id === section.publishedBy ? "You" : undefined;
+
+  const { toolbarPortal, editorRef } = useRegisterCmsEditor({
+    section: "settings",
+    sectionLabel: "site settings",
+    hasDraftOnServer,
+    hasLocalEdits,
+    publishedAt: section?.publishedAt ?? null,
+    publishedByLabel,
+    busy,
+    autosaveStatus,
+    inlineError,
+    onPublish: handlePublish,
+    onDiscardConfirm: handleDiscardConfirm,
+    flush: flushAutosave,
+  });
+
+  // Stable ref callback — see the matching comment in `about-editor.tsx`.
+  // An inline arrow would be a new identity each render, causing React to
+  // detach/reattach every render and kill the pending autosave debounce.
+  const handleEditorRef = useCallback(
+    (el: HTMLDivElement | null) => {
+      autosaveOnUnmount(el);
+      editorRef(el);
+    },
+    [autosaveOnUnmount, editorRef],
+  );
+
   if (section === undefined) {
     return <p className="body-text text-muted-foreground">Loading settings…</p>;
   }
@@ -173,11 +215,8 @@ function SettingsForm() {
     );
   }
 
-  const publishedByLabel =
-    section.publishedBy && user?.id === section.publishedBy ? "You" : undefined;
-
   return (
-    <div className="space-y-8 pb-24" ref={autosaveOnUnmount}>
+    <div className="space-y-8 pb-24" ref={handleEditorRef}>
       <fieldset className="space-y-3">
         <legend className="label-text text-muted-foreground">Site Metadata</legend>
         <label className="block space-y-1">
@@ -209,31 +248,7 @@ function SettingsForm() {
           />
         </label>
       </fieldset>
-
-      <CmsPublishToolbar
-        section="settings"
-        sectionLabel="site settings"
-        hasDraftOnServer={hasDraftOnServer}
-        hasLocalEdits={hasLocalEdits}
-        publishedAt={section.publishedAt ?? null}
-        publishedByLabel={publishedByLabel}
-        busy={busy}
-        inlineError={inlineError}
-        autosaveStatus={autosaveStatus}
-        onPublish={() => {
-          const publishOnce = convexMutationEffect(() =>
-            publish({ section: "settings" }),
-          );
-          void (async () => {
-            if (hasLocalEdits) {
-              const flushed = await flushAutosave();
-              if (!flushed) return;
-            }
-            await runAction("Publishing…", publishOnce);
-          })();
-        }}
-        onDiscardConfirm={handleDiscardConfirm}
-      />
+      {toolbarPortal}
     </div>
   );
 }

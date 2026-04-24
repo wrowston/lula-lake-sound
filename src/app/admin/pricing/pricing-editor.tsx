@@ -26,7 +26,7 @@ import { Switch } from "@/components/ui/switch";
 import { cn } from "@/lib/utils";
 import { convexMutationEffect } from "@/lib/effect-errors";
 import { runAdminEffect } from "@/lib/admin-run-effect";
-import { CmsPublishToolbar } from "@/components/admin/cms-publish-toolbar";
+import { useRegisterCmsEditor } from "@/components/admin/cms-workspace";
 import { useAutosaveDraft } from "@/lib/use-autosave-draft";
 import {
   mergeAutosaveStatus,
@@ -427,6 +427,84 @@ function PricingForm() {
     ffAutosaveStatus,
   );
 
+  const publishedByLabel =
+    pricing?.publishedBy && user?.id === pricing.publishedBy ? "You" : undefined;
+
+  const handlePublish = useCallback(() => {
+    void (async () => {
+      cancelAutosaveRef.current();
+      cancelFFAutosave();
+      if (hasPricingLocalEdits) {
+        const flushed = await flushAutosave();
+        if (!flushed) return;
+      }
+      if (hasFFLocalEdits) {
+        const flushed = await flushFFAutosave();
+        if (!flushed) return;
+      }
+      setInlineError(null);
+      setBusy("Publishing…");
+      const priceOutcome = await runAdminEffect(
+        convexMutationEffect(() => publish({})),
+        { onErrorMessage: setInlineError },
+      );
+      if (priceOutcome === undefined) {
+        setBusy(null);
+        return;
+      }
+      setLocalDraft(null);
+      const ffOutcome = await runAdminEffect(runPublishFF(), {
+        onErrorMessage: setInlineError,
+      });
+      setBusy(null);
+      if (ffOutcome !== undefined) {
+        clearFFLocal();
+        toast.success("Changes published.");
+      }
+    })();
+  }, [
+    cancelFFAutosave,
+    clearFFLocal,
+    flushAutosave,
+    flushFFAutosave,
+    hasFFLocalEdits,
+    hasPricingLocalEdits,
+    publish,
+    runPublishFF,
+  ]);
+
+  /**
+   * Composite flush awaited by the sidebar nav guard — see the matching
+   * helper in `about-editor.tsx`.
+   */
+  const flushAllAutosaves = useCallback(async (): Promise<boolean> => {
+    if (hasPricingLocalEdits) {
+      const ok = await flushAutosave();
+      if (!ok) return false;
+    }
+    if (hasFFLocalEdits) {
+      const ok = await flushFFAutosave();
+      if (!ok) return false;
+    }
+    return true;
+  }, [flushAutosave, flushFFAutosave, hasPricingLocalEdits, hasFFLocalEdits]);
+
+  const { toolbarPortal, editorRef } = useRegisterCmsEditor({
+    section: "pricing",
+    sectionLabel: "pricing",
+    hasDraftOnServer,
+    hasLocalEdits,
+    publishedAt: mergedPublishedAt,
+    publishedByLabel,
+    busy,
+    autosaveStatus: combinedAutosaveStatus,
+    inlineError,
+    previewHref: "/preview#services-pricing",
+    onPublish: handlePublish,
+    onDiscardConfirm: handleDiscardConfirm,
+    flush: flushAllAutosaves,
+  });
+
   // Stable ref callback so React only runs `dispose()` (which clears the
   // pending autosave timer) when this editor truly unmounts. An inline arrow
   // would be a new function each render, causing React to detach + reattach
@@ -436,8 +514,9 @@ function PricingForm() {
     (el: HTMLDivElement | null) => {
       autosaveOnUnmount(el);
       ffOnUnmount(el);
+      editorRef(el);
     },
-    [autosaveOnUnmount, ffOnUnmount],
+    [autosaveOnUnmount, ffOnUnmount, editorRef],
   );
 
   if (pricing === undefined || featureFlagsLoading) {
@@ -451,9 +530,6 @@ function PricingForm() {
       </p>
     );
   }
-
-  const publishedByLabel =
-    pricing.publishedBy && user?.id === pricing.publishedBy ? "You" : undefined;
 
   return (
     <div className="space-y-10 pb-24" ref={handleEditorRef}>
@@ -755,52 +831,7 @@ function PricingForm() {
         )}
       </section>
 
-      <CmsPublishToolbar
-        section="pricing"
-        sectionLabel="pricing"
-        hasDraftOnServer={hasDraftOnServer}
-        hasLocalEdits={hasLocalEdits}
-        publishedAt={mergedPublishedAt}
-        publishedByLabel={publishedByLabel}
-        busy={busy}
-        inlineError={inlineError}
-        autosaveStatus={combinedAutosaveStatus}
-        previewHref="/preview#services-pricing"
-        onPublish={() => {
-          void (async () => {
-            cancelAutosaveRef.current();
-            cancelFFAutosave();
-            if (hasPricingLocalEdits) {
-              const flushed = await flushAutosave();
-              if (!flushed) return;
-            }
-            if (hasFFLocalEdits) {
-              const flushed = await flushFFAutosave();
-              if (!flushed) return;
-            }
-            setInlineError(null);
-            setBusy("Publishing…");
-            const priceOutcome = await runAdminEffect(
-              convexMutationEffect(() => publish({})),
-              { onErrorMessage: setInlineError },
-            );
-            if (priceOutcome === undefined) {
-              setBusy(null);
-              return;
-            }
-            setLocalDraft(null);
-            const ffOutcome = await runAdminEffect(runPublishFF(), {
-              onErrorMessage: setInlineError,
-            });
-            setBusy(null);
-            if (ffOutcome !== undefined) {
-              clearFFLocal();
-              toast.success("Changes published.");
-            }
-          })();
-        }}
-        onDiscardConfirm={handleDiscardConfirm}
-      />
+      {toolbarPortal}
     </div>
   );
 }

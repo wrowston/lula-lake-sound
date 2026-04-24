@@ -49,7 +49,7 @@ import { Switch } from "@/components/ui/switch";
 import { cn } from "@/lib/utils";
 import { convexMutationEffect } from "@/lib/effect-errors";
 import { runAdminEffect } from "@/lib/admin-run-effect";
-import { CmsPublishToolbar } from "@/components/admin/cms-publish-toolbar";
+import { useRegisterCmsEditor } from "@/components/admin/cms-workspace";
 import { useAutosaveDraft } from "@/lib/use-autosave-draft";
 import {
   mergeAutosaveStatus,
@@ -675,6 +675,104 @@ function AboutForm() {
     ffAutosaveStatus,
   );
 
+  const publishedByLabel =
+    section?.publishedBy && user?.id === section.publishedBy ? "You" : undefined;
+
+  const handlePublish = useCallback(() => {
+    if (!base) return;
+    const liveBody = bodyDirty
+      ? (bodyRef.current?.getHTML() ?? "")
+      : (base.bodyHtml ?? "");
+    const publishSnapshot: AboutContent = {
+      ...base,
+      bodyHtml: liveBody,
+      body: [],
+    };
+    const publishIssues = collectAboutIssues(publishSnapshot);
+    if (publishIssues.length > 0) {
+      setInlineError("Fix the blocking issues above before publishing.");
+      return;
+    }
+    void (async () => {
+      cancelAutosaveRef.current();
+      cancelFFAutosave();
+      if (hasAboutLocalEdits) {
+        const flushed = await flushAutosave();
+        if (!flushed) return;
+      }
+      if (hasFFLocalEdits) {
+        const flushed = await flushFFAutosave();
+        if (!flushed) return;
+      }
+      setInlineError(null);
+      setBusy("Publishing…");
+      const aboutOutcome = await runAdminEffect(
+        convexMutationEffect(() => publish({ section: "about" })),
+        { onErrorMessage: setInlineError },
+      );
+      if (aboutOutcome === undefined) {
+        setBusy(null);
+        return;
+      }
+      setLocalDraft(null);
+      clearLocalBodyUiState();
+      const ffOutcome = await runAdminEffect(runPublishFF(), {
+        onErrorMessage: setInlineError,
+      });
+      setBusy(null);
+      if (ffOutcome !== undefined) {
+        clearFFLocal();
+        toast.success("Changes published.");
+      }
+    })();
+  }, [
+    base,
+    bodyDirty,
+    cancelFFAutosave,
+    clearFFLocal,
+    clearLocalBodyUiState,
+    flushAutosave,
+    flushFFAutosave,
+    hasAboutLocalEdits,
+    hasFFLocalEdits,
+    publish,
+    runPublishFF,
+  ]);
+
+  /**
+   * Composite flush awaited by the sidebar nav guard. Silently persists any
+   * in-memory About edits and marketing-flag edits before navigation so the
+   * user never loses a one-shot change (e.g. a freshly-toggled switch within
+   * the 1s autosave debounce window).
+   */
+  const flushAllAutosaves = useCallback(async (): Promise<boolean> => {
+    if (hasAboutLocalEdits) {
+      const ok = await flushAutosave();
+      if (!ok) return false;
+    }
+    if (hasFFLocalEdits) {
+      const ok = await flushFFAutosave();
+      if (!ok) return false;
+    }
+    return true;
+  }, [flushAutosave, flushFFAutosave, hasAboutLocalEdits, hasFFLocalEdits]);
+
+  const { toolbarPortal, editorRef } = useRegisterCmsEditor({
+    section: "about",
+    sectionLabel: "the About page",
+    hasDraftOnServer,
+    hasLocalEdits,
+    publishedAt: mergedPublishedAt,
+    publishedByLabel,
+    busy,
+    autosaveStatus: combinedAutosaveStatus,
+    inlineError,
+    previewHref: "/preview/about",
+    onPublish: handlePublish,
+    onDiscardConfirm: handleDiscardConfirm,
+    flush: flushAllAutosaves,
+  });
+
   // The wrapping `<div>` needs a *stable* ref callback. An inline arrow is a
   // new function on every render, which makes React detach (call old ref with
   // `null`) and reattach (call new ref with the element) every time. The
@@ -687,8 +785,9 @@ function AboutForm() {
     (el: HTMLDivElement | null) => {
       autosaveOnUnmount(el);
       ffOnUnmount(el);
+      editorRef(el);
     },
-    [autosaveOnUnmount, ffOnUnmount],
+    [autosaveOnUnmount, ffOnUnmount, editorRef],
   );
 
   if (section === undefined || featureFlagsLoading) {
@@ -704,9 +803,6 @@ function AboutForm() {
       </p>
     );
   }
-
-  const publishedByLabel =
-    section.publishedBy && user?.id === section.publishedBy ? "You" : undefined;
 
   const seoTitleValue = base.seoTitle ?? "";
   const seoDescriptionValue = base.seoDescription ?? "";
@@ -906,67 +1002,7 @@ function AboutForm() {
             bodyDirty={bodyDirty}
           />
       </div>
-
-      <CmsPublishToolbar
-        section="about"
-        sectionLabel="the About page"
-        hasDraftOnServer={hasDraftOnServer}
-        hasLocalEdits={hasLocalEdits}
-        publishedAt={mergedPublishedAt}
-        publishedByLabel={publishedByLabel}
-        busy={busy}
-        inlineError={inlineError}
-        autosaveStatus={combinedAutosaveStatus}
-        previewHref="/preview/about"
-        onPublish={() => {
-          const liveBody = bodyDirty
-            ? (bodyRef.current?.getHTML() ?? "")
-            : (base.bodyHtml ?? "");
-          const publishSnapshot: AboutContent = {
-            ...base,
-            bodyHtml: liveBody,
-            body: [],
-          };
-          const publishIssues = collectAboutIssues(publishSnapshot);
-          if (publishIssues.length > 0) {
-            setInlineError("Fix the blocking issues above before publishing.");
-            return;
-          }
-          void (async () => {
-            cancelAutosaveRef.current();
-            cancelFFAutosave();
-            if (hasAboutLocalEdits) {
-              const flushed = await flushAutosave();
-              if (!flushed) return;
-            }
-            if (hasFFLocalEdits) {
-              const flushed = await flushFFAutosave();
-              if (!flushed) return;
-            }
-            setInlineError(null);
-            setBusy("Publishing…");
-            const aboutOutcome = await runAdminEffect(
-              convexMutationEffect(() => publish({ section: "about" })),
-              { onErrorMessage: setInlineError },
-            );
-            if (aboutOutcome === undefined) {
-              setBusy(null);
-              return;
-            }
-            setLocalDraft(null);
-            clearLocalBodyUiState();
-            const ffOutcome = await runAdminEffect(runPublishFF(), {
-              onErrorMessage: setInlineError,
-            });
-            setBusy(null);
-            if (ffOutcome !== undefined) {
-              clearFFLocal();
-              toast.success("Changes published.");
-            }
-          })();
-        }}
-        onDiscardConfirm={handleDiscardConfirm}
-      />
+      {toolbarPortal}
     </div>
   );
 }
