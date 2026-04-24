@@ -50,7 +50,7 @@ import {
 import { cn } from "@/lib/utils";
 import { convexMutationEffect, type CmsAppError } from "@/lib/effect-errors";
 import { runAdminEffect } from "@/lib/admin-run-effect";
-import { CmsPublishToolbar } from "@/components/admin/cms-publish-toolbar";
+import { useRegisterCmsEditor } from "@/components/admin/cms-workspace";
 
 /** Client-side limits (Convex schema is structural only). */
 const MAX_NAME_LEN = 500;
@@ -513,6 +513,32 @@ function GearEditorForm() {
 
   const publishProgram = convexMutationEffect(() => publishGear({}));
 
+  const handleToolbarPublish = useCallback(() => {
+    void (async () => {
+      const ok = await runAction("Publishing…", publishProgram);
+      if (ok !== undefined) {
+        toast.success("Gear published.");
+      }
+    })();
+  }, [publishProgram, runAction]);
+
+  const { toolbarPortal, editorRef } = useRegisterCmsEditor({
+    section: "gear",
+    sectionLabel: "gear",
+    hasDraftOnServer,
+    hasLocalEdits,
+    publishedAt: data?.publishedAt ?? null,
+    publishedByLabel,
+    busy,
+    inlineError,
+    previewHref: "/preview#equipment-specs",
+    onPublish: handleToolbarPublish,
+    onDiscardConfirm: handleDiscardConfirm,
+    // No `flush` — gear edits are persisted server-side per-row so
+    // `hasLocalEdits` is always false; the nav guard never needs to
+    // intervene.
+  });
+
   if (data === undefined) {
     return (
       <p className="body-text text-foreground/80">Loading gear…</p>
@@ -520,7 +546,7 @@ function GearEditorForm() {
   }
 
   return (
-    <div className="space-y-8 pb-24">
+    <div className="space-y-8 pb-24" ref={editorRef}>
       <div className="space-y-6">
         <div className="space-y-2">
           <h2 className="font-heading text-xl font-semibold text-foreground">
@@ -727,26 +753,7 @@ function GearEditorForm() {
         </div>
       )}
 
-      <CmsPublishToolbar
-        section="gear"
-        sectionLabel="gear"
-        hasDraftOnServer={hasDraftOnServer}
-        hasLocalEdits={hasLocalEdits}
-        publishedAt={data.publishedAt ?? null}
-        publishedByLabel={publishedByLabel}
-        busy={busy}
-        inlineError={inlineError}
-        previewHref="/preview#equipment-specs"
-        onPublish={() => {
-          void (async () => {
-            const ok = await runAction("Publishing…", publishProgram);
-            if (ok !== undefined) {
-              toast.success("Gear published.");
-            }
-          })();
-        }}
-        onDiscardConfirm={handleDiscardConfirm}
-      />
+      {toolbarPortal}
 
       <Sheet
         open={categorySheet !== null}

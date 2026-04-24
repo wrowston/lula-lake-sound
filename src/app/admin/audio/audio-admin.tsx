@@ -8,7 +8,7 @@ import {
 import { useUser } from "@clerk/nextjs";
 import { useCallback, useState } from "react";
 import { toast } from "sonner";
-import { CmsPublishToolbar } from "@/components/admin/cms-publish-toolbar";
+import { useRegisterCmsEditor } from "@/components/admin/cms-workspace";
 import { Switch } from "@/components/ui/switch";
 import { runAdminEffect } from "@/lib/admin-run-effect";
 import { useMarketingFeatureFlagsAdmin } from "@/lib/use-marketing-feature-flags-admin";
@@ -72,6 +72,64 @@ function AudioAdminForm() {
     return true;
   }, [hasFFDraftOnServer, runDiscardFF, clearFFLocal, cancelFFAutosave]);
 
+  const handlePublish = useCallback(() => {
+    void (async () => {
+      cancelFFAutosave();
+      if (hasFFLocalEdits) {
+        const flushed = await flushFFAutosave();
+        if (!flushed) return;
+      }
+      setInlineError(null);
+      setBusy("Publishing…");
+      const outcome = await runAdminEffect(runPublishFF(), {
+        onErrorMessage: setInlineError,
+      });
+      setBusy(null);
+      if (outcome !== undefined) {
+        clearFFLocal();
+        toast.success("Changes published.");
+      }
+    })();
+  }, [cancelFFAutosave, clearFFLocal, flushFFAutosave, hasFFLocalEdits, runPublishFF]);
+
+  const flushAllAutosaves = useCallback(async (): Promise<boolean> => {
+    if (hasFFLocalEdits) {
+      const ok = await flushFFAutosave();
+      if (!ok) return false;
+    }
+    return true;
+  }, [flushFFAutosave, hasFFLocalEdits]);
+
+  const publishedByLabel =
+    featureFlagsCms?.publishedBy && user?.id === featureFlagsCms.publishedBy
+      ? "You"
+      : undefined;
+
+  const { toolbarPortal, editorRef } = useRegisterCmsEditor({
+    section: "marketingFeatureFlags",
+    sectionLabel: "Recordings visibility",
+    hasDraftOnServer: hasFFDraftOnServer,
+    hasLocalEdits: hasFFLocalEdits,
+    publishedAt: featureFlagsCms?.publishedAt ?? null,
+    publishedByLabel,
+    busy,
+    autosaveStatus: ffAutosaveStatus,
+    inlineError,
+    previewHref: "/preview",
+    onPublish: handlePublish,
+    onDiscardConfirm: handleDiscardConfirm,
+    flush: flushAllAutosaves,
+  });
+
+  // Stable ref callback — see the matching comment in `about-editor.tsx`.
+  const handleEditorRef = useCallback(
+    (el: HTMLDivElement | null) => {
+      ffOnUnmount(el);
+      editorRef(el);
+    },
+    [ffOnUnmount, editorRef],
+  );
+
   if (isLoading) {
     return (
       <p className="body-text text-muted-foreground">Loading site visibility…</p>
@@ -86,13 +144,8 @@ function AudioAdminForm() {
     );
   }
 
-  const publishedByLabel =
-    featureFlagsCms?.publishedBy && user?.id === featureFlagsCms.publishedBy
-      ? "You"
-      : undefined;
-
   return (
-    <div className="space-y-8 pb-24" ref={ffOnUnmount}>
+    <div className="space-y-8 pb-24" ref={handleEditorRef}>
       <div className="rounded-lg border border-border bg-muted/50 p-6 text-center">
         <p className="body-text text-muted-foreground">
           Audio sample management coming soon.
@@ -120,39 +173,7 @@ function AudioAdminForm() {
           </div>
         </div>
       </fieldset>
-
-      <CmsPublishToolbar
-        section="marketingFeatureFlags"
-        sectionLabel="Recordings visibility"
-        hasDraftOnServer={hasFFDraftOnServer}
-        hasLocalEdits={hasFFLocalEdits}
-        publishedAt={featureFlagsCms?.publishedAt ?? null}
-        publishedByLabel={publishedByLabel}
-        busy={busy}
-        onPublish={() => {
-          void (async () => {
-            cancelFFAutosave();
-            if (hasFFLocalEdits) {
-              const flushed = await flushFFAutosave();
-              if (!flushed) return;
-            }
-            setInlineError(null);
-            setBusy("Publishing…");
-            const outcome = await runAdminEffect(runPublishFF(), {
-              onErrorMessage: setInlineError,
-            });
-            setBusy(null);
-            if (outcome !== undefined) {
-              clearFFLocal();
-              toast.success("Changes published.");
-            }
-          })();
-        }}
-        onDiscardConfirm={handleDiscardConfirm}
-        previewHref="/preview"
-        inlineError={inlineError}
-        autosaveStatus={ffAutosaveStatus}
-      />
+      {toolbarPortal}
     </div>
   );
 }

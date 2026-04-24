@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import Image from "next/image";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { useConvex } from "convex/react";
 import { LayoutDashboard, ArrowLeft } from "lucide-react";
 import { ADMIN_MANAGE_NAV_ITEMS } from "@/lib/admin-nav";
@@ -22,6 +22,8 @@ import {
   prewarmAdminNavigation,
   useRoutePrewarmIntent,
 } from "@/lib/route-prewarm";
+import { useCmsNavGuard } from "@/components/admin/cms-workspace";
+import type { MouseEvent as ReactMouseEvent } from "react";
 
 const navItems = [
   { title: "Dashboard", href: "/admin", icon: LayoutDashboard },
@@ -36,6 +38,8 @@ function AdminNavLinkItem({
   pathname: string;
 }) {
   const convex = useConvex();
+  const router = useRouter();
+  const { attemptNavigate } = useCmsNavGuard();
   const { handlers: prewarmHandlers, intentRootRef } = useRoutePrewarmIntent(
     () => prewarmAdminNavigation(convex, item.href),
   );
@@ -45,19 +49,76 @@ function AdminNavLinkItem({
     return pathname.startsWith(href);
   }
 
+  async function handleClick(event: ReactMouseEvent<HTMLAnchorElement>) {
+    if (isActive(item.href)) return;
+    // Skip the guard on modifier clicks so the user can still open the
+    // destination in a new tab / window / background tab.
+    if (
+      event.defaultPrevented ||
+      event.button !== 0 ||
+      event.metaKey ||
+      event.ctrlKey ||
+      event.shiftKey ||
+      event.altKey
+    ) {
+      return;
+    }
+    event.preventDefault();
+    const ok = await attemptNavigate();
+    if (ok) router.push(item.href);
+  }
+
   return (
     <SidebarMenuItem>
       <SidebarMenuButton
         isActive={isActive(item.href)}
         tooltip={item.title}
         render={
-          <Link href={item.href} ref={intentRootRef} {...prewarmHandlers} />
+          <Link
+            href={item.href}
+            ref={intentRootRef}
+            onClick={handleClick}
+            {...prewarmHandlers}
+          />
         }
       >
         <item.icon className="size-4" />
         <span>{item.title}</span>
       </SidebarMenuButton>
     </SidebarMenuItem>
+  );
+}
+
+function BackToSiteLink() {
+  const router = useRouter();
+  const { attemptNavigate } = useCmsNavGuard();
+
+  async function handleClick(event: ReactMouseEvent<HTMLAnchorElement>) {
+    if (
+      event.defaultPrevented ||
+      event.button !== 0 ||
+      event.metaKey ||
+      event.ctrlKey ||
+      event.shiftKey ||
+      event.altKey
+    ) {
+      return;
+    }
+    event.preventDefault();
+    const ok = await attemptNavigate();
+    if (ok) router.push("/");
+  }
+
+  return (
+    <SidebarMenuButton
+      tooltip="Back to site"
+      render={<Link href="/" onClick={handleClick} />}
+    >
+      <ArrowLeft className="size-4" />
+      <span className="body-text-small text-sidebar-foreground">
+        Back to site
+      </span>
+    </SidebarMenuButton>
   );
 }
 
@@ -117,15 +178,7 @@ export function AdminSidebar() {
       <SidebarFooter>
         <SidebarMenu>
           <SidebarMenuItem>
-            <SidebarMenuButton
-              tooltip="Back to site"
-              render={<Link href="/" />}
-            >
-              <ArrowLeft className="size-4" />
-              <span className="body-text-small text-sidebar-foreground">
-                Back to site
-              </span>
-            </SidebarMenuButton>
+            <BackToSiteLink />
           </SidebarMenuItem>
         </SidebarMenu>
       </SidebarFooter>
