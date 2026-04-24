@@ -95,11 +95,15 @@ export function publishedIsEnabled(
 
 /**
  * `true` when the section has a content draft that differs from the published
- * scope. **Empty draft scope always counts as "no content draft"** — the
- * admin editors always populate the full working copy on save, so an empty
- * draft scope means "the user has not edited content". This is what lets
- * flag-only toggles (`saveSectionIsEnabledDraft`) publish without wiping
- * published content.
+ * scope.
+ *
+ * For **about** and **settings**, an empty draft scope means "no in-progress
+ * content edit" (editors save a full working copy), which keeps flag-only
+ * visibility drafts from looking like content changes.
+ *
+ * **Pricing** is different: an empty draft with a non-empty published catalogue
+ * means the owner removed every package in draft and must be able to publish
+ * that deletion.
  */
 export async function sectionHasContentDraftDiff(
   ctx: QueryCtx | MutationCtx,
@@ -116,8 +120,10 @@ export async function sectionHasContentDraftDiff(
 
   if (section === "pricing") {
     const draft = await loadPricingPackages(ctx, "draft");
-    if (draft.length === 0) return false;
     const published = await loadPricingPackages(ctx, "published");
+    if (draft.length === 0) {
+      return published.length > 0;
+    }
     return !pricingDraftMatchesPublished(draft, published);
   }
 

@@ -26,7 +26,8 @@ import {
   type MarketingFeatureFlagsSnapshot,
   type PricingPackage,
 } from "../cmsShared";
-import { DEFAULT_IS_ENABLED } from "../cmsMeta";
+import { DEFAULT_IS_ENABLED, recomputeSectionHasDraftChanges } from "../cmsMeta";
+import { copyPricingScope, loadPricingPackages } from "../pricingTree";
 
 type Scope = "draft" | "published";
 
@@ -145,6 +146,33 @@ export const extractSectionContent = internalMutation({
         "draft",
         existing.draftSnapshot,
       );
+
+      // Align draft with published when legacy never meant "empty catalogue in
+      // draft" — otherwise `sectionHasContentDraftDiff` treats empty draft vs
+      // published rows as a pending delete and spuriously dirties the row.
+      // Skip when snapshots are already stripped (migration re-run) so an
+      // intentional unpublished "delete all packages" draft is preserved.
+      if (section === "pricing") {
+        const snapshotsAlreadyStripped =
+          existing.publishedSnapshot === undefined &&
+          existing.draftSnapshot === undefined;
+        if (!snapshotsAlreadyStripped) {
+          const draftPkgs = await loadPricingPackages(ctx, "draft");
+          const publishedPkgs = await loadPricingPackages(ctx, "published");
+          if (draftPkgs.length === 0 && publishedPkgs.length > 0) {
+            const ds = existing.draftSnapshot;
+            const explicitEmptyPackages =
+              ds !== undefined &&
+              typeof ds === "object" &&
+              Array.isArray((ds as PricingSnapshotShape).packages) &&
+              (ds as PricingSnapshotShape).packages.length === 0;
+            if (!explicitEmptyPackages) {
+              await copyPricingScope(ctx, "published", "draft");
+            }
+            await recomputeSectionHasDraftChanges(ctx, "pricing", undefined);
+          }
+        }
+      }
 
       await extractSettingsScopeIfAvailable(
         ctx,
