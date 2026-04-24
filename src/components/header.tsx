@@ -112,7 +112,7 @@ export function Header({
         className="fixed top-0 left-0 right-0 z-50 transition-colors duration-700 ease-[cubic-bezier(0.16,1,0.3,1)]"
         style={{ backgroundColor: baseBg }}
       >
-        <div className="mx-auto flex w-full max-w-7xl items-center justify-between px-6 py-5 md:px-12 md:py-6">
+        <div className="mx-auto flex w-full max-w-6xl items-center justify-between px-6 py-5 md:px-10 md:py-6">
           <button
             onClick={handleLogoClick}
             aria-label="Lula Lake Sound — back to top"
@@ -188,7 +188,7 @@ export function Header({
 
         {/* Editorial rule — fades in as the header becomes opaque. */}
         <div
-          className="mx-auto h-px max-w-7xl px-6 transition-opacity duration-700 md:px-12"
+          className="mx-auto h-px max-w-6xl px-6 transition-opacity duration-700 md:px-10"
           style={{ opacity: progress }}
         >
           <div className="h-px w-full bg-sand/15" />
