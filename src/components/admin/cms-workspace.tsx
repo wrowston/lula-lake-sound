@@ -65,6 +65,8 @@ interface CmsWorkspaceContextValue {
   readonly hostNode: HTMLDivElement | null;
   readonly registerHostNode: (el: HTMLDivElement | null) => void;
   readonly navStateRef: MutableRefObject<CmsNavState>;
+  /** Which editor last wrote `navStateRef` (avoids stale unmount clearing a successor's state). */
+  readonly activeEditorMountRef: MutableRefObject<unknown>;
   readonly attemptNavigate: () => Promise<boolean>;
   readonly openConfirm: () => Promise<ConfirmResult>;
 }
@@ -83,6 +85,7 @@ const CmsWorkspaceContext = createContext<CmsWorkspaceContextValue | null>(
 export function CmsWorkspaceProvider({ children }: { children: ReactNode }) {
   const [hostNode, setHostNode] = useState<HTMLDivElement | null>(null);
   const navStateRef = useRef<CmsNavState>({ hasLocalEdits: false });
+  const activeEditorMountRef = useRef<unknown>(null);
 
   const [confirmOpen, setConfirmOpen] = useState(false);
   const confirmResolverRef = useRef<((r: ConfirmResult) => void) | null>(null);
@@ -126,6 +129,7 @@ export function CmsWorkspaceProvider({ children }: { children: ReactNode }) {
       hostNode,
       registerHostNode,
       navStateRef,
+      activeEditorMountRef,
       attemptNavigate,
       openConfirm,
     }),
@@ -209,20 +213,27 @@ export interface RegisteredCmsEditor {
 export function useRegisterCmsEditor(
   state: CmsEditorState,
 ): RegisteredCmsEditor {
-  const { hostNode, navStateRef } = useCmsWorkspace();
+  const { hostNode, navStateRef, activeEditorMountRef } = useCmsWorkspace();
+  const mountIdRef = useRef<object | null>(null);
+  if (mountIdRef.current === null) {
+    mountIdRef.current = {};
+  }
 
   navStateRef.current = {
     hasLocalEdits: state.hasLocalEdits,
     flush: state.flush,
   };
+  activeEditorMountRef.current = mountIdRef.current;
 
   const editorRef = useCallback(
     (el: HTMLElement | null) => {
       if (!el) {
-        navStateRef.current = { hasLocalEdits: false };
+        if (activeEditorMountRef.current === mountIdRef.current) {
+          navStateRef.current = { hasLocalEdits: false };
+        }
       }
     },
-    [navStateRef],
+    [navStateRef, activeEditorMountRef],
   );
 
   const toolbarPortal: ReactNode = hostNode

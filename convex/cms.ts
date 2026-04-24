@@ -192,8 +192,8 @@ export const saveDraft = mutation({
  *
  * Unauthenticated callers get an empty list (rather than an error) so the
  * admin layout can mount this query before the Clerk session hydrates
- * without crashing the sidebar / toolbar chrome. Admin routes remain
- * gated upstream by Clerk.
+ * without crashing the sidebar / toolbar chrome. Authenticated callers
+ * must pass the same owner check as other CMS queries.
  */
 export const listPendingDrafts = query({
   args: {},
@@ -206,6 +206,8 @@ export const listPendingDrafts = query({
         >,
       };
     }
+
+    await requireCmsOwner(ctx);
 
     const [cmsRows, gearMeta, galleryMeta] = await Promise.all([
       ctx.db.query("cmsSections").collect(),
