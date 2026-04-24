@@ -104,7 +104,7 @@ const SEO_DESCRIPTION_RECOMMENDED = 160;
 const fieldClass =
   "block w-full rounded-md border border-input bg-background px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground focus:border-ring focus:outline-none focus:ring-1 focus:ring-ring/50";
 
-function trimToUndefined(value: string): string | undefined {
+export function trimToUndefined(value: string): string | undefined {
   const trimmed = value.trim();
   return trimmed.length === 0 ? undefined : value;
 }
@@ -113,7 +113,7 @@ function trimToUndefined(value: string): string | undefined {
  * Convert legacy paragraph/heading block arrays to Tiptap-compatible HTML
  * so existing rows upgrade cleanly the first time the owner edits them.
  */
-function blocksToHtml(blocks: AboutBlock[]): string {
+export function blocksToHtml(blocks: AboutBlock[]): string {
   if (blocks.length === 0) return "";
   return blocks
     .map((b) => {
@@ -123,7 +123,7 @@ function blocksToHtml(blocks: AboutBlock[]): string {
     .join("");
 }
 
-function escapeHtml(value: string): string {
+export function escapeHtml(value: string): string {
   return value
     .replace(/&/g, "&amp;")
     .replace(/</g, "&lt;")
@@ -132,7 +132,7 @@ function escapeHtml(value: string): string {
     .replace(/'/g, "&#39;");
 }
 
-function htmlToPlainText(html: string): string {
+export function htmlToPlainText(html: string): string {
   return html
     .replace(/<[^>]*>/g, " ")
     .replace(/&nbsp;/g, " ")
@@ -172,7 +172,7 @@ async function uploadHeadshotToConvex(
 }
 
 /** Normalize whatever came off the wire to the editor shape. */
-function toAboutContent(raw: unknown): AboutContent {
+export function toAboutContent(raw: unknown): AboutContent {
   const r = (raw ?? {}) as Partial<AboutContent> & Record<string, unknown>;
   const body: AboutBlock[] = Array.isArray(r.body)
     ? r.body
@@ -241,7 +241,7 @@ function toAboutContent(raw: unknown): AboutContent {
  * Publish-validation mirror (kept in sync with `collectAboutIssues` in
  * `convex/cmsPublishHelpers.ts`) so blocking issues surface live.
  */
-function collectAboutIssues(
+export function collectAboutIssues(
   draft: AboutContent,
 ): { path: string; message: string }[] {
   const issues: { path: string; message: string }[] = [];

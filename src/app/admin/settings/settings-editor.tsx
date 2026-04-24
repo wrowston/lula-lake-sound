@@ -51,7 +51,7 @@ export function SettingsEditor() {
  * legacy `flags`) for the editor. Metadata is editable; legacy `flags` are
  * preserved on save/publish so public reads do not fall back to defaults.
  */
-function toSettingsContent(raw: {
+export function toSettingsContent(raw: {
   metadata?: { title?: string; description?: string };
   flags?: { priceTabEnabled?: boolean };
 }): SettingsContent {
