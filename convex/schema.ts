@@ -5,10 +5,8 @@ import {
   aboutHighlightRowValidator,
   aboutTeamMemberRowValidator,
   cmsSectionValidator,
-  cmsSnapshotValidator,
   gearScopeValidator,
   gearSpecsValidator,
-  marketingFeatureFlagsSnapshotValidator,
   pricingPackageRowValidator,
   settingsContentRowValidator,
 } from "./schema.shared";
@@ -26,11 +24,6 @@ import {
  *   scope onto the published scope in a single mutation.
  * - The `recordings` section is flag-only (no content table); the public page
  *   reads copy from `src/app/recordings/recordings-data.ts`.
- *
- * `publishedSnapshot` / `draftSnapshot` columns remain **optional** on
- * `cmsSections` during the transition so pre-migration rows keep validating.
- * They are stripped by `migrations/extractSectionContent.ts`; a follow-up
- * deploy will remove the columns entirely.
  */
 export default defineSchema({
   inquiries: defineTable({
@@ -55,10 +48,6 @@ export default defineSchema({
     updatedAt: v.number(),
     /** Clerk user id (`subject`) when the last write was authenticated. */
     updatedBy: v.optional(v.string()),
-    /** @deprecated Pre-refactor JSON blob; stripped by the content migration. */
-    publishedSnapshot: v.optional(cmsSnapshotValidator),
-    /** @deprecated Pre-refactor JSON blob; stripped by the content migration. */
-    draftSnapshot: v.optional(cmsSnapshotValidator),
   }).index("by_section", ["section"]),
 
   aboutContent: defineTable(aboutContentRowValidator).index("by_scope", [
@@ -80,23 +69,6 @@ export default defineSchema({
   settingsContent: defineTable(settingsContentRowValidator).index("by_scope", [
     "scope",
   ]),
-
-  /**
-   * @deprecated Marketing visibility now lives on `cmsSections.isEnabled` rows
-   * per section. Kept in the schema so the existing singleton row still
-   * validates until `migrations/extractSectionContent.ts` deletes it. A
-   * follow-up deploy drops this table.
-   */
-  marketingFeatureFlags: defineTable({
-    singletonKey: v.literal("default"),
-    publishedSnapshot: marketingFeatureFlagsSnapshotValidator,
-    draftSnapshot: v.optional(marketingFeatureFlagsSnapshotValidator),
-    hasDraftChanges: v.boolean(),
-    publishedAt: v.union(v.number(), v.null()),
-    publishedBy: v.optional(v.string()),
-    updatedAt: v.number(),
-    updatedBy: v.optional(v.string()),
-  }).index("by_singleton", ["singletonKey"]),
 
   gearMeta: defineTable({
     singletonKey: v.literal("default"),

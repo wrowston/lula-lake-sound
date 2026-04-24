@@ -96,26 +96,6 @@ baseline.
    deployment (comma-separated `tokenIdentifier` values) to restrict
    publish to the studio owner.
 
-## Migrating pre-refactor data
-
-Legacy deployments stored content in `cmsSections.publishedSnapshot` /
-`draftSnapshot` JSON blobs and visibility in a separate
-`marketingFeatureFlags` singleton. Run the one-shot migration once post
-deploy to unpack those blobs into the new scoped tables and fold the flags
-into `cmsSections.isEnabled`:
-
-```
-bunx convex run migrations/extractSectionContent:extractSectionContent
-```
-
-The migration is idempotent: it skips scopes that already have rows and
-tolerates already-stripped columns. After it runs in production, a
-follow-up deploy can drop:
-
-- `publishedSnapshot` / `draftSnapshot` columns on `cmsSections`
-- the `marketingFeatureFlags` table
-- the legacy snapshot validators in `convex/schema.shared.ts`
-
 ## Adding a new section
 
 1. **Add the section literal** to `cmsSectionValidator` in

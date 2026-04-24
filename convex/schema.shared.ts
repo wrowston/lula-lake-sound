@@ -152,16 +152,6 @@ export const aboutContentValidator = v.object({
 });
 
 /**
- * @deprecated Any section's snapshot payload — union of the legacy validators.
- * Kept only so legacy rows still validate during migration.
- */
-export const cmsSnapshotValidator = v.union(
-  settingsContentValidator,
-  pricingContentValidator,
-  aboutContentValidator,
-);
-
-/**
  * The set of sections tracked in `cmsSections`. `recordings` was added when
  * flags moved off the `marketingFeatureFlags` singleton and onto `cmsSections`
  * rows; it has no content table today (flag-only).
