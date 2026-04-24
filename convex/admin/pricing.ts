@@ -70,7 +70,14 @@ async function toListShape(
   const draft =
     which === "draft" ? await loadPricingPackages(ctx, "draft") : [];
   const published = await loadPricingPackages(ctx, "published");
-  const rows = which === "draft" && draft.length > 0 ? draft : published;
+  const rows =
+    which === "published"
+      ? published
+      : draft.length > 0
+        ? draft
+        : row.hasDraftChanges && published.length > 0
+          ? draft
+          : published;
 
   const priceTabEnabled =
     which === "draft"

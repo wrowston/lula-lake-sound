@@ -143,6 +143,19 @@ export function sectionHasPendingFlagDraft(
   return row.isEnabledDraft !== (row.isEnabled ?? DEFAULT_IS_ENABLED[section]);
 }
 
+/** True when about, recordings, or pricing has a pending `isEnabledDraft`. */
+export function anyMarketingFlagDraftPending(
+  aboutRow: Doc<"cmsSections"> | null,
+  recordingsRow: Doc<"cmsSections"> | null,
+  pricingRow: Doc<"cmsSections"> | null,
+): boolean {
+  return (
+    sectionHasPendingFlagDraft(aboutRow, "about") ||
+    sectionHasPendingFlagDraft(recordingsRow, "recordings") ||
+    sectionHasPendingFlagDraft(pricingRow, "pricing")
+  );
+}
+
 /**
  * `true` when the section has any pending draft — content or flag. Used by
  * `recomputeSectionHasDraftChanges` to keep the `hasDraftChanges` indicator

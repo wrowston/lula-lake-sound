@@ -30,6 +30,7 @@ import {
   publishedIsEnabled,
   recomputeSectionHasDraftChanges,
   sectionHasContentDraftDiff,
+  anyMarketingFlagDraftPending,
   sectionHasPendingFlagDraft,
 } from "./cmsMeta";
 import {
@@ -201,16 +202,11 @@ export const listMarketingFlagsDraft = query({
       pricingSection: effectiveIsEnabled(pricingRow, "pricing"),
     };
 
-    const hasDraftChanges =
-      (aboutRow?.isEnabledDraft !== undefined &&
-        aboutRow.isEnabledDraft !==
-          publishedIsEnabled(aboutRow, "about")) ||
-      (recordingsRow?.isEnabledDraft !== undefined &&
-        recordingsRow.isEnabledDraft !==
-          publishedIsEnabled(recordingsRow, "recordings")) ||
-      (pricingRow?.isEnabledDraft !== undefined &&
-        pricingRow.isEnabledDraft !==
-          publishedIsEnabled(pricingRow, "pricing"));
+    const hasDraftChanges = anyMarketingFlagDraftPending(
+      aboutRow,
+      recordingsRow,
+      pricingRow,
+    );
 
     // Expose per-section meta so the publish toolbar can disambiguate which
     // sections need the `publishSection` mutation to promote a flag draft.
@@ -284,16 +280,11 @@ export const getPreviewMarketingFeatureFlags = query({
       getSectionMetaRow(ctx, "pricing"),
     ]);
 
-    const hasDraftChanges =
-      (aboutRow?.isEnabledDraft !== undefined &&
-        aboutRow.isEnabledDraft !==
-          publishedIsEnabled(aboutRow, "about")) ||
-      (recordingsRow?.isEnabledDraft !== undefined &&
-        recordingsRow.isEnabledDraft !==
-          publishedIsEnabled(recordingsRow, "recordings")) ||
-      (pricingRow?.isEnabledDraft !== undefined &&
-        pricingRow.isEnabledDraft !==
-          publishedIsEnabled(pricingRow, "pricing"));
+    const hasDraftChanges = anyMarketingFlagDraftPending(
+      aboutRow,
+      recordingsRow,
+      pricingRow,
+    );
 
     return {
       aboutPage: effectiveIsEnabled(aboutRow, "about"),

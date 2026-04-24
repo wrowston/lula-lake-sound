@@ -23,6 +23,7 @@
 import { mutation, query } from "./_generated/server";
 import { marketingFeatureFlagsSnapshotValidator } from "./schema.shared";
 import {
+  anyMarketingFlagDraftPending,
   effectiveIsEnabled,
   ensureSectionMetaRow,
   getSectionMetaRow,
@@ -83,15 +84,11 @@ export const listDraft = query({
       recordingsPage: effectiveIsEnabled(recordingsRow, "recordings"),
       pricingSection: effectiveIsEnabled(pricingRow, "pricing"),
     };
-    const hasDraftChanges =
-      (aboutRow?.isEnabledDraft !== undefined &&
-        aboutRow.isEnabledDraft !== publishedIsEnabled(aboutRow, "about")) ||
-      (recordingsRow?.isEnabledDraft !== undefined &&
-        recordingsRow.isEnabledDraft !==
-          publishedIsEnabled(recordingsRow, "recordings")) ||
-      (pricingRow?.isEnabledDraft !== undefined &&
-        pricingRow.isEnabledDraft !==
-          publishedIsEnabled(pricingRow, "pricing"));
+    const hasDraftChanges = anyMarketingFlagDraftPending(
+      aboutRow,
+      recordingsRow,
+      pricingRow,
+    );
 
     const publishedAt = latestTimestamp([
       aboutRow?.publishedAt ?? null,
@@ -142,15 +139,11 @@ export const getPreviewMarketingFeatureFlags = query({
     const [aboutRow, recordingsRow, pricingRow] = await Promise.all(
       SECTIONS.map((section) => getSectionMetaRow(ctx, section)),
     );
-    const hasDraftChanges =
-      (aboutRow?.isEnabledDraft !== undefined &&
-        aboutRow.isEnabledDraft !== publishedIsEnabled(aboutRow, "about")) ||
-      (recordingsRow?.isEnabledDraft !== undefined &&
-        recordingsRow.isEnabledDraft !==
-          publishedIsEnabled(recordingsRow, "recordings")) ||
-      (pricingRow?.isEnabledDraft !== undefined &&
-        pricingRow.isEnabledDraft !==
-          publishedIsEnabled(pricingRow, "pricing"));
+    const hasDraftChanges = anyMarketingFlagDraftPending(
+      aboutRow,
+      recordingsRow,
+      pricingRow,
+    );
 
     return {
       aboutPage: effectiveIsEnabled(aboutRow, "about"),

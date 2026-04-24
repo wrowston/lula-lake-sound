@@ -154,8 +154,15 @@ export function validatePricingPackageArray(
 async function collectPricingIssues(
   ctx: QueryCtx | MutationCtx,
 ): Promise<PublishIssue[]> {
-  const packages = await loadPricingPackages(ctx, "draft");
-  return validatePricingPackageArray(packages);
+  const draft = await loadPricingPackages(ctx, "draft");
+  if (draft.length > 0) {
+    return validatePricingPackageArray(draft);
+  }
+  if (await sectionHasContentDraftDiff(ctx, "pricing")) {
+    return validatePricingPackageArray(draft);
+  }
+  const published = await loadPricingPackages(ctx, "published");
+  return validatePricingPackageArray(published);
 }
 
 /** Very small HTML-to-plaintext helper — good enough for emptiness checks. */

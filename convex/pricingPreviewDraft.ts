@@ -28,7 +28,11 @@ export const getPreviewPricingFlags = query({
       loadPricingPackages(ctx, "published"),
     ]);
 
-    const source = draftRows.length > 0 ? draftRows : publishedRows;
+    const source =
+      draftRows.length > 0 ||
+      ((row?.hasDraftChanges ?? false) && publishedRows.length > 0)
+        ? draftRows
+        : publishedRows;
     return {
       flags: { priceTabEnabled: effectiveIsEnabled(row, "pricing") },
       packages: source.map(pricingPackageFromRow),
