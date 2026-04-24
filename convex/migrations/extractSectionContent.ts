@@ -77,6 +77,23 @@ export const extractSectionContent = internalMutation({
       legacyFlagsRow?.publishedSnapshot,
     );
 
+    // Read pricing visibility from legacy snapshots *before* any row is patched
+    // and snapshots are cleared; otherwise `extractPriceTabEnabled` can no
+    // longer see `priceTabEnabled` from pre-split settings/pricing blobs.
+    const pricingRowForSnapshots = await ctx.db
+      .query("cmsSections")
+      .withIndex("by_section", (q) => q.eq("section", "pricing"))
+      .unique();
+    const settingsRowForSnapshots = await ctx.db
+      .query("cmsSections")
+      .withIndex("by_section", (q) => q.eq("section", "settings"))
+      .unique();
+    const pricingIsEnabledResolved =
+      legacyFlags?.pricingSection ??
+      extractPriceTabEnabled(pricingRowForSnapshots?.publishedSnapshot) ??
+      extractPriceTabEnabled(settingsRowForSnapshots?.publishedSnapshot) ??
+      DEFAULT_IS_ENABLED.pricing;
+
     // Make sure a metadata row exists for every section.
     for (const section of sections) {
       const existing = await ctx.db
@@ -86,9 +103,13 @@ export const extractSectionContent = internalMutation({
       const now = Date.now();
 
       if (!existing) {
+        const isEnabled =
+          section === "pricing"
+            ? pricingIsEnabledResolved
+            : isEnabledFromLegacy(section, legacyFlags);
         await ctx.db.insert("cmsSections", {
           section,
-          isEnabled: isEnabledFromLegacy(section, legacyFlags),
+          isEnabled,
           hasDraftChanges: false,
           publishedAt: now,
           updatedAt: now,
@@ -139,40 +160,16 @@ export const extractSectionContent = internalMutation({
       );
 
       // Apply legacy flag + drop the snapshot columns + normalise metadata.
+      const isEnabled =
+        section === "pricing"
+          ? (existing.isEnabled ?? pricingIsEnabledResolved)
+          : (existing.isEnabled ?? isEnabledFromLegacy(section, legacyFlags));
       const patch: Record<string, unknown> = {
-        isEnabled:
-          existing.isEnabled ?? isEnabledFromLegacy(section, legacyFlags),
+        isEnabled,
         publishedSnapshot: undefined,
         draftSnapshot: undefined,
       };
       await ctx.db.patch(existing._id, patch);
-    }
-
-    // For pricing specifically: preserve `priceTabEnabled` from legacy
-    // published pricing snapshot OR from the legacy settings snapshot
-    // (pre-split deployments). If the legacy marketing flags set a value
-    // for `pricingSection` we prefer that (explicit override).
-    const pricingRow = await ctx.db
-      .query("cmsSections")
-      .withIndex("by_section", (q) => q.eq("section", "pricing"))
-      .unique();
-    if (pricingRow && pricingRow.isEnabled === undefined) {
-      const pricingLegacy = extractPriceTabEnabled(
-        pricingRow.publishedSnapshot,
-      );
-      const settingsRow = await ctx.db
-        .query("cmsSections")
-        .withIndex("by_section", (q) => q.eq("section", "settings"))
-        .unique();
-      const settingsLegacy = extractPriceTabEnabled(
-        settingsRow?.publishedSnapshot,
-      );
-      const effective =
-        legacyFlags?.pricingSection ??
-        pricingLegacy ??
-        settingsLegacy ??
-        DEFAULT_IS_ENABLED.pricing;
-      await ctx.db.patch(pricingRow._id, { isEnabled: effective });
     }
 
     // Seed the published pricing catalogue from defaults when the migration
