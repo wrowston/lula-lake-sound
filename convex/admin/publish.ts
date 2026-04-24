@@ -95,7 +95,7 @@ export const publishSite = mutation({
       const audioIssues = await validateDraftAudioForPublish(ctx, draftAudio);
       for (const issue of audioIssues) {
         issues.push({
-          path: `audio.${issue.path}`,
+          path: issue.path,
           message: issue.message,
         });
       }

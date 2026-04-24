@@ -833,6 +833,7 @@ function AudioEditorForm() {
       if (outcome === undefined) {
         return false;
       }
+      setEdits({});
     }
     if (hasFFDraftOnServer) {
       setBusy("Discarding…");
@@ -845,7 +846,9 @@ function AudioEditorForm() {
       }
     }
 
-    setEdits({});
+    if (!hasAudioDraftOnServer) {
+      setEdits({});
+    }
     clearFFLocal();
     toast.success(
       hasAudioDraftOnServer || hasFFDraftOnServer
@@ -860,6 +863,7 @@ function AudioEditorForm() {
     hasAudioDraftOnServer,
     hasFFDraftOnServer,
     runDiscardFF,
+    setEdits,
   ]);
 
   const handlePublish = useCallback(async () => {
