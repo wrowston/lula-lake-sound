@@ -161,11 +161,12 @@ export const extractSectionContent = internalMutation({
           const publishedPkgs = await loadPricingPackages(ctx, "published");
           if (draftPkgs.length === 0 && publishedPkgs.length > 0) {
             const ds = existing.draftSnapshot;
+            const draftPkg =
+              ds !== undefined && typeof ds === "object"
+                ? (ds as PricingSnapshotShape).packages
+                : undefined;
             const explicitEmptyPackages =
-              ds !== undefined &&
-              typeof ds === "object" &&
-              Array.isArray((ds as PricingSnapshotShape).packages) &&
-              (ds as PricingSnapshotShape).packages.length === 0;
+              Array.isArray(draftPkg) && draftPkg.length === 0;
             if (!explicitEmptyPackages) {
               await copyPricingScope(ctx, "published", "draft");
             }
