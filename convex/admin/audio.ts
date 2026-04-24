@@ -714,7 +714,6 @@ export const discardDraftAudioTracks = mutation({
   args: {},
   handler: async (ctx) => {
     const { updatedBy } = await requireCmsOwner(ctx);
-    await ensureAudioMeta(ctx);
     await replaceAudioScope(ctx, "published", "draft");
 
     const now = Date.now();
