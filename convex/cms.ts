@@ -182,6 +182,57 @@ export const saveDraft = mutation({
 });
 
 /**
+ * Aggregate list of CMS surfaces that have a pending draft right now.
+ *
+ * The admin toolbar and sidebar use this to indicate — from any admin route —
+ * which sections still need to be published / discarded. Covers every place
+ * that tracks draft state: the `cmsSections` metadata table (settings,
+ * pricing, about, recordings) plus the two singleton-metadata tables used by
+ * the gear and photo CMS trees.
+ *
+ * Unauthenticated callers get an empty list (rather than an error) so the
+ * admin layout can mount this query before the Clerk session hydrates
+ * without crashing the sidebar / toolbar chrome. Admin routes remain
+ * gated upstream by Clerk.
+ */
+export const listPendingDrafts = query({
+  args: {},
+  handler: async (ctx) => {
+    const identity = await ctx.auth.getUserIdentity();
+    if (identity === null) {
+      return {
+        sections: [] as Array<
+          "settings" | "pricing" | "about" | "recordings" | "gear" | "photos"
+        >,
+      };
+    }
+
+    const [cmsRows, gearMeta, galleryMeta] = await Promise.all([
+      ctx.db.query("cmsSections").collect(),
+      ctx.db
+        .query("gearMeta")
+        .withIndex("by_singleton", (q) => q.eq("singletonKey", "default"))
+        .unique(),
+      ctx.db
+        .query("galleryPhotoMeta")
+        .withIndex("by_singleton", (q) => q.eq("singletonKey", "default"))
+        .unique(),
+    ]);
+
+    const sections: Array<
+      "settings" | "pricing" | "about" | "recordings" | "gear" | "photos"
+    > = [];
+    for (const row of cmsRows) {
+      if (row.hasDraftChanges) sections.push(row.section);
+    }
+    if (gearMeta?.hasDraftChanges) sections.push("gear");
+    if (galleryMeta?.hasDraftChanges) sections.push("photos");
+
+    return { sections };
+  },
+});
+
+/**
  * Owner-only view of the three marketing-visibility flags (about / recordings
  * / homepage pricing block). Reads per-section `cmsSections` rows and returns
  * the historical shape so the admin hook stays simple.

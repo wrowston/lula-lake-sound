@@ -11,11 +11,15 @@ import {
   type ReactNode,
 } from "react";
 import { createPortal } from "react-dom";
+import { usePathname } from "next/navigation";
 import { toast } from "sonner";
 import type { AutosaveStatus } from "@/components/admin/cms-publish-toolbar";
 import { CmsPublishToolbar } from "@/components/admin/cms-publish-toolbar";
+import { CrossSectionPendingBanner } from "@/components/admin/cross-section-pending-banner";
 import { UnsavedChangesDialog } from "@/components/admin/unsaved-changes-dialog";
 import { BeforeUnloadGuard } from "@/components/admin/before-unload-guard";
+import { usePendingDraftSections } from "@/components/admin/use-pending-drafts";
+import { cn } from "@/lib/utils";
 
 /**
  * Props passed by the active editor into the persistent toolbar host. All
@@ -248,29 +252,60 @@ export function useRegisterCmsEditor(
 /**
  * Persistent toolbar host. Rendered once from the admin layout inside
  * `<SidebarInset>` so its sticky-bottom positioning resolves against the
- * admin scroll container. Editors portal their `<CmsPublishToolbar>`
- * into this element via {@link useRegisterCmsEditor}. When no editor is
- * mounted (e.g. the admin dashboard or `/admin/videos`) the host is
- * still present but empty, so the sticky bar simply doesn't show.
+ * admin scroll container.
  *
- * The host carries the sticky/border/padding that was previously baked
- * into each editor's local toolbar mount (where `-mx-6 px-6`
- * compensated for the page's inner `max-w-3xl` container). Sitting at
- * the `SidebarInset` level instead, we apply horizontal padding directly
- * and render the toolbar itself in its inline variant.
+ * Two surfaces live here:
+ *
+ * 1. A banner listing **other sections** that currently have pending
+ *    drafts. Always rendered from the layout so the indicator reaches
+ *    editor-less admin pages (dashboard, `/admin/videos`) too. The
+ *    current section is filtered out by pathname so its state isn't
+ *    double-shown (it already owns the publish toolbar below).
+ * 2. The active editor's `<CmsPublishToolbar>`, portaled in via
+ *    {@link useRegisterCmsEditor}. When no editor is mounted the
+ *    portal target is empty and `empty:hidden` collapses it.
+ *
+ * The outer sticky container hides itself whenever both children are
+ * empty, so non-CMS admin routes without pending drafts don't get a
+ * leftover border bar.
  */
 export function CmsPersistentToolbarHost() {
   const { registerHostNode, hostNode } = useCmsWorkspace();
+  const pathname = usePathname() ?? "";
+  const pending = usePendingDraftSections();
+
+  const othersPending = useMemo(() => {
+    return pending.filter((section) => {
+      if (section.href === pathname) return false;
+      return !pathname.startsWith(`${section.href}/`);
+    });
+  }, [pending, pathname]);
+
+  const hasBanner = othersPending.length > 0;
+
   return (
     <div
-      ref={registerHostNode}
-      data-cms-toolbar-host
-      className="sticky bottom-0 z-20 border-t border-border/70 bg-background/95 px-6 py-3 backdrop-blur supports-[backdrop-filter]:bg-background/80 empty:hidden"
-      // `empty:hidden` keeps the sticky bar out of the flow when no
-      // editor is mounted, so non-CMS admin pages don't get a leftover
-      // border bar. `hostNode` is read only to participate in the
-      // provider re-render that occurs when the host element attaches.
-      data-has-node={hostNode ? "true" : "false"}
-    />
+      data-cms-toolbar-host-wrapper
+      data-has-banner={hasBanner ? "true" : "false"}
+      className={cn(
+        "sticky bottom-0 z-20 border-t border-border/70 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/80",
+        // When neither the banner nor the portal has content, the
+        // `:has()` check below collapses the whole bar. Tailwind v4's
+        // `has-[]` variant compiles this to a native CSS selector so
+        // there's no runtime observation needed.
+        !hasBanner &&
+          "has-[[data-cms-toolbar-host]:empty]:hidden",
+      )}
+    >
+      {hasBanner ? (
+        <CrossSectionPendingBanner sections={othersPending} />
+      ) : null}
+      <div
+        ref={registerHostNode}
+        data-cms-toolbar-host
+        data-has-node={hostNode ? "true" : "false"}
+        className="px-6 py-3 empty:hidden"
+      />
+    </div>
   );
 }

@@ -23,7 +23,8 @@ import {
   useRoutePrewarmIntent,
 } from "@/lib/route-prewarm";
 import { useCmsNavGuard } from "@/components/admin/cms-workspace";
-import type { MouseEvent as ReactMouseEvent } from "react";
+import { usePendingDraftSections } from "@/components/admin/use-pending-drafts";
+import { useMemo, type MouseEvent as ReactMouseEvent } from "react";
 
 const navItems = [
   { title: "Dashboard", href: "/admin", icon: LayoutDashboard },
@@ -33,9 +34,11 @@ const navItems = [
 function AdminNavLinkItem({
   item,
   pathname,
+  hasPendingChanges,
 }: {
   item: (typeof navItems)[number];
   pathname: string;
+  hasPendingChanges: boolean;
 }) {
   const convex = useConvex();
   const router = useRouter();
@@ -68,11 +71,15 @@ function AdminNavLinkItem({
     if (ok) router.push(item.href);
   }
 
+  const tooltipLabel = hasPendingChanges
+    ? `${item.title} · unpublished changes`
+    : item.title;
+
   return (
     <SidebarMenuItem>
       <SidebarMenuButton
         isActive={isActive(item.href)}
-        tooltip={item.title}
+        tooltip={tooltipLabel}
         render={
           <Link
             href={item.href}
@@ -82,8 +89,19 @@ function AdminNavLinkItem({
           />
         }
       >
-        <item.icon className="size-4" />
+        <span className="relative inline-flex shrink-0 items-center justify-center">
+          <item.icon className="size-4" />
+          {hasPendingChanges ? (
+            <span
+              aria-hidden
+              className="pointer-events-none absolute -top-0.5 -right-0.5 size-1.5 rounded-full bg-amber-500 ring-2 ring-sidebar"
+            />
+          ) : null}
+        </span>
         <span>{item.title}</span>
+        {hasPendingChanges ? (
+          <span className="sr-only"> (unpublished changes)</span>
+        ) : null}
       </SidebarMenuButton>
     </SidebarMenuItem>
   );
@@ -124,6 +142,11 @@ function BackToSiteLink() {
 
 export function AdminSidebar() {
   const pathname = usePathname();
+  const pending = usePendingDraftSections();
+  const pendingHrefs = useMemo(
+    () => new Set(pending.map((section) => section.href)),
+    [pending],
+  );
 
   return (
     <Sidebar
@@ -168,6 +191,7 @@ export function AdminSidebar() {
                   key={item.href}
                   item={item}
                   pathname={pathname}
+                  hasPendingChanges={pendingHrefs.has(item.href)}
                 />
               ))}
             </SidebarMenu>
