@@ -5,6 +5,7 @@ import {
   PRICING_DEFAULTS,
   SETTINGS_DEFAULTS,
   type AboutSnapshot,
+  type PricingBillingCadence,
   type PricingPackage,
   type PricingSnapshot,
   type PublicAboutSnapshot,
@@ -19,6 +20,70 @@ import { getSectionMetaRow, publishedIsEnabled } from "./cmsMeta";
 type SettingsFlags = PricingSnapshot["flags"];
 type SettingsMetadata = NonNullable<SettingsSnapshot["metadata"]>;
 
+const BILLING_CADENCES: readonly PricingBillingCadence[] = [
+  "hourly",
+  "six_hour_block",
+  "daily",
+  "per_song",
+  "per_album",
+  "per_project",
+  "flat",
+  "custom",
+];
+
+function isPricingBillingCadence(v: unknown): v is PricingBillingCadence {
+  return (
+    typeof v === "string" &&
+    (BILLING_CADENCES as readonly string[]).includes(v)
+  );
+}
+
+function isWellFormedPricingPackage(item: unknown): item is PricingPackage {
+  if (!item || typeof item !== "object") return false;
+  const o = item as Record<string, unknown>;
+  if (typeof o.id !== "string" || o.id.trim().length === 0) return false;
+  if (typeof o.name !== "string" || o.name.trim().length === 0) return false;
+  if (
+    typeof o.priceCents !== "number" ||
+    !Number.isFinite(o.priceCents) ||
+    o.priceCents < 0 ||
+    !Number.isInteger(o.priceCents)
+  ) {
+    return false;
+  }
+  if (typeof o.currency !== "string" || o.currency.trim().length === 0) {
+    return false;
+  }
+  if (!isPricingBillingCadence(o.billingCadence)) return false;
+  if (
+    o.billingCadence === "custom" &&
+    (typeof o.unitLabel !== "string" || o.unitLabel.trim().length === 0)
+  ) {
+    return false;
+  }
+  if (typeof o.highlight !== "boolean") return false;
+  if (typeof o.sortOrder !== "number" || !Number.isFinite(o.sortOrder)) {
+    return false;
+  }
+  if (typeof o.isActive !== "boolean") return false;
+  if (
+    o.description !== undefined &&
+    typeof o.description !== "string"
+  ) {
+    return false;
+  }
+  if (o.unitLabel !== undefined && typeof o.unitLabel !== "string") {
+    return false;
+  }
+  if (o.features !== undefined) {
+    if (!Array.isArray(o.features)) return false;
+    for (const f of o.features) {
+      if (typeof f !== "string") return false;
+    }
+  }
+  return true;
+}
+
 /**
  * Keep only packages the public should see (active, well-formed), sorted
  * by `sortOrder` then name. Retained so older callers keep compiling; new
@@ -29,8 +94,8 @@ export function sanitizePricingPackages(raw: unknown): PricingPackage[] {
   if (!Array.isArray(raw)) return [];
   const out: PricingPackage[] = [];
   for (const item of raw) {
-    if (item && typeof item === "object") {
-      out.push(item as PricingPackage);
+    if (isWellFormedPricingPackage(item)) {
+      out.push(item);
     }
   }
   out.sort((a, b) => {

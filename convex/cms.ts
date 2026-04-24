@@ -560,9 +560,16 @@ async function readSnapshotForAdmin(
   }
 
   if (section === "pricing") {
-    const rows = await loadPricingPackages(ctx, scope);
+    const [rows, metaRow] = await Promise.all([
+      loadPricingPackages(ctx, scope),
+      getSectionMetaRow(ctx, "pricing"),
+    ]);
+    const priceTabEnabled =
+      scope === "draft"
+        ? effectiveIsEnabled(metaRow, "pricing")
+        : publishedIsEnabled(metaRow, "pricing");
     return {
-      flags: { priceTabEnabled: true },
+      flags: { priceTabEnabled },
       packages: rows.map(pricingPackageFromRow),
     } satisfies PricingSnapshot;
   }

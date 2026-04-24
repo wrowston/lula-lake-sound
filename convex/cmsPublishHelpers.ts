@@ -274,7 +274,14 @@ export async function collectPublishIssues(
     return collectPricingIssues(ctx);
   }
   if (section === "about") {
-    const tree = await loadAboutTree(ctx, "draft");
+    const draftTree = await loadAboutTree(ctx, "draft");
+    const draftHasContent =
+      draftTree.content !== null ||
+      draftTree.highlights.length > 0 ||
+      draftTree.teamMembers.length > 0;
+    const tree = draftHasContent
+      ? draftTree
+      : await loadAboutTree(ctx, "published");
     return collectAboutIssuesFromTree(ctx, tree);
   }
   return [];
