@@ -30,6 +30,7 @@ import {
   publishedIsEnabled,
   recomputeSectionHasDraftChanges,
   sectionHasContentDraftDiff,
+  sectionHasPendingFlagDraft,
 } from "./cmsMeta";
 import {
   copyAboutScope,
@@ -341,9 +342,10 @@ function mostRecentUpdatedBy(
 }
 
 /**
- * Publish any marketing-flag drafts: iterates About / Recordings / Pricing
- * and calls `publishSectionCore` for each section that has pending changes.
- * Used by the admin hook's `runPublishFF`.
+ * Publish marketing-flag drafts only: iterates About / Recordings / Pricing
+ * and calls `publishSectionCore` when `isEnabledDraft` differs from published.
+ * Sections with content-only drafts are skipped so `runPublishFF` does not
+ * publish unrelated copy.
  */
 export const publishMarketingFlags = mutation({
   args: {},
@@ -354,7 +356,7 @@ export const publishMarketingFlags = mutation({
     > = [];
     for (const section of ["about", "recordings", "pricing"] as const) {
       const row = await getSectionMetaRow(ctx, section);
-      if (!row || !row.hasDraftChanges) continue;
+      if (!row || !sectionHasPendingFlagDraft(row, section)) continue;
       const result = await publishSectionCore(ctx, {
         section,
         id: row._id,

@@ -128,6 +128,15 @@ export async function sectionHasContentDraftDiff(
   return !settingsDraftMatchesPublished(draft, published);
 }
 
+/** Pending visibility draft: `isEnabledDraft` set and differs from published. */
+export function sectionHasPendingFlagDraft(
+  row: Doc<"cmsSections"> | null,
+  section: CmsSection,
+): boolean {
+  if (!row || typeof row.isEnabledDraft !== "boolean") return false;
+  return row.isEnabledDraft !== (row.isEnabled ?? DEFAULT_IS_ENABLED[section]);
+}
+
 /**
  * `true` when the section has any pending draft — content or flag. Used by
  * `recomputeSectionHasDraftChanges` to keep the `hasDraftChanges` indicator
@@ -138,12 +147,7 @@ export async function sectionHasPendingDraft(
   section: CmsSection,
   row: Doc<"cmsSections"> | null,
 ): Promise<boolean> {
-  const flagDirty =
-    row !== null &&
-    typeof row.isEnabledDraft === "boolean" &&
-    row.isEnabledDraft !== (row.isEnabled ?? DEFAULT_IS_ENABLED[section]);
-
-  if (flagDirty) return true;
+  if (sectionHasPendingFlagDraft(row, section)) return true;
 
   return await sectionHasContentDraftDiff(ctx, section);
 }
