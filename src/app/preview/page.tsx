@@ -16,9 +16,7 @@ function PreviewContent() {
   // can confirm the feature-flag toggle before publishing. Preview query is
   // owner-only and returns `null` for non-owners.
   const aboutPreview = useQuery(api.aboutPreviewDraft.getPreviewAbout);
-  const marketingPreview = useQuery(
-    api.marketingFeatureFlags.getPreviewMarketingFeatureFlags,
-  );
+  const marketingPreview = useQuery(api.cms.getPreviewMarketingFeatureFlags);
 
   if (
     pricingFlags === undefined ||

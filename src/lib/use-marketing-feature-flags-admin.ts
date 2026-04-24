@@ -2,6 +2,7 @@
 
 import { useCallback, useRef, useState } from "react";
 import { useMutation, useQuery } from "convex/react";
+import { Effect } from "effect";
 import { api } from "../../convex/_generated/api";
 import { useAutosaveDraft } from "@/lib/use-autosave-draft";
 import { convexMutationEffect } from "@/lib/effect-errors";
@@ -12,6 +13,14 @@ const FLAGS_DEFAULT: MarketingFeatureFlags = {
   aboutPage: false,
   recordingsPage: false,
   pricingSection: true,
+};
+
+type FlagKey = keyof MarketingFeatureFlags;
+
+const FLAG_TO_SECTION: Record<FlagKey, "about" | "recordings" | "pricing"> = {
+  aboutPage: "about",
+  recordingsPage: "recordings",
+  pricingSection: "pricing",
 };
 
 export function mergeAutosaveStatus(
@@ -25,20 +34,15 @@ export function mergeAutosaveStatus(
 }
 
 /**
- * Marketing site visibility flags (`marketingFeatureFlags` singleton) with
- * the same draft/autosave pattern as other CMS admin editors.
+ * Marketing-site visibility flags. Internally reads/writes each flag as a
+ * per-section `cmsSections.isEnabled` row; the hook preserves the
+ * snapshot-shaped public API so the admin editors stay unchanged.
  */
 export function useMarketingFeatureFlagsAdmin(pauseWhen: boolean) {
-  const data = useQuery(api.marketingFeatureFlags.listDraft);
-  const saveDraft = useMutation(
-    api.marketingFeatureFlags.saveMarketingFeatureFlagsDraft,
-  );
-  const publish = useMutation(
-    api.marketingFeatureFlags.publishMarketingFeatureFlags,
-  );
-  const discard = useMutation(
-    api.marketingFeatureFlags.discardMarketingFeatureFlagsDraft,
-  );
+  const data = useQuery(api.cms.listMarketingFlagsDraft);
+  const saveSectionFlag = useMutation(api.cms.saveSectionIsEnabledDraft);
+  const publish = useMutation(api.cms.publishMarketingFlags);
+  const discard = useMutation(api.cms.discardMarketingFlagsDraft);
 
   const [localDraft, setLocalDraft] = useState<MarketingFeatureFlags | null>(
     null,
@@ -51,6 +55,26 @@ export function useMarketingFeatureFlagsAdmin(pauseWhen: boolean) {
   const hasFFLocalEdits = localDraft !== null;
   const hasFFDraftOnServer = data?.hasDraftChanges ?? false;
 
+  const saveEffect = useCallback(() => {
+    if (source === undefined) return Effect.void;
+    const base = data?.flags ?? FLAGS_DEFAULT;
+    const dirtyKeys: FlagKey[] = (
+      ["aboutPage", "recordingsPage", "pricingSection"] as const
+    ).filter((k) => source[k] !== base[k]);
+    if (dirtyKeys.length === 0) return Effect.void;
+    return Effect.all(
+      dirtyKeys.map((key) =>
+        convexMutationEffect(() =>
+          saveSectionFlag({
+            section: FLAG_TO_SECTION[key],
+            isEnabled: source[key],
+          }),
+        ),
+      ),
+      { concurrency: "unbounded" },
+    );
+  }, [source, data?.flags, saveSectionFlag]);
+
   const {
     status: ffAutosaveStatus,
     flush: flushFFAutosave,
@@ -60,12 +84,7 @@ export function useMarketingFeatureFlagsAdmin(pauseWhen: boolean) {
   } = useAutosaveDraft({
     isDirty: hasFFLocalEdits && source !== undefined,
     pauseWhen,
-    saveEffect: () =>
-      convexMutationEffect(() =>
-        saveDraft({
-          snapshot: source ?? FLAGS_DEFAULT,
-        }),
-      ),
+    saveEffect,
     onSaved: () => setLocalDraft(null),
   });
   kickFFAutosaveRef.current = kickFFAutosave;

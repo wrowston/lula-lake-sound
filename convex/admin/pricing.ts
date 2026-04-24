@@ -16,18 +16,27 @@ import { pricingPackageValidator, siteFlagsValidator } from "../schema.shared";
 import {
   DEFAULT_PRICING_PACKAGES,
   PRICING_DEFAULTS,
-  cmsSnapshotsEqual,
   type PricingPackage,
   type PricingSnapshot,
 } from "../cmsShared";
 import {
   collectPublishIssues,
-  ensureSectionRow,
   publishSectionCore,
 } from "../cmsPublishHelpers";
+import {
+  effectiveIsEnabled,
+  ensureSectionMetaRow,
+  getSectionMetaRow,
+  publishedIsEnabled,
+  recomputeSectionHasDraftChanges,
+} from "../cmsMeta";
+import {
+  loadPricingPackages,
+  pricingPackageFromRow,
+  replacePricingDraftFromPackages,
+} from "../pricingTree";
 import { requireCmsOwner } from "../lib/auth";
 import { cmsValidationError } from "../errors";
-import { sanitizePricingPackages } from "../publicSettingsSnapshot";
 
 type PricingListShape = {
   flags: PricingSnapshot["flags"];
@@ -39,35 +48,17 @@ type PricingListShape = {
   updatedBy: string | null;
 };
 
-function readPricingSnapshot(raw: unknown): PricingSnapshot {
-  if (raw && typeof raw === "object" && "flags" in raw) {
-    const snap = raw as Partial<PricingSnapshot>;
-    const flags =
-      snap.flags && typeof snap.flags.priceTabEnabled === "boolean"
-        ? snap.flags
-        : PRICING_DEFAULTS.flags;
-    return {
-      flags,
-      packages: sanitizePricingPackages(
-        (snap as { packages?: unknown }).packages,
-      ),
-    };
-  }
-  return PRICING_DEFAULTS;
-}
-
-function toListShape(
+async function toListShape(
+  ctx: import("../_generated/server").QueryCtx,
   row: Doc<"cmsSections"> | null,
   which: "draft" | "published",
-): PricingListShape {
+): Promise<PricingListShape> {
   if (!row) {
     return {
       flags: PRICING_DEFAULTS.flags,
-      // Drafts get the default catalog as a starting point for the editor;
-      // the public/published view stays empty until the owner publishes,
-      // matching `publishedPricingFromRows`.
-      packages:
-        which === "draft" ? [...DEFAULT_PRICING_PACKAGES] : [],
+      // Drafts get the default catalogue as a starting point for the editor;
+      // the published view stays empty until the owner publishes.
+      packages: which === "draft" ? [...DEFAULT_PRICING_PACKAGES] : [],
       hasDraftChanges: false,
       publishedAt: null,
       publishedBy: null,
@@ -75,12 +66,20 @@ function toListShape(
       updatedBy: null,
     };
   }
-  const source =
-    which === "draft" ? (row.draftSnapshot ?? row.publishedSnapshot) : row.publishedSnapshot;
-  const snap = readPricingSnapshot(source);
+
+  const draft =
+    which === "draft" ? await loadPricingPackages(ctx, "draft") : [];
+  const published = await loadPricingPackages(ctx, "published");
+  const rows = which === "draft" && draft.length > 0 ? draft : published;
+
+  const priceTabEnabled =
+    which === "draft"
+      ? effectiveIsEnabled(row, "pricing")
+      : publishedIsEnabled(row, "pricing");
+
   return {
-    flags: snap.flags,
-    packages: snap.packages ?? [],
+    flags: { priceTabEnabled },
+    packages: rows.map(pricingPackageFromRow),
     hasDraftChanges: row.hasDraftChanges,
     publishedAt: row.publishedAt,
     publishedBy: row.publishedBy ?? null,
@@ -97,11 +96,8 @@ export const listDraft = query({
   args: {},
   handler: async (ctx): Promise<PricingListShape> => {
     await requireCmsOwner(ctx);
-    const row = await ctx.db
-      .query("cmsSections")
-      .withIndex("by_section", (q) => q.eq("section", "pricing"))
-      .unique();
-    return toListShape(row, "draft");
+    const row = await getSectionMetaRow(ctx, "pricing");
+    return await toListShape(ctx, row, "draft");
   },
 });
 
@@ -113,20 +109,21 @@ export const listPublished = query({
   args: {},
   handler: async (ctx): Promise<PricingListShape> => {
     await requireCmsOwner(ctx);
-    const row = await ctx.db
-      .query("cmsSections")
-      .withIndex("by_section", (q) => q.eq("section", "pricing"))
-      .unique();
-    return toListShape(row, "published");
+    const row = await getSectionMetaRow(ctx, "pricing");
+    return await toListShape(ctx, row, "published");
   },
 });
 
 /**
- * Persist a new draft packages + flags payload for the `pricing` section.
+ * Persist a new draft packages payload for the `pricing` section.
  *
  * Accepts the full set of packages (create / edit / delete done client-side
  * by diffing this array). Server enforces id uniqueness and basic value
  * validation before writing so drafts never land in an unpublishable state.
+ *
+ * The `flags` arg is accepted for back-compat with existing callers but no
+ * longer persisted — pricing visibility lives on `cmsSections.pricing.isEnabled`
+ * and is toggled via `api.cms.saveSectionIsEnabledDraft`.
  */
 export const saveDraftPricing = mutation({
   args: {
@@ -142,10 +139,7 @@ export const saveDraftPricing = mutation({
         cmsValidationError("Each pricing package requires an id.", "id");
       }
       if (seenIds.has(pkg.id)) {
-        cmsValidationError(
-          `Duplicate pricing package id: ${pkg.id}`,
-          "id",
-        );
+        cmsValidationError(`Duplicate pricing package id: ${pkg.id}`, "id");
       }
       seenIds.add(pkg.id);
       if (pkg.name.trim().length === 0) {
@@ -172,24 +166,16 @@ export const saveDraftPricing = mutation({
       }
     }
 
-    const { id, row } = await ensureSectionRow(ctx, "pricing", updatedBy);
+    await ensureSectionMetaRow(ctx, "pricing", updatedBy);
+    await replacePricingDraftFromPackages(ctx, args.packages);
+    await recomputeSectionHasDraftChanges(ctx, "pricing", updatedBy);
 
-    const content: PricingSnapshot = {
-      flags: args.flags,
-      packages: args.packages,
+    const row = await getSectionMetaRow(ctx, "pricing");
+    return {
+      ok: true as const,
+      section: "pricing" as const,
+      hasDraftChanges: row?.hasDraftChanges ?? false,
     };
-
-    const hasDraftChanges = !cmsSnapshotsEqual(content, row.publishedSnapshot);
-    const now = Date.now();
-
-    await ctx.db.patch(id, {
-      draftSnapshot: content,
-      hasDraftChanges,
-      updatedAt: now,
-      updatedBy,
-    });
-
-    return { ok: true as const, section: "pricing" as const, hasDraftChanges };
   },
 });
 
@@ -201,9 +187,8 @@ export const saveDraftPricing = mutation({
 export const publishPricing = mutation({
   args: {},
   handler: async (ctx) => {
-    const { identity, userId, updatedBy } = await requireCmsOwner(ctx);
-    void identity;
-    const { id, row } = await ensureSectionRow(ctx, "pricing", updatedBy);
+    const { userId, updatedBy } = await requireCmsOwner(ctx);
+    const { id, row } = await ensureSectionMetaRow(ctx, "pricing", updatedBy);
     return await publishSectionCore(ctx, {
       section: "pricing",
       id,
@@ -222,14 +207,7 @@ export const validatePricing = query({
   args: {},
   handler: async (ctx) => {
     await requireCmsOwner(ctx);
-    const row = await ctx.db
-      .query("cmsSections")
-      .withIndex("by_section", (q) => q.eq("section", "pricing"))
-      .unique();
-
-    const snapshot =
-      row?.draftSnapshot ?? row?.publishedSnapshot ?? PRICING_DEFAULTS;
-    const issues = collectPublishIssues("pricing", snapshot);
+    const issues = await collectPublishIssues(ctx, "pricing");
     return {
       ok: issues.length === 0,
       section: "pricing" as const,
@@ -239,15 +217,21 @@ export const validatePricing = query({
 });
 
 /**
- * Internal snapshot dump for owner debugging. Mirrors
- * `internal.admin.siteSettings.debugSnapshot`.
+ * Internal snapshot dump for owner debugging. Returns the metadata row and
+ * both scopes of the pricing catalogue.
  */
 export const debugSnapshot = internalQuery({
   args: {},
   handler: async (ctx) => {
-    return await ctx.db
-      .query("cmsSections")
-      .withIndex("by_section", (q) => q.eq("section", "pricing"))
-      .unique();
+    const [row, draft, published] = await Promise.all([
+      getSectionMetaRow(ctx, "pricing"),
+      loadPricingPackages(ctx, "draft"),
+      loadPricingPackages(ctx, "published"),
+    ]);
+    return {
+      row,
+      draft,
+      published,
+    };
   },
 });
