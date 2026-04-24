@@ -68,7 +68,11 @@ export const getSection = query({
       args.section,
       "published",
     );
-    const draftSnapshot = row?.hasDraftChanges
+    const hasContentDraft = await sectionHasContentDraftDiff(
+      ctx,
+      args.section,
+    );
+    const draftSnapshot = hasContentDraft
       ? await readSnapshotForAdmin(ctx, args.section, "draft")
       : null;
 
