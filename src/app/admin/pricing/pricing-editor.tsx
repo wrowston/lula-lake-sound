@@ -427,6 +427,19 @@ function PricingForm() {
     ffAutosaveStatus,
   );
 
+  // Stable ref callback so React only runs `dispose()` (which clears the
+  // pending autosave timer) when this editor truly unmounts. An inline arrow
+  // would be a new function each render, causing React to detach + reattach
+  // every render and silently kill the 1s debounce — see the matching
+  // comment in `about-editor.tsx`.
+  const handleEditorRef = useCallback(
+    (el: HTMLDivElement | null) => {
+      autosaveOnUnmount(el);
+      ffOnUnmount(el);
+    },
+    [autosaveOnUnmount, ffOnUnmount],
+  );
+
   if (pricing === undefined || featureFlagsLoading) {
     return <p className="body-text text-muted-foreground">Loading pricing…</p>;
   }
@@ -443,13 +456,7 @@ function PricingForm() {
     pricing.publishedBy && user?.id === pricing.publishedBy ? "You" : undefined;
 
   return (
-    <div
-      className="space-y-10 pb-24"
-      ref={(el) => {
-        autosaveOnUnmount(el);
-        ffOnUnmount(el);
-      }}
-    >
+    <div className="space-y-10 pb-24" ref={handleEditorRef}>
       <fieldset className="space-y-4">
         <legend className="label-text text-muted-foreground">Site visibility</legend>
         <div className="flex items-start gap-3">

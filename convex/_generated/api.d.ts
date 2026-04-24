@@ -31,6 +31,7 @@ import type * as gearTree from "../gearTree.js";
 import type * as inquiries from "../inquiries.js";
 import type * as lib_auth from "../lib/auth.js";
 import type * as lib_sentryConvex from "../lib/sentryConvex.js";
+import type * as marketingFeatureFlags from "../marketingFeatureFlags.js";
 import type * as migrations_extractSectionContent from "../migrations/extractSectionContent.js";
 import type * as migrations_gearFromEquipmentSpecs from "../migrations/gearFromEquipmentSpecs.js";
 import type * as observability from "../observability.js";
@@ -74,6 +75,7 @@ declare const fullApi: ApiFromModules<{
   inquiries: typeof inquiries;
   "lib/auth": typeof lib_auth;
   "lib/sentryConvex": typeof lib_sentryConvex;
+  marketingFeatureFlags: typeof marketingFeatureFlags;
   "migrations/extractSectionContent": typeof migrations_extractSectionContent;
   "migrations/gearFromEquipmentSpecs": typeof migrations_gearFromEquipmentSpecs;
   observability: typeof observability;
