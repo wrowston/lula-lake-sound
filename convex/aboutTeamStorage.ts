@@ -1,11 +1,15 @@
-import type { Doc, Id } from "./_generated/dataModel";
+import type { Id } from "./_generated/dataModel";
 import type { MutationCtx, QueryCtx } from "./_generated/server";
-import type { AboutSnapshot } from "./cmsShared";
 import {
   ALLOWED_GALLERY_IMAGE_TYPES,
   MAX_GALLERY_IMAGE_BYTES,
   getStorageMetadata,
 } from "./galleryPhotos";
+import {
+  collectAboutTeamStorageIdsFromTree,
+  loadAboutTree,
+  type AboutTree,
+} from "./aboutTree";
 
 /** Max team members per About snapshot (CMS guard). */
 export const MAX_ABOUT_TEAM_MEMBERS = 20;
@@ -22,46 +26,25 @@ function isAllowedImageType(
 }
 
 /**
- * Collect Convex storage ids referenced by `teamMembers` on an about-shaped snapshot.
+ * Union of team headshot + hero image ids across published ∪ draft scopes.
+ * Used by blob-cleanup helpers so we never delete a blob still referenced by
+ * either scope.
  */
-export function collectAboutTeamStorageIds(snap: unknown): Set<Id<"_storage">> {
-  const out = new Set<Id<"_storage">>();
-  if (!snap || typeof snap !== "object") return out;
-  const team = (snap as { teamMembers?: unknown }).teamMembers;
-  if (!Array.isArray(team)) return out;
-  for (const m of team) {
-    if (!m || typeof m !== "object") continue;
-    const sid = (m as { storageId?: unknown }).storageId;
-    if (typeof sid === "string" && sid.length > 0) {
-      out.add(sid as Id<"_storage">);
-    }
-  }
-  return out;
-}
-
-/** Union of team headshot ids in published + draft for the about `cmsSections` row. */
-export function unionAboutTeamStorageForRow(
-  row: Doc<"cmsSections"> | null,
-): Set<Id<"_storage">> {
-  if (!row || row.section !== "about") return new Set();
-  const a = collectAboutTeamStorageIds(row.publishedSnapshot);
-  const b = row.draftSnapshot
-    ? collectAboutTeamStorageIds(row.draftSnapshot)
-    : new Set<Id<"_storage">>();
+export async function unionAboutTeamStorage(
+  ctx: QueryCtx | MutationCtx,
+): Promise<Set<Id<"_storage">>> {
+  const [draft, published] = await Promise.all([
+    loadAboutTree(ctx, "draft"),
+    loadAboutTree(ctx, "published"),
+  ]);
+  const a = collectAboutTeamStorageIdsFromTree(draft);
+  const b = collectAboutTeamStorageIdsFromTree(published);
   return new Set([...a, ...b]);
 }
 
-async function getAboutSectionRow(
-  ctx: MutationCtx,
-): Promise<Doc<"cmsSections"> | null> {
-  return await ctx.db
-    .query("cmsSections")
-    .withIndex("by_section", (q) => q.eq("section", "about"))
-    .unique();
-}
-
 /**
- * Delete a storage blob if it is not referenced by the gallery or any about team field.
+ * Delete a storage blob if it is not referenced by the gallery or any
+ * About team / hero field in either scope.
  */
 export async function deleteBlobIfUnreferencedByGalleryOrAbout(
   ctx: MutationCtx,
@@ -73,10 +56,8 @@ export async function deleteBlobIfUnreferencedByGalleryOrAbout(
     .take(1);
   if (galleryRefs.length > 0) return;
 
-  const aboutRow = await getAboutSectionRow(ctx);
-  if (aboutRow && unionAboutTeamStorageForRow(aboutRow).has(storageId)) {
-    return;
-  }
+  const referenced = await unionAboutTeamStorage(ctx);
+  if (referenced.has(storageId)) return;
 
   const meta = await getStorageMetadata(ctx, storageId);
   if (!meta) return;
@@ -84,15 +65,16 @@ export async function deleteBlobIfUnreferencedByGalleryOrAbout(
 }
 
 /**
- * Async validation for team headshot blobs (publish / preflight).
+ * Async validation for team headshot blobs (publish / preflight). Reads the
+ * already-loaded draft tree so callers don't pay a second DB round-trip.
  */
-export async function collectAboutTeamBlobIssues(
+export async function collectAboutTeamBlobIssuesForTree(
   ctx: MutationCtx | QueryCtx,
-  draft: AboutSnapshot,
+  tree: AboutTree,
 ): Promise<AboutPublishIssue[]> {
   const issues: AboutPublishIssue[] = [];
-  const team = draft.teamMembers;
-  if (team === undefined || team.length === 0) return issues;
+  const team = tree.teamMembers;
+  if (team.length === 0) return issues;
 
   for (let i = 0; i < team.length; i++) {
     const base = `teamMembers[${i}]`;
@@ -126,7 +108,9 @@ export async function collectAboutTeamBlobIssues(
     if (storage.size > MAX_GALLERY_IMAGE_BYTES) {
       issues.push({
         path: `${base}.storageId`,
-        message: `${who}: image must be ${Math.floor(MAX_GALLERY_IMAGE_BYTES / (1024 * 1024))}MB or smaller.`,
+        message: `${who}: image must be ${Math.floor(
+          MAX_GALLERY_IMAGE_BYTES / (1024 * 1024),
+        )}MB or smaller.`,
       });
     }
   }
@@ -134,15 +118,27 @@ export async function collectAboutTeamBlobIssues(
 }
 
 /**
- * After publish: remove team headshot blobs that were dropped from the published snapshot.
+ * @deprecated Use {@link collectAboutTeamBlobIssuesForTree}. This wrapper
+ * loads the draft tree from the DB for callers that don't have it yet.
  */
-export async function pruneAboutTeamBlobsAfterPublish(
+export async function collectAboutTeamBlobIssues(
+  ctx: MutationCtx | QueryCtx,
+): Promise<AboutPublishIssue[]> {
+  const draft = await loadAboutTree(ctx, "draft");
+  return collectAboutTeamBlobIssuesForTree(ctx, draft);
+}
+
+/**
+ * After publish: remove team headshot / hero blobs that were dropped from
+ * the published scope.
+ */
+export async function pruneAboutTeamBlobsAfterPublishScoped(
   ctx: MutationCtx,
-  previousPublishedSnapshot: unknown,
-  newPublishedSnapshot: unknown,
+  previousPublished: AboutTree,
+  newPublished: AboutTree,
 ): Promise<void> {
-  const prev = collectAboutTeamStorageIds(previousPublishedSnapshot);
-  const next = collectAboutTeamStorageIds(newPublishedSnapshot);
+  const prev = collectAboutTeamStorageIdsFromTree(previousPublished);
+  const next = collectAboutTeamStorageIdsFromTree(newPublished);
   for (const id of prev) {
     if (!next.has(id)) {
       await deleteBlobIfUnreferencedByGalleryOrAbout(ctx, id);
@@ -151,49 +147,17 @@ export async function pruneAboutTeamBlobsAfterPublish(
 }
 
 /**
- * After saveDraft (about): drop blobs no longer referenced by published ∪ new draft.
+ * After saveDraft (about): drop blobs no longer referenced by published ∪
+ * the freshly-persisted draft scope.
  */
-export async function pruneAboutTeamBlobsAfterSaveDraft(
+export async function pruneAboutTeamBlobsAfterSaveDraftScoped(
   ctx: MutationCtx,
-  rowBefore: Doc<"cmsSections">,
-  newDraftContent: AboutSnapshot,
+  previousUnion: Set<Id<"_storage">>,
 ): Promise<void> {
-  if (rowBefore.section !== "about") return;
-  const beforeUnion = unionAboutTeamStorageForRow(rowBefore);
-  const publishedIds = collectAboutTeamStorageIds(rowBefore.publishedSnapshot);
-  const draftIds = collectAboutTeamStorageIds(newDraftContent);
-  const afterUnion = new Set([...publishedIds, ...draftIds]);
-  for (const id of beforeUnion) {
+  const afterUnion = await unionAboutTeamStorage(ctx);
+  for (const id of previousUnion) {
     if (!afterUnion.has(id)) {
       await deleteBlobIfUnreferencedByGalleryOrAbout(ctx, id);
     }
-  }
-}
-
-/**
- * Storage ids that appeared only on the draft (not on published) before discard.
- * Call after `patch` clears the draft so `deleteBlobIfUnreferencedByGalleryOrAbout`
- * no longer sees those ids on the about row.
- */
-export function collectDraftOnlyAboutTeamStorageIds(
-  rowBeforeDiscard: Doc<"cmsSections">,
-): Id<"_storage">[] {
-  if (rowBeforeDiscard.section !== "about" || !rowBeforeDiscard.draftSnapshot) {
-    return [];
-  }
-  const publishedIds = collectAboutTeamStorageIds(
-    rowBeforeDiscard.publishedSnapshot,
-  );
-  const draftIds = collectAboutTeamStorageIds(rowBeforeDiscard.draftSnapshot);
-  return [...draftIds].filter((id) => !publishedIds.has(id));
-}
-
-/** Delete draft-only headshot blobs after discard (invoke after DB patch). */
-export async function deleteDraftOnlyAboutTeamBlobs(
-  ctx: MutationCtx,
-  storageIds: Id<"_storage">[],
-): Promise<void> {
-  for (const id of storageIds) {
-    await deleteBlobIfUnreferencedByGalleryOrAbout(ctx, id);
   }
 }

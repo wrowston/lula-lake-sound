@@ -273,8 +273,39 @@
   --radius-4xl: 2rem;
 }
 
-.dark .admin-dashboard-tokens {
-  --card: #2a2725;
+/*
+ * Admin dark mode uses a neutral black/zinc palette rather than the marketing
+ * site's warm washed-black + forest undertones. Operators expect a
+ * conventional CMS dark theme — muted, restrained, shades of black.
+ */
+.dark .admin-dashboard-tokens,
+.dark.admin-dashboard-tokens {
+  --background: #1c1c1f;
+  --foreground: #e4e4e7;
+  --card: #242427;
+  --card-foreground: #e4e4e7;
+  --popover: #242427;
+  --popover-foreground: #e4e4e7;
+  --primary: #e4e4e7;
+  --primary-foreground: #1c1c1f;
+  --secondary: #2e2e32;
+  --secondary-foreground: #e4e4e7;
+  --muted: #242427;
+  --muted-foreground: #a1a1aa;
+  --accent: #2e2e32;
+  --accent-foreground: #e4e4e7;
+  --destructive: #ef3c23;
+  --border: rgba(228, 228, 231, 0.12);
+  --input: rgba(228, 228, 231, 0.16);
+  --ring: #5c5c63;
+  --sidebar: #18181b;
+  --sidebar-foreground: #e4e4e7;
+  --sidebar-primary: #e4e4e7;
+  --sidebar-primary-foreground: #18181b;
+  --sidebar-accent: rgba(228, 228, 231, 0.1);
+  --sidebar-accent-foreground: #e4e4e7;
+  --sidebar-border: rgba(228, 228, 231, 0.1);
+  --sidebar-ring: #5c5c63;
 }
 
 /* Dark — the marketing site default. */
@@ -467,6 +498,35 @@ html.light {
     opacity: 1;
     transform: none;
     animation: none;
+  }
+}
+
+/* ————————————————————————————————
+ * Recordings table — waveform bars while audio is playing
+ * ———————————————————————————————— */
+
+@keyframes recordings-waveform-bar-pulse {
+  0%,
+  100% {
+    transform: scaleY(0.35);
+  }
+  50% {
+    transform: scaleY(1);
+  }
+}
+
+.recordings-waveform-bar--playing {
+  animation-name: recordings-waveform-bar-pulse;
+  animation-timing-function: ease-in-out;
+  animation-iteration-count: infinite;
+  animation-direction: alternate;
+  transform-origin: bottom center;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .recordings-waveform-bar--playing {
+    animation: none;
+    transform: none;
   }
 }
 

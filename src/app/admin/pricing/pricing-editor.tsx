@@ -10,7 +10,6 @@ import {
 import { useUser } from "@clerk/nextjs";
 import { api } from "../../../../convex/_generated/api";
 import { useCallback, useMemo, useRef, useState } from "react";
-import { Effect } from "effect";
 import { toast } from "sonner";
 import {
   ArrowDown,
@@ -25,10 +24,14 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Switch } from "@/components/ui/switch";
 import { cn } from "@/lib/utils";
-import { convexMutationEffect, type CmsAppError } from "@/lib/effect-errors";
+import { convexMutationEffect } from "@/lib/effect-errors";
 import { runAdminEffect } from "@/lib/admin-run-effect";
-import { CmsPublishToolbar } from "@/components/admin/cms-publish-toolbar";
+import { useRegisterCmsEditor } from "@/components/admin/cms-workspace";
 import { useAutosaveDraft } from "@/lib/use-autosave-draft";
+import {
+  mergeAutosaveStatus,
+  useMarketingFeatureFlagsAdmin,
+} from "@/lib/use-marketing-feature-flags-admin";
 
 type BillingCadence =
   | "hourly"
@@ -55,7 +58,6 @@ type PricingPackage = {
 };
 
 type PricingContent = {
-  flags: { priceTabEnabled: boolean };
   packages: PricingPackage[];
 };
 
@@ -85,7 +87,7 @@ const CADENCE_LABELS: Record<BillingCadence, string> = {
 const PRICING_FIELD_INPUT_CLASS =
   "text-foreground placeholder:text-muted-foreground";
 
-function isCadence(value: string): value is BillingCadence {
+export function isCadence(value: string): value is BillingCadence {
   return (VALID_CADENCES as readonly string[]).includes(value);
 }
 
@@ -96,12 +98,11 @@ function generateId(): string {
   return `pkg_${Math.random().toString(36).slice(2)}${Date.now().toString(36)}`;
 }
 
-function toPricingContent(raw: {
-  flags: { priceTabEnabled: boolean };
+export function toPricingContent(raw: {
+  flags?: { priceTabEnabled?: boolean };
   packages: PricingPackage[];
 }): PricingContent {
   return {
-    flags: { priceTabEnabled: raw.flags.priceTabEnabled },
     packages: raw.packages.map((p) => ({
       id: p.id,
       name: p.name,
@@ -118,16 +119,16 @@ function toPricingContent(raw: {
   };
 }
 
-function renumberSortOrder(packages: PricingPackage[]): PricingPackage[] {
+export function renumberSortOrder(packages: PricingPackage[]): PricingPackage[] {
   return packages.map((p, idx) => ({ ...p, sortOrder: idx }));
 }
 
-function priceCentsToDisplay(cents: number): string {
+export function priceCentsToDisplay(cents: number): string {
   if (!Number.isFinite(cents)) return "";
   return (cents / 100).toFixed(2);
 }
 
-function parsePriceInput(value: string): number | null {
+export function parsePriceInput(value: string): number | null {
   const trimmed = value.trim();
   if (trimmed.length === 0) return null;
   const num = Number(trimmed);
@@ -235,6 +236,22 @@ function PricingForm() {
   const kickAutosaveRef = useRef<() => void>(() => {});
   const cancelAutosaveRef = useRef<() => void>(() => {});
 
+  const {
+    data: featureFlagsCms,
+    source: featureFlagsSource,
+    isLoading: featureFlagsLoading,
+    hasFFLocalEdits,
+    hasFFDraftOnServer,
+    ffAutosaveStatus,
+    flushFFAutosave,
+    cancelFFAutosave: cancelFFAutosave,
+    ffOnUnmount,
+    setPricingSection,
+    runPublishFF,
+    runDiscardFF,
+    clearFFLocal,
+  } = useMarketingFeatureFlagsAdmin(busy !== null);
+
   const source: PricingContent | undefined = useMemo(() => {
     if (localDraft) return localDraft;
     if (!pricing) return undefined;
@@ -249,17 +266,6 @@ function PricingForm() {
     setLocalDraft(next);
     kickAutosaveRef.current();
   }, []);
-
-  const setPriceTabEnabled = useCallback(
-    (checked: boolean) => {
-      if (!source) return;
-      mutate({
-        ...source,
-        flags: { ...source.flags, priceTabEnabled: checked },
-      });
-    },
-    [source, mutate],
-  );
 
   const addPackage = useCallback(() => {
     if (!source) return;
@@ -339,25 +345,10 @@ function PricingForm() {
     [source, mutate],
   );
 
-  const runAction = useCallback(
-    async <A,>(label: string, program: Effect.Effect<A, CmsAppError>) => {
-      cancelAutosaveRef.current();
-      setInlineError(null);
-      setBusy(label);
-      const outcome = await runAdminEffect(program, {
-        onErrorMessage: setInlineError,
-      });
-      if (outcome !== undefined) {
-        setLocalDraft(null);
-      }
-      setBusy(null);
-      return outcome;
-    },
-    [],
-  );
-
-  const hasDraftOnServer = pricing?.hasDraftChanges ?? false;
-  const hasLocalEdits = localDraft !== null;
+  const hasPricingLocalEdits = localDraft !== null;
+  const hasPricingDraftOnServer = pricing?.hasDraftChanges ?? false;
+  const hasDraftOnServer = hasPricingDraftOnServer || hasFFDraftOnServer;
+  const hasLocalEdits = hasPricingLocalEdits || hasFFLocalEdits;
 
   const {
     status: autosaveStatus,
@@ -366,12 +357,12 @@ function PricingForm() {
     cancel: cancelAutosave,
     onUnmount: autosaveOnUnmount,
   } = useAutosaveDraft({
-    isDirty: hasLocalEdits && source !== undefined,
+    isDirty: hasPricingLocalEdits && source !== undefined,
     pauseWhen: busy !== null,
     saveEffect: () =>
       convexMutationEffect(() =>
         saveDraft({
-          flags: source?.flags ?? { priceTabEnabled: false },
+          flags: { priceTabEnabled: true },
           packages: source?.packages ?? [],
         }),
       ),
@@ -382,8 +373,9 @@ function PricingForm() {
 
   const handleDiscardConfirm = useCallback(async (): Promise<boolean> => {
     cancelAutosaveRef.current();
+    cancelFFAutosave();
     setInlineError(null);
-    if (hasDraftOnServer) {
+    if (hasPricingDraftOnServer) {
       setBusy("Discarding…");
       const outcome = await runAdminEffect(
         convexMutationEffect(() => discard({ section: "pricing" })),
@@ -394,16 +386,140 @@ function PricingForm() {
         return false;
       }
     }
+    if (hasFFDraftOnServer) {
+      setBusy("Discarding…");
+      const outcome = await runAdminEffect(runDiscardFF(), {
+        onErrorMessage: setInlineError,
+      });
+      setBusy(null);
+      if (outcome === undefined) {
+        return false;
+      }
+    }
     setLocalDraft(null);
+    clearFFLocal();
     toast.success(
-      hasDraftOnServer
+      hasPricingDraftOnServer || hasFFDraftOnServer
         ? "Draft discarded. The editor now matches the published site."
         : "Unsaved changes discarded.",
     );
     return true;
-  }, [discard, hasDraftOnServer]);
+  }, [
+    discard,
+    hasPricingDraftOnServer,
+    hasFFDraftOnServer,
+    runDiscardFF,
+    clearFFLocal,
+    cancelFFAutosave,
+  ]);
 
-  if (pricing === undefined) {
+  const mergedPublishedAt = useMemo((): number | null => {
+    const a = pricing?.publishedAt;
+    const b = featureFlagsCms?.publishedAt;
+    if (a == null && b == null) return null;
+    if (a == null) return b ?? null;
+    if (b == null) return a;
+    return Math.max(a, b);
+  }, [pricing?.publishedAt, featureFlagsCms?.publishedAt]);
+
+  const combinedAutosaveStatus = mergeAutosaveStatus(
+    autosaveStatus,
+    ffAutosaveStatus,
+  );
+
+  const publishedByLabel =
+    pricing?.publishedBy && user?.id === pricing.publishedBy ? "You" : undefined;
+
+  const handlePublish = useCallback(() => {
+    void (async () => {
+      cancelAutosaveRef.current();
+      cancelFFAutosave();
+      if (hasPricingLocalEdits) {
+        const flushed = await flushAutosave();
+        if (!flushed) return;
+      }
+      if (hasFFLocalEdits) {
+        const flushed = await flushFFAutosave();
+        if (!flushed) return;
+      }
+      setInlineError(null);
+      setBusy("Publishing…");
+      const priceOutcome = await runAdminEffect(
+        convexMutationEffect(() => publish({})),
+        { onErrorMessage: setInlineError },
+      );
+      if (priceOutcome === undefined) {
+        setBusy(null);
+        return;
+      }
+      setLocalDraft(null);
+      const ffOutcome = await runAdminEffect(runPublishFF(), {
+        onErrorMessage: setInlineError,
+      });
+      setBusy(null);
+      if (ffOutcome !== undefined) {
+        clearFFLocal();
+        toast.success("Changes published.");
+      }
+    })();
+  }, [
+    cancelFFAutosave,
+    clearFFLocal,
+    flushAutosave,
+    flushFFAutosave,
+    hasFFLocalEdits,
+    hasPricingLocalEdits,
+    publish,
+    runPublishFF,
+  ]);
+
+  /**
+   * Composite flush awaited by the sidebar nav guard — see the matching
+   * helper in `about-editor.tsx`.
+   */
+  const flushAllAutosaves = useCallback(async (): Promise<boolean> => {
+    if (hasPricingLocalEdits) {
+      const ok = await flushAutosave();
+      if (!ok) return false;
+    }
+    if (hasFFLocalEdits) {
+      const ok = await flushFFAutosave();
+      if (!ok) return false;
+    }
+    return true;
+  }, [flushAutosave, flushFFAutosave, hasPricingLocalEdits, hasFFLocalEdits]);
+
+  const { toolbarPortal, editorRef } = useRegisterCmsEditor({
+    section: "pricing",
+    sectionLabel: "pricing",
+    hasDraftOnServer,
+    hasLocalEdits,
+    publishedAt: mergedPublishedAt,
+    publishedByLabel,
+    busy,
+    autosaveStatus: combinedAutosaveStatus,
+    inlineError,
+    previewHref: "/preview#services-pricing",
+    onPublish: handlePublish,
+    onDiscardConfirm: handleDiscardConfirm,
+    flush: flushAllAutosaves,
+  });
+
+  // Stable ref callback so React only runs `dispose()` (which clears the
+  // pending autosave timer) when this editor truly unmounts. An inline arrow
+  // would be a new function each render, causing React to detach + reattach
+  // every render and silently kill the 1s debounce — see the matching
+  // comment in `about-editor.tsx`.
+  const handleEditorRef = useCallback(
+    (el: HTMLDivElement | null) => {
+      autosaveOnUnmount(el);
+      ffOnUnmount(el);
+      editorRef(el);
+    },
+    [autosaveOnUnmount, ffOnUnmount, editorRef],
+  );
+
+  if (pricing === undefined || featureFlagsLoading) {
     return <p className="body-text text-muted-foreground">Loading pricing…</p>;
   }
 
@@ -415,29 +531,25 @@ function PricingForm() {
     );
   }
 
-  const publishedByLabel =
-    pricing.publishedBy && user?.id === pricing.publishedBy ? "You" : undefined;
-
   return (
-    <div className="space-y-10 pb-24" ref={autosaveOnUnmount}>
-      <fieldset className="space-y-3">
-        <legend className="label-text text-muted-foreground">Visibility</legend>
+    <div className="space-y-10 pb-24" ref={handleEditorRef}>
+      <fieldset className="space-y-4">
+        <legend className="label-text text-muted-foreground">Site visibility</legend>
         <div className="flex items-start gap-3">
           <Switch
-            id="pricing-price-tab-enabled"
-            checked={source.flags.priceTabEnabled}
-            onCheckedChange={setPriceTabEnabled}
+            id="ff-pricing-section-embedded"
+            checked={featureFlagsSource?.pricingSection ?? false}
+            onCheckedChange={setPricingSection}
           />
           <div className="space-y-1">
             <label
-              htmlFor="pricing-price-tab-enabled"
+              htmlFor="ff-pricing-section-embedded"
               className="body-text-small cursor-pointer text-foreground"
             >
-              Show pricing on marketing site
+              Pricing section on homepage
             </label>
             <p className="body-text-small text-muted-foreground">
-              Hides pricing on the public site when off. Preview still shows
-              the draft value.
+              Toggles the Services &amp; Pricing block on the marketing homepage.
             </p>
           </div>
         </div>
@@ -719,29 +831,7 @@ function PricingForm() {
         )}
       </section>
 
-      <CmsPublishToolbar
-        section="pricing"
-        sectionLabel="pricing"
-        hasDraftOnServer={hasDraftOnServer}
-        hasLocalEdits={hasLocalEdits}
-        publishedAt={pricing.publishedAt ?? null}
-        publishedByLabel={publishedByLabel}
-        busy={busy}
-        inlineError={inlineError}
-        autosaveStatus={autosaveStatus}
-        previewHref="/preview#services-pricing"
-        onPublish={() => {
-          const publishOnce = convexMutationEffect(() => publish({}));
-          void (async () => {
-            if (hasLocalEdits) {
-              const flushed = await flushAutosave();
-              if (!flushed) return;
-            }
-            await runAction("Publishing…", publishOnce);
-          })();
-        }}
-        onDiscardConfirm={handleDiscardConfirm}
-      />
+      {toolbarPortal}
     </div>
   );
 }

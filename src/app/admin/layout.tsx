@@ -4,6 +4,10 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { SidebarProvider, SidebarInset } from "@/components/ui/sidebar";
 import { AdminSidebar } from "@/components/admin/admin-sidebar";
 import {
+  CmsWorkspaceProvider,
+  CmsPersistentToolbarHost,
+} from "@/components/admin/cms-workspace";
+import {
   getDefaultSidebarOpenFromCookie,
   SIDEBAR_COOKIE_NAME,
 } from "@/lib/sidebar-cookie";
@@ -36,10 +40,13 @@ export default async function AdminLayout({
         resizableWidth
         sidebarWidthStorageKey="admin_sidebar_width_px"
       >
-        <AdminSidebar />
-        <SidebarInset className="text-foreground">
-          {children}
-        </SidebarInset>
+        <CmsWorkspaceProvider>
+          <AdminSidebar />
+          <SidebarInset className="text-foreground">
+            {children}
+            <CmsPersistentToolbarHost />
+          </SidebarInset>
+        </CmsWorkspaceProvider>
       </SidebarProvider>
     </TooltipProvider>
   );

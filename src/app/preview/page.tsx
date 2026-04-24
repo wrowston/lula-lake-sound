@@ -14,17 +14,18 @@ function PreviewContent() {
   const gearPreview = useQuery(api.gearPreviewDraft.getPreviewGear);
   const photoPreview = useQuery(api.photosPreviewDraft.getPreviewGalleryPhotos);
   const audioPreview = useQuery(api.audioPreviewDraft.getPreviewAudioTracks);
-  // INF-46: surface the draft About visibility in the homepage nav so owners
-  // can confirm the feature-flag toggle before publishing. Preview query is
-  // owner-only and returns `null` for non-owners.
+  // Tracks whether the About section has unpublished draft content so the
+  // preview banner can reflect it. Owner-only — returns `null` for non-owners.
   const aboutPreview = useQuery(api.aboutPreviewDraft.getPreviewAbout);
+  const marketingPreview = useQuery(api.cms.getPreviewMarketingFeatureFlags);
 
   if (
     pricingFlags === undefined ||
     gearPreview === undefined ||
     photoPreview === undefined ||
     audioPreview === undefined ||
-    aboutPreview === undefined
+    aboutPreview === undefined ||
+    marketingPreview === undefined
   ) {
     return (
       <div className="flex min-h-screen items-center justify-center bg-washed-black">
@@ -38,7 +39,8 @@ function PreviewContent() {
     gearPreview === null ||
     photoPreview === null ||
     audioPreview === null ||
-    aboutPreview === null
+    aboutPreview === null ||
+    marketingPreview === null
   ) {
     return (
       <div className="flex min-h-screen items-center justify-center bg-washed-black">
@@ -54,7 +56,8 @@ function PreviewContent() {
     gearPreview.hasDraftChanges ||
     photoPreview.hasDraftChanges ||
     audioPreview.hasDraftChanges ||
-    aboutPreview.hasDraftChanges;
+    aboutPreview.hasDraftChanges ||
+    marketingPreview.hasDraftChanges;
 
   const audioTracks: PublishedAudioTrack[] = audioPreview.tracks
     .filter((t): t is typeof t & { url: string } => t.url !== null)
@@ -78,10 +81,14 @@ function PreviewContent() {
         flags: pricingFlags.flags,
         packages: pricingFlags.packages,
       }}
+      marketingFeatureFlags={{
+        aboutPage: marketingPreview.aboutPage,
+        recordingsPage: marketingPreview.recordingsPage,
+        pricingSection: marketingPreview.pricingSection,
+      }}
       gear={{ categories: gearPreview.categories }}
       photos={photoPreview.photos}
       audioTracks={audioTracks}
-      aboutVisibility={{ published: aboutPreview.published === true }}
       banner={<PreviewBanner hasDraftChanges={hasDraftChanges} />}
     />
   );

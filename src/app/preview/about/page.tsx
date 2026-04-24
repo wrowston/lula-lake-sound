@@ -9,6 +9,7 @@ import {
 import { api } from "../../../../convex/_generated/api";
 import { AboutLayout } from "../../about/about-layout";
 import { PreviewBanner } from "@/components/preview-banner";
+import { isHomepagePricingSectionEnabled } from "@/lib/site-settings";
 
 /**
  * Owner-only preview of the About page using the draft CMS snapshot. Mirrors
@@ -22,8 +23,9 @@ function AboutPreviewContent() {
   const pricingPreview = useQuery(
     api.pricingPreviewDraft.getPreviewPricingFlags,
   );
+  const marketing = useQuery(api.cms.getPreviewMarketingFeatureFlags);
 
-  if (about === undefined || pricingPreview === undefined) {
+  if (about === undefined || pricingPreview === undefined || marketing === undefined) {
     return (
       <div className="flex min-h-screen items-center justify-center bg-deep-forest">
         <p className="text-ivory/60">Loading preview…</p>
@@ -31,7 +33,7 @@ function AboutPreviewContent() {
     );
   }
 
-  if (about === null || pricingPreview === null) {
+  if (about === null || pricingPreview === null || marketing === null) {
     return (
       <div className="flex min-h-screen items-center justify-center bg-deep-forest">
         <p className="text-ivory/60">
@@ -44,14 +46,21 @@ function AboutPreviewContent() {
 
   const { hasDraftChanges: _aboutDrafty, ...data } = about;
   void _aboutDrafty;
-  const showPricing = pricingPreview.flags.priceTabEnabled === true;
+  const showPricing = isHomepagePricingSectionEnabled(marketing);
   const hasDraftChanges =
-    about.hasDraftChanges || pricingPreview.hasDraftChanges;
+    about.hasDraftChanges ||
+    pricingPreview.hasDraftChanges ||
+    marketing.hasDraftChanges;
 
   return (
     <AboutLayout
       data={data}
       showPricing={showPricing}
+      marketing={{
+        aboutPage: marketing.aboutPage,
+        recordingsPage: marketing.recordingsPage,
+        pricingSection: marketing.pricingSection,
+      }}
       banner={<PreviewBanner hasDraftChanges={hasDraftChanges} />}
     />
   );

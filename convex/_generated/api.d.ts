@@ -10,6 +10,7 @@
 
 import type * as aboutPreviewDraft from "../aboutPreviewDraft.js";
 import type * as aboutTeamStorage from "../aboutTeamStorage.js";
+import type * as aboutTree from "../aboutTree.js";
 import type * as admin_about from "../admin/about.js";
 import type * as admin_aboutTeam from "../admin/aboutTeam.js";
 import type * as admin_audio from "../admin/audio.js";
@@ -19,6 +20,7 @@ import type * as admin_pricing from "../admin/pricing.js";
 import type * as admin_publish from "../admin/publish.js";
 import type * as admin_siteSettings from "../admin/siteSettings.js";
 import type * as cms from "../cms.js";
+import type * as cmsMeta from "../cmsMeta.js";
 import type * as cmsPublishHelpers from "../cmsPublishHelpers.js";
 import type * as cmsShared from "../cmsShared.js";
 import type * as errors from "../errors.js";
@@ -32,14 +34,17 @@ import type * as gearTree from "../gearTree.js";
 import type * as inquiries from "../inquiries.js";
 import type * as lib_auth from "../lib/auth.js";
 import type * as lib_sentryConvex from "../lib/sentryConvex.js";
+import type * as marketingFeatureFlags from "../marketingFeatureFlags.js";
 import type * as migrations_gearFromEquipmentSpecs from "../migrations/gearFromEquipmentSpecs.js";
 import type * as observability from "../observability.js";
 import type * as photosPreviewDraft from "../photosPreviewDraft.js";
 import type * as pricingPreviewDraft from "../pricingPreviewDraft.js";
+import type * as pricingTree from "../pricingTree.js";
 import type * as public_ from "../public.js";
 import type * as publicSettingsSnapshot from "../publicSettingsSnapshot.js";
 import type * as seed from "../seed.js";
 import type * as sentryNodeReport from "../sentryNodeReport.js";
+import type * as settingsTree from "../settingsTree.js";
 import type * as siteSettingsPreviewDraft from "../siteSettingsPreviewDraft.js";
 
 import type {
@@ -51,6 +56,7 @@ import type {
 declare const fullApi: ApiFromModules<{
   aboutPreviewDraft: typeof aboutPreviewDraft;
   aboutTeamStorage: typeof aboutTeamStorage;
+  aboutTree: typeof aboutTree;
   "admin/about": typeof admin_about;
   "admin/aboutTeam": typeof admin_aboutTeam;
   "admin/audio": typeof admin_audio;
@@ -60,6 +66,7 @@ declare const fullApi: ApiFromModules<{
   "admin/publish": typeof admin_publish;
   "admin/siteSettings": typeof admin_siteSettings;
   cms: typeof cms;
+  cmsMeta: typeof cmsMeta;
   cmsPublishHelpers: typeof cmsPublishHelpers;
   cmsShared: typeof cmsShared;
   errors: typeof errors;
@@ -73,14 +80,17 @@ declare const fullApi: ApiFromModules<{
   inquiries: typeof inquiries;
   "lib/auth": typeof lib_auth;
   "lib/sentryConvex": typeof lib_sentryConvex;
+  marketingFeatureFlags: typeof marketingFeatureFlags;
   "migrations/gearFromEquipmentSpecs": typeof migrations_gearFromEquipmentSpecs;
   observability: typeof observability;
   photosPreviewDraft: typeof photosPreviewDraft;
   pricingPreviewDraft: typeof pricingPreviewDraft;
+  pricingTree: typeof pricingTree;
   public: typeof public_;
   publicSettingsSnapshot: typeof publicSettingsSnapshot;
   seed: typeof seed;
   sentryNodeReport: typeof sentryNodeReport;
+  settingsTree: typeof settingsTree;
   siteSettingsPreviewDraft: typeof siteSettingsPreviewDraft;
 }>;
 

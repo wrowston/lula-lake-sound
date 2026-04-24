@@ -50,7 +50,7 @@ import {
 import { cn } from "@/lib/utils";
 import { convexMutationEffect, type CmsAppError } from "@/lib/effect-errors";
 import { runAdminEffect } from "@/lib/admin-run-effect";
-import { CmsPublishToolbar } from "@/components/admin/cms-publish-toolbar";
+import { useRegisterCmsEditor } from "@/components/admin/cms-workspace";
 
 /** Client-side limits (Convex schema is structural only). */
 const MAX_NAME_LEN = 500;
@@ -95,7 +95,7 @@ function generateItemId(): string {
   return `item_${Math.random().toString(36).slice(2)}${Date.now().toString(36)}`;
 }
 
-function specsPreview(specs: GearSpecs): string {
+export function specsPreview(specs: GearSpecs): string {
   if (specs.kind === "markdown") {
     const t = specs.text.trim().replace(/\s+/g, " ");
     return t.length > SPECS_PREVIEW_LEN
@@ -110,18 +110,18 @@ function specsPreview(specs: GearSpecs): string {
     : joined || "—";
 }
 
-function validateItemName(name: string): string | null {
+export function validateItemName(name: string): string | null {
   const t = name.trim();
   if (t.length === 0) return "Name is required.";
   if (t.length > MAX_NAME_LEN) return `Name must be at most ${MAX_NAME_LEN} characters.`;
   return null;
 }
 
-function validateCategoryName(name: string): string | null {
+export function validateCategoryName(name: string): string | null {
   return validateItemName(name);
 }
 
-function validateSpecs(specs: GearSpecs): string | null {
+export function validateSpecs(specs: GearSpecs): string | null {
   if (specs.kind === "markdown") {
     if (specs.text.length > MAX_MARKDOWN_LEN) {
       return `Details must be at most ${MAX_MARKDOWN_LEN} characters.`;
@@ -143,7 +143,7 @@ function validateSpecs(specs: GearSpecs): string | null {
   return null;
 }
 
-function validateUrl(url: string): string | null {
+export function validateUrl(url: string): string | null {
   const t = url.trim();
   if (t.length === 0) return null;
   if (t.length > MAX_URL_LEN) return `URL must be at most ${MAX_URL_LEN} characters.`;
@@ -158,20 +158,20 @@ function validateUrl(url: string): string | null {
   return null;
 }
 
-function sortCategories(cats: GearCategoryPayload[]): GearCategoryPayload[] {
+export function sortCategories(cats: GearCategoryPayload[]): GearCategoryPayload[] {
   return [...cats].sort(
     (a, b) => a.sort - b.sort || a.stableId.localeCompare(b.stableId),
   );
 }
 
-function sortItems(items: GearItemPayload[]): GearItemPayload[] {
+export function sortItems(items: GearItemPayload[]): GearItemPayload[] {
   return [...items].sort(
     (a, b) => a.sort - b.sort || a.stableId.localeCompare(b.stableId),
   );
 }
 
 /** Next sort for a new row at the end; avoids colliding with gaps after deletes. */
-function nextAppendSort(sorts: readonly number[]): number {
+export function nextAppendSort(sorts: readonly number[]): number {
   if (sorts.length === 0) return 0;
   return Math.max(...sorts) + 1;
 }
@@ -513,6 +513,32 @@ function GearEditorForm() {
 
   const publishProgram = convexMutationEffect(() => publishGear({}));
 
+  const handleToolbarPublish = useCallback(() => {
+    void (async () => {
+      const ok = await runAction("Publishing…", publishProgram);
+      if (ok !== undefined) {
+        toast.success("Gear published.");
+      }
+    })();
+  }, [publishProgram, runAction]);
+
+  const { toolbarPortal, editorRef } = useRegisterCmsEditor({
+    section: "gear",
+    sectionLabel: "gear",
+    hasDraftOnServer,
+    hasLocalEdits,
+    publishedAt: data?.publishedAt ?? null,
+    publishedByLabel,
+    busy,
+    inlineError,
+    previewHref: "/preview#equipment-specs",
+    onPublish: handleToolbarPublish,
+    onDiscardConfirm: handleDiscardConfirm,
+    // No `flush` — gear edits are persisted server-side per-row so
+    // `hasLocalEdits` is always false; the nav guard never needs to
+    // intervene.
+  });
+
   if (data === undefined) {
     return (
       <p className="body-text text-foreground/80">Loading gear…</p>
@@ -520,7 +546,7 @@ function GearEditorForm() {
   }
 
   return (
-    <div className="space-y-8 pb-24">
+    <div className="space-y-8 pb-24" ref={editorRef}>
       <div className="space-y-6">
         <div className="space-y-2">
           <h2 className="font-heading text-xl font-semibold text-foreground">
@@ -727,26 +753,7 @@ function GearEditorForm() {
         </div>
       )}
 
-      <CmsPublishToolbar
-        section="gear"
-        sectionLabel="gear"
-        hasDraftOnServer={hasDraftOnServer}
-        hasLocalEdits={hasLocalEdits}
-        publishedAt={data.publishedAt ?? null}
-        publishedByLabel={publishedByLabel}
-        busy={busy}
-        inlineError={inlineError}
-        previewHref="/preview#equipment-specs"
-        onPublish={() => {
-          void (async () => {
-            const ok = await runAction("Publishing…", publishProgram);
-            if (ok !== undefined) {
-              toast.success("Gear published.");
-            }
-          })();
-        }}
-        onDiscardConfirm={handleDiscardConfirm}
-      />
+      {toolbarPortal}
 
       <Sheet
         open={categorySheet !== null}

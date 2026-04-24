@@ -2,8 +2,9 @@ import { query } from "./_generated/server";
 import { requireCmsOwner } from "./lib/auth";
 import {
   materializePublicAbout,
-  publishedAboutFromRow,
+  previewAboutFromScoped,
 } from "./publicSettingsSnapshot";
+import { getSectionMetaRow } from "./cmsMeta";
 
 /**
  * Preview About copy for owner-only access. Resolves **draft** when present,
@@ -23,35 +24,15 @@ export const getPreviewAbout = query({
       return null;
     }
 
-    const row = await ctx.db
-      .query("cmsSections")
-      .withIndex("by_section", (q) => q.eq("section", "about"))
-      .unique();
-
-    if (!row) {
-      const snapshot = await materializePublicAbout(
-        ctx,
-        publishedAboutFromRow(null),
-      );
-      return {
-        ...snapshot,
-        hasDraftChanges: false,
-      };
-    }
-
-    const effectiveRow = {
-      ...row,
-      publishedSnapshot: row.draftSnapshot ?? row.publishedSnapshot,
-    };
-
-    const snapshot = await materializePublicAbout(
-      ctx,
-      publishedAboutFromRow(effectiveRow),
-    );
+    const [snapshot, row] = await Promise.all([
+      previewAboutFromScoped(ctx),
+      getSectionMetaRow(ctx, "about"),
+    ]);
+    const materialized = await materializePublicAbout(ctx, snapshot);
 
     return {
-      ...snapshot,
-      hasDraftChanges: row.hasDraftChanges,
+      ...materialized,
+      hasDraftChanges: row?.hasDraftChanges ?? false,
     };
   },
 });

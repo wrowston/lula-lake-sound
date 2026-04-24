@@ -1,23 +1,29 @@
 import { defineSchema, defineTable } from "convex/server";
 import { v } from "convex/values";
 import {
+  aboutContentRowValidator,
+  aboutHighlightRowValidator,
+  aboutTeamMemberRowValidator,
   cmsSectionValidator,
-  cmsSnapshotValidator,
   gearScopeValidator,
   gearSpecsValidator,
+  pricingPackageRowValidator,
+  settingsContentRowValidator,
 } from "./schema.shared";
 
-// Draft/publish model: see docs/cms-publish.md (INF-70).
-
 /**
- * CMS sections use **one row per section** (approach B):
- * - `publishedSnapshot` + `publishedAt` + optional `publishedBy` (Clerk user id) — what public readers see (atomic updates on publish).
- * - `draftSnapshot` — working copy for admins; optional until first edit.
- * - `hasDraftChanges` — true when draft differs from published (cleared on publish / discard).
+ * CMS sections (one row per section):
  *
- * Snapshots are a union across sections; consumers must narrow via the row's `section` field.
- * First-time publish: `publishedSnapshot` may be a seeded default; saving draft populates
- * `draftSnapshot`; publish copies `draftSnapshot` → `publishedSnapshot` in one `patch`.
+ * - `cmsSections` is a **metadata-only** table: publish bookkeeping
+ *   (`hasDraftChanges`, `publishedAt`, `publishedBy`, timestamps) plus the
+ *   section's visibility flag (`isEnabled` with optional `isEnabledDraft`).
+ * - Section content lives in dedicated scoped tables
+ *   (`aboutContent` / `aboutHighlights` / `aboutTeamMembers`,
+ *   `pricingPackages`, `settingsContent`) using the same `scope: "draft" | "published"`
+ *   pattern as `gearCategories` / `galleryPhotos`. Publish copies the draft
+ *   scope onto the published scope in a single mutation.
+ * - The `recordings` section is flag-only (no content table); the public page
+ *   reads copy from `src/app/recordings/recordings-data.ts`.
  */
 export default defineSchema({
   inquiries: defineTable({
@@ -28,28 +34,42 @@ export default defineSchema({
     message: v.string(),
     createdAt: v.number(),
   }),
-  /**
-   * Per-section CMS documents. `section` is the primary key for the singleton pattern
-   * (one row per section literal, e.g. `settings`, `pricing`).
-   */
+
   cmsSections: defineTable({
     section: cmsSectionValidator,
-    updatedAt: v.number(),
-    /** Clerk user id (`subject`) when the last write was authenticated. */
-    updatedBy: v.optional(v.string()),
-    publishedSnapshot: cmsSnapshotValidator,
+    /** Published visibility. Controls route/section visibility on the public site. */
+    isEnabled: v.optional(v.boolean()),
+    /** Draft override for `isEnabled`; cleared on publish / discard. */
+    isEnabledDraft: v.optional(v.boolean()),
+    hasDraftChanges: v.boolean(),
     publishedAt: v.union(v.number(), v.null()),
     /** Clerk user id (`subject`) who last published this section. */
     publishedBy: v.optional(v.string()),
-    draftSnapshot: v.optional(cmsSnapshotValidator),
-    hasDraftChanges: v.boolean(),
+    updatedAt: v.number(),
+    /** Clerk user id (`subject`) when the last write was authenticated. */
+    updatedBy: v.optional(v.string()),
   }).index("by_section", ["section"]),
 
-  /**
-   * Studio gear CMS (INF-86): separate rows per scope so we can index by category
-   * and sort. Publish replaces all `published` rows in one transaction; discard
-   * copies `published` → `draft` after clearing draft.
-   */
+  aboutContent: defineTable(aboutContentRowValidator).index("by_scope", [
+    "scope",
+  ]),
+
+  aboutHighlights: defineTable(aboutHighlightRowValidator)
+    .index("by_scope_and_sort", ["scope", "sort"])
+    .index("by_scope_and_stableId", ["scope", "stableId"]),
+
+  aboutTeamMembers: defineTable(aboutTeamMemberRowValidator)
+    .index("by_scope_and_sort", ["scope", "sort"])
+    .index("by_scope_and_stableId", ["scope", "stableId"]),
+
+  pricingPackages: defineTable(pricingPackageRowValidator)
+    .index("by_scope_and_sort", ["scope", "sortOrder"])
+    .index("by_scope_and_stableId", ["scope", "stableId"]),
+
+  settingsContent: defineTable(settingsContentRowValidator).index("by_scope", [
+    "scope",
+  ]),
+
   gearMeta: defineTable({
     singletonKey: v.literal("default"),
     hasDraftChanges: v.boolean(),

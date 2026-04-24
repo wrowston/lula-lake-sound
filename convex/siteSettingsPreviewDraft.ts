@@ -1,12 +1,15 @@
 import { query } from "./_generated/server";
 import { requireCmsOwner } from "./lib/auth";
-import { publishedSettingsFromRow } from "./publicSettingsSnapshot";
+import { SETTINGS_DEFAULTS } from "./cmsShared";
+import { loadSettingsContent } from "./settingsTree";
+import { getSectionMetaRow } from "./cmsMeta";
 
 /**
- * Preview site metadata for owner-only access. Resolves **draft** when present,
- * else published (same effective snapshot as the editor).
+ * Preview site metadata for owner-only access. Resolves **draft** when
+ * present, else published (same effective snapshot as the editor).
  *
- * Returns `null` for unauthenticated or non-owner callers — never leaks drafts.
+ * Returns `null` for unauthenticated or non-owner callers — never leaks
+ * drafts.
  */
 export const getPreviewSiteSettings = query({
   args: {},
@@ -20,26 +23,24 @@ export const getPreviewSiteSettings = query({
       return null;
     }
 
-    const row = await ctx.db
-      .query("cmsSections")
-      .withIndex("by_section", (q) => q.eq("section", "settings"))
-      .unique();
+    const [metaRow, draft, published] = await Promise.all([
+      getSectionMetaRow(ctx, "settings"),
+      loadSettingsContent(ctx, "draft"),
+      loadSettingsContent(ctx, "published"),
+    ]);
 
-    if (!row) {
-      return {
-        ...publishedSettingsFromRow(null),
-        hasDraftChanges: false,
-      };
-    }
-
-    const effectiveRow = {
-      ...row,
-      publishedSnapshot: row.draftSnapshot ?? row.publishedSnapshot,
+    const source = draft ?? published;
+    const defaults = SETTINGS_DEFAULTS.metadata ?? {
+      title: "",
+      description: "",
     };
 
     return {
-      ...publishedSettingsFromRow(effectiveRow),
-      hasDraftChanges: row.hasDraftChanges,
+      metadata: {
+        title: source?.title ?? defaults.title,
+        description: source?.description ?? defaults.description,
+      },
+      hasDraftChanges: metaRow?.hasDraftChanges ?? false,
     };
   },
 });

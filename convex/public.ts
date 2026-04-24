@@ -1,57 +1,41 @@
 import { query } from "./_generated/server";
 import {
   materializePublicAbout,
-  publishedAboutFromRow,
-  publishedPricingFromRows,
-  publishedSettingsFromRow,
+  publishedAboutFromScoped,
+  publishedPricingFromScoped,
+  publishedSettingsFromScoped,
 } from "./publicSettingsSnapshot";
 import { loadGearDocs, mapSortedGearTree } from "./gearTree";
 import type { Doc } from "./_generated/dataModel";
 import { loadGalleryPhotos, materializeGalleryPhotos } from "./galleryPhotos";
 import { loadAudioTracks, materializeAudioTracks } from "./audioTracks";
+import { getSectionMetaRow, publishedIsEnabled } from "./cmsMeta";
 
 /**
- * **Public (anonymous) site reads** — published snapshot only.
+ * **Public (anonymous) site reads** — published only.
  *
- * Add new landing-page queries here (one entry point per domain). Each handler must
- * read only `publishedSnapshot` (or other published columns), never `draftSnapshot`.
- * For owner preview / draft overlay, use `pricingPreviewDraft` / `siteSettingsPreviewDraft`.
+ * Each handler reads from the per-section scoped tables at `scope="published"`
+ * and/or the `cmsSections.isEnabled` flag. For owner preview / draft overlay,
+ * see `aboutPreviewDraft` / `pricingPreviewDraft`.
  */
 export const getPublishedSiteSettings = query({
   args: {},
   handler: async (ctx) => {
-    const row = await ctx.db
-      .query("cmsSections")
-      .withIndex("by_section", (q) => q.eq("section", "settings"))
-      .unique();
-
-    return publishedSettingsFromRow(row);
+    return await publishedSettingsFromScoped(ctx);
   },
 });
 
 /**
- * Published pricing feature flags.
+ * Published pricing payload for the marketing site.
  *
- * Resolves the `pricing` section's `publishedSnapshot.flags`. If that row
- * has not yet been written (legacy deployments that still store flags on
- * the `settings` row), the helper falls back to `settings.flags` and then
- * to the seeded defaults, so the marketing site always renders.
+ * Returns `{ flags: { priceTabEnabled }, packages }` where `priceTabEnabled`
+ * mirrors `cmsSections.pricing.isEnabled`. The shape is preserved for back-
+ * compat with existing front-end consumers.
  */
 export const getPublishedPricingFlags = query({
   args: {},
   handler: async (ctx) => {
-    const [pricingRow, settingsRow] = await Promise.all([
-      ctx.db
-        .query("cmsSections")
-        .withIndex("by_section", (q) => q.eq("section", "pricing"))
-        .unique(),
-      ctx.db
-        .query("cmsSections")
-        .withIndex("by_section", (q) => q.eq("section", "settings"))
-        .unique(),
-    ]);
-
-    return publishedPricingFromRows(pricingRow, settingsRow);
+    return await publishedPricingFromScoped(ctx);
   },
 });
 
@@ -61,13 +45,6 @@ type GearItemPublic = {
   sort: number;
   specs: Doc<"gearItems">["specs"];
   url?: string;
-};
-
-type GearCategoryPublic = {
-  stableId: string;
-  name: string;
-  sort: number;
-  items: GearItemPublic[];
 };
 
 /**
@@ -90,37 +67,15 @@ export const getPublishedGear = query({
 });
 
 /**
- * Published About page copy only. Anonymous; reads `publishedSnapshot` for
- * the `about` section. Falls back to seeded defaults when the row doesn't
- * exist yet, so the public route always renders.
+ * Published About page copy only. Anonymous; reads the published scope of
+ * `aboutContent` + `aboutHighlights` + `aboutTeamMembers`. Falls back to
+ * seeded defaults when nothing has been published yet.
  */
 export const getPublishedAbout = query({
   args: {},
   handler: async (ctx) => {
-    const row = await ctx.db
-      .query("cmsSections")
-      .withIndex("by_section", (q) => q.eq("section", "about"))
-      .unique();
-    const snapshot = publishedAboutFromRow(row);
+    const snapshot = await publishedAboutFromScoped(ctx);
     return await materializePublicAbout(ctx, snapshot);
-  },
-});
-
-/**
- * Lightweight visibility check for the INF-46 About-page feature flag. Used
- * by the header nav and other high-traffic surfaces so we don't have to load
- * the full About snapshot (and generate signed team-headshot URLs) every
- * time they need to decide whether to render the "About" link.
- */
-export const getPublishedAboutVisibility = query({
-  args: {},
-  handler: async (ctx) => {
-    const row = await ctx.db
-      .query("cmsSections")
-      .withIndex("by_section", (q) => q.eq("section", "about"))
-      .unique();
-    const snapshot = publishedAboutFromRow(row);
-    return { published: snapshot.published === true };
   },
 });
 
@@ -151,5 +106,26 @@ export const getPublishedAudioTracks = query({
     const rows = await loadAudioTracks(ctx, "published");
     const tracks = await materializeAudioTracks(ctx, rows);
     return tracks.filter((t) => t.url !== null);
+  },
+});
+
+/**
+ * Marketing-site visibility flags. Reads each section's `cmsSections.isEnabled`
+ * and returns the historical shape `{ aboutPage, recordingsPage, pricingSection }`
+ * so the existing frontend consumers keep working without changes.
+ */
+export const getPublishedMarketingFeatureFlags = query({
+  args: {},
+  handler: async (ctx) => {
+    const [aboutRow, recordingsRow, pricingRow] = await Promise.all([
+      getSectionMetaRow(ctx, "about"),
+      getSectionMetaRow(ctx, "recordings"),
+      getSectionMetaRow(ctx, "pricing"),
+    ]);
+    return {
+      aboutPage: publishedIsEnabled(aboutRow, "about"),
+      recordingsPage: publishedIsEnabled(recordingsRow, "recordings"),
+      pricingSection: publishedIsEnabled(pricingRow, "pricing"),
+    };
   },
 });

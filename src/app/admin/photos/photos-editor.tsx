@@ -44,7 +44,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import { CmsPublishToolbar } from "@/components/admin/cms-publish-toolbar";
+import { useRegisterCmsEditor } from "@/components/admin/cms-workspace";
 import { convexMutationEffect, type CmsAppError } from "@/lib/effect-errors";
 import { runAdminEffect } from "@/lib/admin-run-effect";
 import { cn } from "@/lib/utils";
@@ -95,7 +95,7 @@ type UploadProgressEntry = {
   readonly error?: string;
 };
 
-function defaultAltFromFileName(fileName: string): string {
+export function defaultAltFromFileName(fileName: string): string {
   const withoutExtension = fileName.replace(/\.[^.]+$/, "");
   const normalized = withoutExtension
     .replace(/[_-]+/g, " ")
@@ -107,13 +107,13 @@ function defaultAltFromFileName(fileName: string): string {
   return normalized[0].toUpperCase() + normalized.slice(1);
 }
 
-function formatBytes(bytes: number): string {
+export function formatBytes(bytes: number): string {
   if (bytes < 1024) return `${bytes} B`;
   if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
   return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
 }
 
-function validatePhotoFields(alt: string, caption: string): string | null {
+export function validatePhotoFields(alt: string, caption: string): string | null {
   const trimmedAlt = alt.trim();
   if (trimmedAlt.length === 0) {
     return "Alt text is required.";
@@ -836,6 +836,27 @@ function PhotosEditorForm() {
     }
   }, [publishPhotos, runAction, savePendingEdits]);
 
+  const handleToolbarPublish = useCallback(() => {
+    void handlePublish();
+  }, [handlePublish]);
+
+  const { toolbarPortal, editorRef } = useRegisterCmsEditor({
+    section: "photos",
+    sectionLabel: "Studio gallery",
+    hasDraftOnServer,
+    hasLocalEdits,
+    publishedAt: data?.publishedAt ?? null,
+    publishedByLabel,
+    busy,
+    autosaveStatus: "idle",
+    inlineError,
+    previewHref: "/preview#the-space",
+    onPublish: handleToolbarPublish,
+    onDiscardConfirm: handleDiscardConfirm,
+    // No `flush` — dirty local edits trigger the nav-guard confirm dialog
+    // (they're manual-save pending metadata tweaks, not autosavable).
+  });
+
   if (data === undefined) {
     return <p className="body-text text-foreground/80">Loading photos…</p>;
   }
@@ -846,6 +867,7 @@ function PhotosEditorForm() {
 
   return (
     <div
+      ref={editorRef}
       className={cn(
         "relative space-y-8 pb-24 transition",
         isDraggingOver &&
@@ -1205,20 +1227,7 @@ function PhotosEditorForm() {
         </div>
       )}
 
-      <CmsPublishToolbar
-        section="photos"
-        sectionLabel="Studio gallery"
-        hasDraftOnServer={hasDraftOnServer}
-        hasLocalEdits={hasLocalEdits}
-        publishedAt={data.publishedAt}
-        publishedByLabel={publishedByLabel}
-        busy={busy}
-        onPublish={() => void handlePublish()}
-        onDiscardConfirm={handleDiscardConfirm}
-        previewHref="/preview#the-space"
-        inlineError={inlineError}
-        autosaveStatus="idle"
-      />
+      {toolbarPortal}
 
       <AlertDialog
         open={deleteStableId !== null}

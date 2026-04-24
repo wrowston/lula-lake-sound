@@ -1,17 +1,29 @@
 import type { Infer } from "convex/values";
-import type { Doc } from "./_generated/dataModel";
 import type {
   aboutBlockValidator,
   aboutContentValidator,
   aboutTeamMemberValidator,
+  cmsSectionValidator,
+  marketingFeatureFlagsSnapshotValidator,
   pricingBillingCadenceValidator,
   pricingContentValidator,
   pricingPackageValidator,
   settingsContentValidator,
 } from "./schema.shared";
 
-export type CmsSection = Doc<"cmsSections">["section"];
-export type CmsSnapshot = Doc<"cmsSections">["publishedSnapshot"];
+export type CmsSection = Infer<typeof cmsSectionValidator>;
+
+/**
+ * @deprecated Represents the pre-refactor `publishedSnapshot`/`draftSnapshot`
+ * JSON blob on `cmsSections`. Kept so the one-shot migration can type the
+ * legacy payloads it unpacks. New code reads content from the per-section
+ * scoped tables.
+ */
+export type CmsSnapshot =
+  | Infer<typeof settingsContentValidator>
+  | Infer<typeof pricingContentValidator>
+  | Infer<typeof aboutContentValidator>;
+
 export type SettingsSnapshot = Infer<typeof settingsContentValidator>;
 export type PricingSnapshot = Infer<typeof pricingContentValidator>;
 export type PricingPackage = Infer<typeof pricingPackageValidator>;
@@ -19,6 +31,9 @@ export type PricingBillingCadence = Infer<typeof pricingBillingCadenceValidator>
 export type AboutSnapshot = Infer<typeof aboutContentValidator>;
 export type AboutBlock = Infer<typeof aboutBlockValidator>;
 export type AboutTeamMember = Infer<typeof aboutTeamMemberValidator>;
+export type MarketingFeatureFlagsSnapshot = Infer<
+  typeof marketingFeatureFlagsSnapshotValidator
+>;
 
 /** Team row as returned to anonymous public callers (no raw storage id). */
 export type PublicAboutTeamMember = {
@@ -44,7 +59,7 @@ export type PublicAboutSnapshot = Omit<
   heroImageUrl?: string | null;
 };
 
-/** Per-section default snapshots used for seeding and new-row inserts. */
+/** Default site metadata for brand-new deployments (seed + fallback reads). */
 export const SETTINGS_DEFAULTS: SettingsSnapshot = {
   metadata: {
     title: "Lula Lake Sound",
@@ -53,9 +68,9 @@ export const SETTINGS_DEFAULTS: SettingsSnapshot = {
 };
 
 /**
- * Default catalog shipped to brand-new deployments. Seeds the CMS so the
- * marketing site can render familiar rates after the first publish; the
- * public homepage reads published packages via `api.public.getPublishedPricingFlags`.
+ * Default catalogue shipped with a brand-new deployment. Seeded onto the
+ * published scope of `pricingPackages` so the marketing site renders
+ * familiar rates before the first admin publish.
  */
 export const DEFAULT_PRICING_PACKAGES: PricingPackage[] = [
   {
@@ -109,21 +124,33 @@ export const DEFAULT_PRICING_PACKAGES: PricingPackage[] = [
   },
 ];
 
+/**
+ * @deprecated Pre-split default — `flags.priceTabEnabled` is no longer read.
+ * Kept so older callers that import `PRICING_DEFAULTS` keep compiling; the
+ * packages array is still the default catalogue.
+ */
 export const PRICING_DEFAULTS: PricingSnapshot = {
   flags: { priceTabEnabled: true },
   packages: DEFAULT_PRICING_PACKAGES,
 };
 
 /**
- * Default About page copy shipped with a brand-new deployment. Seeded so the
- * public route renders before the owner has made their first publish. Kept
- * intentionally short — real copy goes in via the admin editor.
- *
- * `published` defaults to `false` (INF-46): the About page is hidden behind
- * a feature flag until the owner explicitly enables it from the CMS.
+ * @deprecated Kept for legacy-format migration code. New code reads each
+ * flag from its owning `cmsSections.isEnabled` row (see `DEFAULT_IS_ENABLED`
+ * in `cmsMeta.ts`).
+ */
+export const MARKETING_FEATURE_FLAGS_DEFAULTS: MarketingFeatureFlagsSnapshot = {
+  aboutPage: false,
+  recordingsPage: false,
+  pricingSection: true,
+};
+
+/**
+ * Default About page copy shipped with a brand-new deployment. Seeded onto
+ * the published scope of `aboutContent` + `aboutHighlights` + `aboutTeamMembers`
+ * so the public route renders before the owner has published.
  */
 export const ABOUT_DEFAULTS: AboutSnapshot = {
-  published: false,
   heroTitle: "About Lula Lake Sound",
   heroSubtitle: "A creative space for music production and recording.",
   body: [
@@ -139,6 +166,10 @@ export const ABOUT_DEFAULTS: AboutSnapshot = {
   teamMembers: [],
 };
 
+/**
+ * @deprecated Default snapshot shape per section — used only by the legacy
+ * `saveDraft` compatibility shim to synthesise defaults for brand-new rows.
+ */
 export function defaultSnapshotForSection(section: CmsSection): CmsSnapshot {
   switch (section) {
     case "settings":
@@ -147,6 +178,10 @@ export function defaultSnapshotForSection(section: CmsSection): CmsSnapshot {
       return PRICING_DEFAULTS;
     case "about":
       return ABOUT_DEFAULTS;
+    case "recordings":
+      // `recordings` has no content table; return an empty about-shaped
+      // placeholder so the union typechecks. Nothing reads this branch.
+      return { ...ABOUT_DEFAULTS };
   }
 }
 
@@ -217,7 +252,10 @@ function deepEqual(a: unknown, b: unknown): boolean {
 }
 
 /** Deep equality for section snapshots without relying on `JSON.stringify` key order. */
-export function cmsSnapshotsEqual(a: CmsSnapshot, b: CmsSnapshot): boolean {
+export function cmsSnapshotsEqual(
+  a: CmsSnapshot | undefined,
+  b: CmsSnapshot | undefined,
+): boolean {
   return deepEqual(a, b);
 }
 

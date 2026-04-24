@@ -59,3 +59,42 @@ export const ADMIN_MANAGE_NAV_ITEMS: {
     description: "Site configuration",
   },
 ];
+
+/**
+ * Keys returned from `api.cms.listPendingDrafts`. Aggregates every CMS
+ * surface that tracks its own draft state (`cmsSections` + the two singleton
+ * meta tables).
+ */
+export type PendingDraftKey =
+  | "settings"
+  | "pricing"
+  | "about"
+  | "recordings"
+  | "gear"
+  | "photos";
+
+/**
+ * Nav target + user-facing label for each pending-draft key. `recordings` is
+ * flag-only and is managed from the Audio admin page, so it links there.
+ */
+export const PENDING_SECTION_NAV: Record<
+  PendingDraftKey,
+  { readonly href: string; readonly label: string }
+> = {
+  settings: { href: "/admin/settings", label: "Settings" },
+  pricing: { href: "/admin/pricing", label: "Pricing" },
+  about: { href: "/admin/about", label: "About" },
+  recordings: { href: "/admin/audio", label: "Audio" },
+  gear: { href: "/admin/gear", label: "Gear" },
+  photos: { href: "/admin/photos", label: "Photos" },
+};
+
+/** Stable display order for pending-draft chips / dots. */
+export const PENDING_SECTION_ORDER: readonly PendingDraftKey[] = [
+  "settings",
+  "pricing",
+  "about",
+  "gear",
+  "photos",
+  "recordings",
+];

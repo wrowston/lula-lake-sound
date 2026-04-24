@@ -29,6 +29,7 @@ export default async function Home() {
       return (
         <HomepageShell
           pricingFlags={null}
+          marketingFeatureFlags={undefined}
           gear={null}
           photos={null}
           audioTracks={null}
@@ -47,6 +48,7 @@ export default async function Home() {
     return (
       <HomepageShell
         pricingFlags={null}
+        marketingFeatureFlags={undefined}
         gear={null}
         photos={null}
         audioTracks={null}

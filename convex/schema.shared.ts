@@ -5,11 +5,40 @@ import { v } from "convex/values";
  * See `docs/cms-publish.md` for how to add a new section.
  *
  * Sections today:
- * - `settings`  — site metadata (title, description; extend as CMS grows).
- * - `pricing`   — feature flags and package/rate catalog that govern pricing surfaces.
- * - `about`     — About page hero copy, body block array, optional highlights, SEO meta, optional team headshots.
+ * - `settings`   — site metadata (title, description; extend as CMS grows).
+ * - `pricing`    — pricing package catalogue that drives the public pricing block.
+ * - `about`      — About page hero copy, body block array, optional highlights, SEO meta, optional team headshots.
+ * - `recordings` — public recordings page (flag-only; content lives in `src/app/recordings/recordings-data.ts`).
+ *
+ * Content for each section (when any) lives in dedicated scoped tables using the
+ * gear/photos pattern (`scope: "draft" | "published"` column); `cmsSections`
+ * itself now only holds per-section metadata — publish bookkeeping and the
+ * `isEnabled` visibility flag.
+ */
+
+/**
+ * @deprecated Legacy flags object kept until the migration strips it from
+ * existing `pricing` snapshots. New code reads visibility from
+ * `cmsSections.isEnabled`; `priceTabEnabled` is no longer authored.
  */
 export const siteFlagsValidator = v.object({
+  priceTabEnabled: v.boolean(),
+  recordingsPageEnabled: v.optional(v.boolean()),
+});
+
+/**
+ * @deprecated Pre-split marketing flags snapshot; kept so the legacy
+ * `marketingFeatureFlags` table continues to validate until the migration
+ * removes it. New code reads per-section flags from `cmsSections.isEnabled`.
+ */
+export const marketingFeatureFlagsSnapshotValidator = v.object({
+  aboutPage: v.boolean(),
+  recordingsPage: v.boolean(),
+  pricingSection: v.boolean(),
+});
+
+/** @deprecated Same idea as `siteFlagsValidator`; only tolerates legacy rows. */
+export const legacySiteFlagsValidator = v.object({
   priceTabEnabled: v.boolean(),
 });
 
@@ -27,10 +56,6 @@ export const siteMetadataValidator = v.object({
  * package's `unitLabel` field — the UI surfaces it as a "Custom…" option that
  * pairs with the free-form unit label input, and publish validation requires
  * `unitLabel` to be non-empty whenever `billingCadence === "custom"`.
- *
- * Consumers should render a human label via `billingCadenceLabel` in
- * `cmsShared.ts` (which returns the `unitLabel` for custom rows) or bypass it
- * entirely by reading `unitLabel` directly.
  */
 export const pricingBillingCadenceValidator = v.union(
   v.literal("hourly"),
@@ -44,17 +69,10 @@ export const pricingBillingCadenceValidator = v.union(
 );
 
 /**
- * Pricing package / rate row authored in the CMS. Stored inline on the
- * `pricing` section snapshot so publish remains a single atomic patch.
- *
- * - `id` is a stable client-generated identifier (e.g. `crypto.randomUUID()`)
- *   used so the editor can track rows across edits and reorders without
- *   depending on array position. It is NOT a Convex document id.
- * - `priceCents` is an integer so we never have to deal with floating-point
- *   rounding on the display side. Currency format is left to the client.
- * - `unitLabel` optionally overrides the cadence's default display label
- *   (e.g. "per mixed song").
- * - `features` is an ordered bullet list rendered in the public card UI.
+ * Pricing package / rate row authored in the CMS. Kept as a shape validator
+ * (no Convex table) so admin mutations that still accept a whole-snapshot
+ * payload can decompose it into `pricingPackages` rows. Storage uses
+ * `pricingPackageRowValidator` with an explicit `scope` column.
  */
 export const pricingPackageValidator = v.object({
   id: v.string(),
@@ -71,24 +89,17 @@ export const pricingPackageValidator = v.object({
 });
 
 /**
- * "settings" section snapshot — site-wide metadata.
- *
- * `flags` is retained as optional purely to keep legacy rows (pre-split)
- * schema-valid. New writes from the settings editor never populate it;
- * pricing flags live in the `pricing` section. Remove after legacy rows
- * have been migrated.
+ * @deprecated `settings` content now lives in the `settingsContent` scoped table.
+ * Kept so pre-migration `publishedSnapshot`/`draftSnapshot` blobs still validate.
  */
 export const settingsContentValidator = v.object({
   metadata: v.optional(siteMetadataValidator),
-  /** @deprecated Moved to the `pricing` section. Kept optional for legacy rows. */
-  flags: v.optional(siteFlagsValidator),
+  flags: v.optional(legacySiteFlagsValidator),
 });
 
 /**
- * "pricing" section snapshot.
- *
- * `packages` is optional for back-compat with legacy rows that only stored the
- * feature `flags`; consumers should treat `undefined` as an empty array.
+ * @deprecated `pricing` content now lives in the `pricingPackages` scoped table;
+ * the visibility flag now lives on `cmsSections.isEnabled`.
  */
 export const pricingContentValidator = v.object({
   flags: siteFlagsValidator,
@@ -122,37 +133,9 @@ export const aboutTeamMemberValidator = v.object({
 });
 
 /**
- * "about" section snapshot — About page copy (INF-70 / INF-98 / INF-46).
- *
- * - `published` — INF-46 visibility flag. Feature-flag that gates the public
- *   `/about` route and the header's "About" nav link. Treated as `false`
- *   (hidden) when absent so net-new deployments stay off until the owner
- *   explicitly enables the page from the CMS.
- * - `heroImageStorageId` — optional Convex storage id of the cinematic hero
- *   image shown at the top of the public About page. The owner picks an
- *   already-uploaded photo from the studio gallery (INF-46 follow-up); the
- *   public renderer falls back to a baked-in image when this is absent or
- *   when the storage blob has been deleted (`storage.getUrl` → `null`).
- * - `heroTitle` — required display heading above the fold.
- * - `heroSubtitle` — optional supporting line.
- * - `bodyHtml` — rich-text body authored in the admin editor (Tiptap HTML
- *   serialization). Preferred over the legacy `body` blocks when present.
- *   Because Tiptap only emits nodes/marks from its fixed schema, the HTML is
- *   safe to render by construction, BUT the public renderer should still
- *   parse it into React elements through Tiptap's schema (never
- *   `dangerouslySetInnerHTML` with attacker-controlled `href="javascript:"`
- *   values — sanitize links there).
- * - `body` — legacy ordered paragraph / heading blocks (see
- *   `aboutBlockValidator`). Kept for back-compat so pre-INF-98 rows keep
- *   validating; new writes populate `bodyHtml` instead.
- * - `pullQuote` — INF-46 editorial pull quote rendered **below** the
- *   owner / studio-designer headshots on the Variant A layout.
- * - `highlights` — optional short bulleted callouts (e.g. key studio facts).
- * - `seoTitle` / `seoDescription` — optional overrides for page metadata;
- *   when blank the route should fall back to the `settings` section.
- * - `teamMembers` — optional ordered list of people (image, name, title).
- *   The public page renders the first two entries as owner / studio
- *   designer headshots in the Variant A layout.
+ * @deprecated `about` content now lives in `aboutContent` + `aboutHighlights`
+ * + `aboutTeamMembers` scoped tables. This validator remains only so that
+ * pre-migration `cmsSections.publishedSnapshot` blobs keep validating.
  */
 export const aboutContentValidator = v.object({
   published: v.optional(v.boolean()),
@@ -168,24 +151,84 @@ export const aboutContentValidator = v.object({
   teamMembers: v.optional(v.array(aboutTeamMemberValidator)),
 });
 
-/** Any section's snapshot payload — discriminated at runtime by the row's `section`. */
-export const cmsSnapshotValidator = v.union(
-  settingsContentValidator,
-  pricingContentValidator,
-  aboutContentValidator,
-);
-
+/**
+ * The set of sections tracked in `cmsSections`. `recordings` was added when
+ * flags moved off the `marketingFeatureFlags` singleton and onto `cmsSections`
+ * rows; it has no content table today (flag-only).
+ */
 export const cmsSectionValidator = v.union(
   v.literal("settings"),
   v.literal("pricing"),
   v.literal("about"),
+  v.literal("recordings"),
 );
 
-/** Draft vs published rows in `gearCategories` / `gearItems` (INF-86). */
-export const gearScopeValidator = v.union(
+/**
+ * Scope discriminator shared across all CMS content tables (and the existing
+ * gear / gallery tables). Publish copies the tree from `"draft"` → `"published"`
+ * inside a single mutation; discard copies the other direction.
+ */
+export const cmsScopeValidator = v.union(
   v.literal("draft"),
   v.literal("published"),
 );
+
+/** About page scalar fields — one row per scope (two rows total). */
+export const aboutContentRowValidator = {
+  scope: cmsScopeValidator,
+  heroImageStorageId: v.optional(v.id("_storage")),
+  heroTitle: v.string(),
+  heroSubtitle: v.optional(v.string()),
+  bodyHtml: v.optional(v.string()),
+  bodyBlocks: v.optional(v.array(aboutBlockValidator)),
+  pullQuote: v.optional(v.string()),
+  seoTitle: v.optional(v.string()),
+  seoDescription: v.optional(v.string()),
+} as const;
+
+/** About page highlight bullets — one row per bullet. */
+export const aboutHighlightRowValidator = {
+  scope: cmsScopeValidator,
+  stableId: v.string(),
+  text: v.string(),
+  sort: v.number(),
+} as const;
+
+/** About page team-member headshots — one row per person. */
+export const aboutTeamMemberRowValidator = {
+  scope: cmsScopeValidator,
+  stableId: v.string(),
+  name: v.string(),
+  title: v.string(),
+  storageId: v.optional(v.id("_storage")),
+  sort: v.number(),
+} as const;
+
+/** Pricing package — one row per package catalogue entry. */
+export const pricingPackageRowValidator = {
+  scope: cmsScopeValidator,
+  stableId: v.string(),
+  name: v.string(),
+  description: v.optional(v.string()),
+  priceCents: v.number(),
+  currency: v.string(),
+  billingCadence: pricingBillingCadenceValidator,
+  unitLabel: v.optional(v.string()),
+  highlight: v.boolean(),
+  sortOrder: v.number(),
+  isActive: v.boolean(),
+  features: v.optional(v.array(v.string())),
+} as const;
+
+/** Site-wide metadata — one row per scope (two rows total). */
+export const settingsContentRowValidator = {
+  scope: cmsScopeValidator,
+  title: v.optional(v.string()),
+  description: v.optional(v.string()),
+} as const;
+
+/** Draft vs published rows in `gearCategories` / `gearItems` (INF-86). */
+export const gearScopeValidator = cmsScopeValidator;
 
 /**
  * Item specs: markdown string or structured key/value pairs.

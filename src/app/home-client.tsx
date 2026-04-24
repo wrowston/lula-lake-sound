@@ -128,6 +128,7 @@ function BothPreloaded({
   return (
     <HomepageShell
       pricingFlags={pricingFlags}
+      marketingFeatureFlags={undefined}
       gear={gear}
       photos={photos}
       audioTracks={audioTracks}
@@ -149,6 +150,7 @@ function PricingPreloadedGearLive({
   return (
     <HomepageShell
       pricingFlags={pricingFlags}
+      marketingFeatureFlags={undefined}
       gear={gear}
       photos={photos}
       audioTracks={audioTracks}
@@ -170,6 +172,7 @@ function PricingLiveGearPreloaded({
   return (
     <HomepageShell
       pricingFlags={pricingFlags}
+      marketingFeatureFlags={undefined}
       gear={gear}
       photos={photos}
       audioTracks={audioTracks}
@@ -189,6 +192,7 @@ function BothLive({
   return (
     <HomepageShell
       pricingFlags={pricingFlags}
+      marketingFeatureFlags={undefined}
       gear={gear}
       photos={photos}
       audioTracks={audioTracks}

@@ -38,20 +38,23 @@ import {
   memo,
   startTransition,
 } from "react";
-import { Effect } from "effect";
 import { toast } from "sonner";
 import { ArrowDown, ArrowUp, Check, Plus, Trash2, X } from "lucide-react";
 import type { Id } from "../../../../convex/_generated/dataModel";
 import { api } from "../../../../convex/_generated/api";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Switch } from "@/components/ui/switch";
 import { Textarea } from "@/components/ui/textarea";
+import { Switch } from "@/components/ui/switch";
 import { cn } from "@/lib/utils";
-import { convexMutationEffect, type CmsAppError } from "@/lib/effect-errors";
+import { convexMutationEffect } from "@/lib/effect-errors";
 import { runAdminEffect } from "@/lib/admin-run-effect";
-import { CmsPublishToolbar } from "@/components/admin/cms-publish-toolbar";
+import { useRegisterCmsEditor } from "@/components/admin/cms-workspace";
 import { useAutosaveDraft } from "@/lib/use-autosave-draft";
+import {
+  mergeAutosaveStatus,
+  useMarketingFeatureFlagsAdmin,
+} from "@/lib/use-marketing-feature-flags-admin";
 import { RichTextEditor, type RichTextEditorHandle } from "./rich-text-editor";
 
 type AboutBlock = { type: "paragraph" | "heading"; text: string };
@@ -65,8 +68,6 @@ export type AboutTeamMemberRow = {
 };
 
 type AboutContent = {
-  /** INF-46 visibility flag — gates the public `/about` route and nav link. */
-  published: boolean;
   /**
    * INF-46 follow-up — storage id of the hero image. The owner picks from
    * the existing studio gallery; we intentionally reuse already-uploaded
@@ -103,7 +104,7 @@ const SEO_DESCRIPTION_RECOMMENDED = 160;
 const fieldClass =
   "block w-full rounded-md border border-input bg-background px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground focus:border-ring focus:outline-none focus:ring-1 focus:ring-ring/50";
 
-function trimToUndefined(value: string): string | undefined {
+export function trimToUndefined(value: string): string | undefined {
   const trimmed = value.trim();
   return trimmed.length === 0 ? undefined : value;
 }
@@ -112,7 +113,7 @@ function trimToUndefined(value: string): string | undefined {
  * Convert legacy paragraph/heading block arrays to Tiptap-compatible HTML
  * so existing rows upgrade cleanly the first time the owner edits them.
  */
-function blocksToHtml(blocks: AboutBlock[]): string {
+export function blocksToHtml(blocks: AboutBlock[]): string {
   if (blocks.length === 0) return "";
   return blocks
     .map((b) => {
@@ -122,7 +123,7 @@ function blocksToHtml(blocks: AboutBlock[]): string {
     .join("");
 }
 
-function escapeHtml(value: string): string {
+export function escapeHtml(value: string): string {
   return value
     .replace(/&/g, "&amp;")
     .replace(/</g, "&lt;")
@@ -131,7 +132,7 @@ function escapeHtml(value: string): string {
     .replace(/'/g, "&#39;");
 }
 
-function htmlToPlainText(html: string): string {
+export function htmlToPlainText(html: string): string {
   return html
     .replace(/<[^>]*>/g, " ")
     .replace(/&nbsp;/g, " ")
@@ -171,7 +172,7 @@ async function uploadHeadshotToConvex(
 }
 
 /** Normalize whatever came off the wire to the editor shape. */
-function toAboutContent(raw: unknown): AboutContent {
+export function toAboutContent(raw: unknown): AboutContent {
   const r = (raw ?? {}) as Partial<AboutContent> & Record<string, unknown>;
   const body: AboutBlock[] = Array.isArray(r.body)
     ? r.body
@@ -208,9 +209,6 @@ function toAboutContent(raw: unknown): AboutContent {
     : [];
 
   return {
-    // INF-46: default hidden so rows saved before this field existed stay
-    // off until the owner explicitly enables the page.
-    published: typeof r.published === "boolean" ? r.published : false,
     heroImageStorageId:
       typeof r.heroImageStorageId === "string" &&
       r.heroImageStorageId.length > 0
@@ -243,7 +241,7 @@ function toAboutContent(raw: unknown): AboutContent {
  * Publish-validation mirror (kept in sync with `collectAboutIssues` in
  * `convex/cmsPublishHelpers.ts`) so blocking issues surface live.
  */
-function collectAboutIssues(
+export function collectAboutIssues(
   draft: AboutContent,
 ): { path: string; message: string }[] {
   const issues: { path: string; message: string }[] = [];
@@ -400,6 +398,22 @@ function AboutForm() {
     typeof setTimeout
   > | null>(null);
 
+  const {
+    data: featureFlagsCms,
+    source: featureFlagsSource,
+    isLoading: featureFlagsLoading,
+    hasFFLocalEdits,
+    hasFFDraftOnServer,
+    ffAutosaveStatus,
+    flushFFAutosave,
+    cancelFFAutosave: cancelFFAutosave,
+    ffOnUnmount,
+    setAboutPage,
+    runPublishFF,
+    runDiscardFF,
+    clearFFLocal,
+  } = useMarketingFeatureFlagsAdmin(busy !== null);
+
   const serverContent: AboutContent | undefined = useMemo(() => {
     if (!section) return undefined;
     return toAboutContent(section.draftSnapshot ?? section.publishedSnapshot);
@@ -408,19 +422,6 @@ function AboutForm() {
   const base: AboutContent | undefined = localDraft ?? serverContent;
 
   const initialHtml = base?.bodyHtml ?? "";
-
-  const setPublished = useCallback(
-    (value: boolean) => {
-      setInlineError(null);
-      setLocalDraft((prev) => {
-        const current = prev ?? serverContent;
-        if (!current) return prev;
-        return { ...current, published: value };
-      });
-      kickAutosaveRef.current();
-    },
-    [serverContent],
-  );
 
   const setHeroImageStorageId = useCallback(
     (value: Id<"_storage"> | undefined) => {
@@ -540,26 +541,11 @@ function AboutForm() {
     }
   }, []);
 
-  const runAction = useCallback(
-    async <A,>(label: string, program: Effect.Effect<A, CmsAppError>) => {
-      cancelAutosaveRef.current();
-      setInlineError(null);
-      setBusy(label);
-      const outcome = await runAdminEffect(program, {
-        onErrorMessage: setInlineError,
-      });
-      if (outcome !== undefined) {
-        setLocalDraft(null);
-        clearLocalBodyUiState();
-      }
-      setBusy(null);
-      return outcome;
-    },
-    [clearLocalBodyUiState],
-  );
-
-  const hasDraftOnServer = section?.hasDraftChanges ?? false;
-  const hasLocalEdits = localDraft !== null || bodyDirty;
+  const hasAboutLocalEdits = localDraft !== null || bodyDirty;
+  const hasDraftOnServer =
+    (section?.hasDraftChanges ?? false) || hasFFDraftOnServer;
+  /** Shown in toolbar: any unpublished edits (about body or feature flags). */
+  const hasLocalEdits = hasAboutLocalEdits || hasFFLocalEdits;
 
   const {
     status: autosaveStatus,
@@ -568,7 +554,7 @@ function AboutForm() {
     cancel: cancelAutosave,
     onUnmount: autosaveOnUnmount,
   } = useAutosaveDraft({
-    isDirty: hasLocalEdits && base !== undefined,
+    isDirty: hasAboutLocalEdits && base !== undefined,
     pauseWhen: busy !== null,
     saveEffect: () => {
         const contentBase = (localDraft ?? serverContent)!;
@@ -580,7 +566,6 @@ function AboutForm() {
           saveDraft({
             section: "about",
             content: {
-              published: contentBase.published,
               ...(contentBase.heroImageStorageId !== undefined
                 ? { heroImageStorageId: contentBase.heroImageStorageId }
                 : {}),
@@ -624,14 +609,17 @@ function AboutForm() {
     }, ISSUES_BODY_HTML_DEBOUNCE_MS);
   }, [kickAutosave]);
 
+  const hasAboutDraftOnServer = section?.hasDraftChanges ?? false;
+
   const handleDiscardConfirm = useCallback(async (): Promise<boolean> => {
     cancelAutosaveRef.current();
+    cancelFFAutosave();
     setInlineError(null);
     const publishedHtml =
       section !== undefined
         ? (toAboutContent(section.publishedSnapshot).bodyHtml ?? "")
         : "";
-    if (hasDraftOnServer) {
+    if (hasAboutDraftOnServer) {
       setBusy("Discarding…");
       const outcome = await runAdminEffect(
         convexMutationEffect(() => discard({ section: "about" })),
@@ -642,18 +630,167 @@ function AboutForm() {
         return false;
       }
     }
+    if (hasFFDraftOnServer) {
+      setBusy("Discarding…");
+      const outcome = await runAdminEffect(runDiscardFF(), {
+        onErrorMessage: setInlineError,
+      });
+      setBusy(null);
+      if (outcome === undefined) {
+        return false;
+      }
+    }
     setLocalDraft(null);
+    clearFFLocal();
     clearLocalBodyUiState();
     bodyRef.current?.reset(publishedHtml);
     toast.success(
-      hasDraftOnServer
+      hasAboutDraftOnServer || hasFFDraftOnServer
         ? "Draft discarded. The editor now matches the published site."
         : "Unsaved changes discarded.",
     );
     return true;
-  }, [clearLocalBodyUiState, discard, hasDraftOnServer, section]);
+  }, [
+    clearLocalBodyUiState,
+    discard,
+    hasAboutDraftOnServer,
+    hasFFDraftOnServer,
+    runDiscardFF,
+    clearFFLocal,
+    cancelFFAutosave,
+    section,
+  ]);
 
-  if (section === undefined) {
+  const mergedPublishedAt = useMemo((): number | null => {
+    const a = section?.publishedAt;
+    const b = featureFlagsCms?.publishedAt;
+    if (a == null && b == null) return null;
+    if (a == null) return b ?? null;
+    if (b == null) return a;
+    return Math.max(a, b);
+  }, [section?.publishedAt, featureFlagsCms?.publishedAt]);
+
+  const combinedAutosaveStatus = mergeAutosaveStatus(
+    autosaveStatus,
+    ffAutosaveStatus,
+  );
+
+  const publishedByLabel =
+    section?.publishedBy && user?.id === section.publishedBy ? "You" : undefined;
+
+  const handlePublish = useCallback(() => {
+    if (!base) return;
+    const liveBody = bodyDirty
+      ? (bodyRef.current?.getHTML() ?? "")
+      : (base.bodyHtml ?? "");
+    const publishSnapshot: AboutContent = {
+      ...base,
+      bodyHtml: liveBody,
+      body: [],
+    };
+    const publishIssues = collectAboutIssues(publishSnapshot);
+    if (publishIssues.length > 0) {
+      setInlineError("Fix the blocking issues above before publishing.");
+      return;
+    }
+    void (async () => {
+      cancelAutosaveRef.current();
+      cancelFFAutosave();
+      if (hasAboutLocalEdits) {
+        const flushed = await flushAutosave();
+        if (!flushed) return;
+      }
+      if (hasFFLocalEdits) {
+        const flushed = await flushFFAutosave();
+        if (!flushed) return;
+      }
+      setInlineError(null);
+      setBusy("Publishing…");
+      const aboutOutcome = await runAdminEffect(
+        convexMutationEffect(() => publish({ section: "about" })),
+        { onErrorMessage: setInlineError },
+      );
+      if (aboutOutcome === undefined) {
+        setBusy(null);
+        return;
+      }
+      setLocalDraft(null);
+      clearLocalBodyUiState();
+      const ffOutcome = await runAdminEffect(runPublishFF(), {
+        onErrorMessage: setInlineError,
+      });
+      setBusy(null);
+      if (ffOutcome !== undefined) {
+        clearFFLocal();
+        toast.success("Changes published.");
+      }
+    })();
+  }, [
+    base,
+    bodyDirty,
+    cancelFFAutosave,
+    clearFFLocal,
+    clearLocalBodyUiState,
+    flushAutosave,
+    flushFFAutosave,
+    hasAboutLocalEdits,
+    hasFFLocalEdits,
+    publish,
+    runPublishFF,
+  ]);
+
+  /**
+   * Composite flush awaited by the sidebar nav guard. Silently persists any
+   * in-memory About edits and marketing-flag edits before navigation so the
+   * user never loses a one-shot change (e.g. a freshly-toggled switch within
+   * the 1s autosave debounce window).
+   */
+  const flushAllAutosaves = useCallback(async (): Promise<boolean> => {
+    if (hasAboutLocalEdits) {
+      const ok = await flushAutosave();
+      if (!ok) return false;
+    }
+    if (hasFFLocalEdits) {
+      const ok = await flushFFAutosave();
+      if (!ok) return false;
+    }
+    return true;
+  }, [flushAutosave, flushFFAutosave, hasAboutLocalEdits, hasFFLocalEdits]);
+
+  const { toolbarPortal, editorRef } = useRegisterCmsEditor({
+    section: "about",
+    sectionLabel: "the About page",
+    hasDraftOnServer,
+    hasLocalEdits,
+    publishedAt: mergedPublishedAt,
+    publishedByLabel,
+    busy,
+    autosaveStatus: combinedAutosaveStatus,
+    inlineError,
+    previewHref: "/preview/about",
+    onPublish: handlePublish,
+    onDiscardConfirm: handleDiscardConfirm,
+    flush: flushAllAutosaves,
+  });
+
+  // The wrapping `<div>` needs a *stable* ref callback. An inline arrow is a
+  // new function on every render, which makes React detach (call old ref with
+  // `null`) and reattach (call new ref with the element) every time. The
+  // detach path runs `dispose()` inside `useAutosaveDraft`, clearing the
+  // pending debounce timer — so a one-shot edit (e.g. flipping the visibility
+  // toggle) never gets to fire its autosave because the next render kills the
+  // timer before the 1s debounce elapses. Wrapping in `useCallback` keeps the
+  // ref identity stable so detach only happens at real unmount.
+  const handleEditorRef = useCallback(
+    (el: HTMLDivElement | null) => {
+      autosaveOnUnmount(el);
+      ffOnUnmount(el);
+      editorRef(el);
+    },
+    [autosaveOnUnmount, ffOnUnmount, editorRef],
+  );
+
+  if (section === undefined || featureFlagsLoading) {
     return (
       <p className="body-text text-muted-foreground">Loading About page…</p>
     );
@@ -667,35 +804,31 @@ function AboutForm() {
     );
   }
 
-  const publishedByLabel =
-    section.publishedBy && user?.id === section.publishedBy ? "You" : undefined;
-
   const seoTitleValue = base.seoTitle ?? "";
   const seoDescriptionValue = base.seoDescription ?? "";
 
   return (
-    <div className="space-y-8 pb-24" ref={autosaveOnUnmount}>
-      <div className="space-y-8">
-          <fieldset className="space-y-3">
+    <div className="space-y-8 pb-24" ref={handleEditorRef}>
+        <div className="space-y-8">
+          <fieldset className="space-y-4">
             <legend className="label-text text-muted-foreground">
-              Visibility
+              Site visibility
             </legend>
             <div className="flex items-start gap-3">
               <Switch
-                id="about-published"
-                checked={base.published}
-                onCheckedChange={setPublished}
+                id="ff-about-embedded"
+                checked={featureFlagsSource?.aboutPage ?? false}
+                onCheckedChange={setAboutPage}
               />
               <div className="space-y-1">
                 <label
-                  htmlFor="about-published"
+                  htmlFor="ff-about-embedded"
                   className="body-text-small cursor-pointer text-foreground"
                 >
-                  Show About page on site
+                  About page (<code className="text-xs">/about</code>)
                 </label>
                 <p className="body-text-small text-muted-foreground">
-                  Hides the public <code>/about</code> route and the header
-                  nav link when off. Preview still shows the draft value.
+                  When off, the route returns 404 and the header link is hidden.
                 </p>
               </div>
             </div>
@@ -869,45 +1002,7 @@ function AboutForm() {
             bodyDirty={bodyDirty}
           />
       </div>
-
-      <CmsPublishToolbar
-        section="about"
-        sectionLabel="the About page"
-        hasDraftOnServer={hasDraftOnServer}
-        hasLocalEdits={hasLocalEdits}
-        publishedAt={section.publishedAt ?? null}
-        publishedByLabel={publishedByLabel}
-        busy={busy}
-        inlineError={inlineError}
-        autosaveStatus={autosaveStatus}
-        previewHref="/preview/about"
-        onPublish={() => {
-          const liveBody = bodyDirty
-            ? (bodyRef.current?.getHTML() ?? "")
-            : (base.bodyHtml ?? "");
-          const publishSnapshot: AboutContent = {
-            ...base,
-            bodyHtml: liveBody,
-            body: [],
-          };
-          const publishIssues = collectAboutIssues(publishSnapshot);
-          if (publishIssues.length > 0) {
-            setInlineError("Fix the blocking issues above before publishing.");
-            return;
-          }
-          const publishOnce = convexMutationEffect(() =>
-            publish({ section: "about" }),
-          );
-          void (async () => {
-            if (hasLocalEdits) {
-              const flushed = await flushAutosave();
-              if (!flushed) return;
-            }
-            await runAction("Publishing…", publishOnce);
-          })();
-        }}
-        onDiscardConfirm={handleDiscardConfirm}
-      />
+      {toolbarPortal}
     </div>
   );
 }
