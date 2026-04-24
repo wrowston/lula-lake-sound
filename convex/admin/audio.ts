@@ -38,6 +38,10 @@ function hostnameOfHttpsUrl(raw: string): string | null {
   }
 }
 
+function isSpotifyHostname(host: string): boolean {
+  return host === "spotify.com" || host.endsWith(".spotify.com");
+}
+
 /**
  * Optional HTTPS URL for streaming / artwork. Empty or null clears the field.
  */
@@ -63,7 +67,7 @@ function normalizeOptionalExternalUrl(
     cmsValidationError("URL must be a valid https:// link.", field);
   }
   if (field === "spotifyUrl") {
-    if (!host.endsWith("spotify.com")) {
+    if (!isSpotifyHostname(host)) {
       cmsValidationError("Spotify URL must be on spotify.com.", field);
     }
   }
@@ -272,7 +276,7 @@ function collectTrackIssues(
         });
       } else {
         const h = hostnameOfHttpsUrl(spotify);
-        if (!h || !h.endsWith("spotify.com")) {
+        if (!h || !isSpotifyHostname(h)) {
           issues.push({
             path: `${base}.spotifyUrl`,
             message: "Spotify URL must be a valid https link on spotify.com.",
