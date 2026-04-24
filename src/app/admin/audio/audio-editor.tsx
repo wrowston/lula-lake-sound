@@ -35,6 +35,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Card } from "@/components/ui/card";
+import { Switch } from "@/components/ui/switch";
 import {
   AlertDialog,
   AlertDialogCancel,
@@ -44,9 +45,13 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import { CmsPublishToolbar } from "@/components/admin/cms-publish-toolbar";
+import { useRegisterCmsEditor } from "@/components/admin/cms-workspace";
 import { convexMutationEffect, type CmsAppError } from "@/lib/effect-errors";
 import { runAdminEffect } from "@/lib/admin-run-effect";
+import {
+  mergeAutosaveStatus,
+  useMarketingFeatureFlagsAdmin,
+} from "@/lib/use-marketing-feature-flags-admin";
 import { cn } from "@/lib/utils";
 
 const MAX_TITLE_LENGTH = 200;
@@ -329,6 +334,22 @@ function AudioEditorForm() {
   const [isDraggingOver, setIsDraggingOver] = useState(false);
   const [uploadQueue, setUploadQueue] = useState<UploadProgressEntry[]>([]);
 
+  const {
+    data: featureFlagsCms,
+    source: featureFlagsSource,
+    isLoading: featureFlagsLoading,
+    hasFFLocalEdits,
+    hasFFDraftOnServer,
+    ffAutosaveStatus,
+    flushFFAutosave,
+    cancelFFAutosave,
+    ffOnUnmount,
+    setRecordingsPage,
+    runPublishFF,
+    runDiscardFF,
+    clearFFLocal,
+  } = useMarketingFeatureFlagsAdmin(busy !== null);
+
   const tracks = useMemo(() => (data?.tracks ?? []) as TrackItem[], [data]);
 
   const setRowAction = useCallback(
@@ -359,11 +380,31 @@ function AudioEditorForm() {
     [],
   );
 
-  const hasDraftOnServer = data?.hasDraftChanges ?? false;
-  const hasLocalEdits = Object.keys(edits).length > 0;
+  const hasAudioDraftOnServer = data?.hasDraftChanges ?? false;
+  const hasAudioLocalEdits = Object.keys(edits).length > 0;
+  const hasDraftOnServer = hasAudioDraftOnServer || hasFFDraftOnServer;
+  const hasLocalEdits = hasAudioLocalEdits || hasFFLocalEdits;
 
-  const publishedByLabel =
-    data?.publishedBy && user?.id === data.publishedBy ? "You" : undefined;
+  const mergedPublishedAt = useMemo((): number | null => {
+    const a = data?.publishedAt ?? null;
+    const b = featureFlagsCms?.publishedAt ?? null;
+    if (a == null && b == null) return null;
+    if (a == null) return b;
+    if (b == null) return a;
+    return Math.max(a, b);
+  }, [data?.publishedAt, featureFlagsCms?.publishedAt]);
+
+  const combinedAutosaveStatus = mergeAutosaveStatus("idle", ffAutosaveStatus);
+
+  const publishedByLabel = (() => {
+    const audioPubAt = data?.publishedAt ?? null;
+    const ffPubAt = featureFlagsCms?.publishedAt ?? null;
+    const latestBy =
+      audioPubAt != null && (ffPubAt == null || audioPubAt >= ffPubAt)
+        ? data?.publishedBy
+        : featureFlagsCms?.publishedBy;
+    return latestBy && user?.id === latestBy ? "You" : undefined;
+  })();
 
   const getEditableFields = useCallback(
     (track: TrackItem) => ({
@@ -779,42 +820,122 @@ function AudioEditorForm() {
   }, [clearTrackEdit, deleteStableId, removeDraftTrack, setRowAction]);
 
   const handleDiscardConfirm = useCallback(async (): Promise<boolean> => {
+    cancelFFAutosave();
     setInlineError(null);
-    if (hasDraftOnServer) {
+    if (hasAudioDraftOnServer) {
+      setBusy("Discarding…");
       const outcome = await runAdminEffect(
         convexMutationEffect(() => discardDraftAudioTracks({})),
         { onErrorMessage: setInlineError },
       );
+      setBusy(null);
+      if (outcome === undefined) {
+        return false;
+      }
+    }
+    if (hasFFDraftOnServer) {
+      setBusy("Discarding…");
+      const outcome = await runAdminEffect(runDiscardFF(), {
+        onErrorMessage: setInlineError,
+      });
+      setBusy(null);
       if (outcome === undefined) {
         return false;
       }
     }
 
     setEdits({});
+    clearFFLocal();
     toast.success(
-      hasDraftOnServer
+      hasAudioDraftOnServer || hasFFDraftOnServer
         ? "Draft discarded. The editor now matches the published site."
         : "Unsaved changes discarded.",
     );
     return true;
-  }, [discardDraftAudioTracks, hasDraftOnServer]);
+  }, [
+    cancelFFAutosave,
+    clearFFLocal,
+    discardDraftAudioTracks,
+    hasAudioDraftOnServer,
+    hasFFDraftOnServer,
+    runDiscardFF,
+  ]);
 
   const handlePublish = useCallback(async () => {
+    cancelFFAutosave();
     const saved = await savePendingEdits();
     if (!saved) {
       return;
     }
-
-    const outcome = await runAction(
-      "Publishing…",
-      convexMutationEffect(() => publishAudioTracks({})),
-    );
-    if (outcome !== undefined) {
-      toast.success("Audio portfolio published.");
+    if (hasFFLocalEdits) {
+      const flushed = await flushFFAutosave();
+      if (!flushed) return;
     }
-  }, [publishAudioTracks, runAction, savePendingEdits]);
 
-  if (data === undefined) {
+    setInlineError(null);
+    setBusy("Publishing…");
+    const audioOutcome = await runAdminEffect(
+      convexMutationEffect(() => publishAudioTracks({})),
+      { onErrorMessage: setInlineError },
+    );
+    if (audioOutcome === undefined) {
+      setBusy(null);
+      return;
+    }
+    const ffOutcome = await runAdminEffect(runPublishFF(), {
+      onErrorMessage: setInlineError,
+    });
+    setBusy(null);
+    if (ffOutcome !== undefined) {
+      clearFFLocal();
+      toast.success("Changes published.");
+    }
+  }, [
+    cancelFFAutosave,
+    clearFFLocal,
+    flushFFAutosave,
+    hasFFLocalEdits,
+    publishAudioTracks,
+    runPublishFF,
+    savePendingEdits,
+  ]);
+
+  const flushAllAutosaves = useCallback(async (): Promise<boolean> => {
+    if (hasFFLocalEdits) {
+      const ok = await flushFFAutosave();
+      if (!ok) return false;
+    }
+    return true;
+  }, [flushFFAutosave, hasFFLocalEdits]);
+
+  const { toolbarPortal, editorRef } = useRegisterCmsEditor({
+    section: "audio",
+    sectionLabel: "Audio portfolio",
+    hasDraftOnServer,
+    hasLocalEdits,
+    publishedAt: mergedPublishedAt,
+    publishedByLabel,
+    busy,
+    autosaveStatus: combinedAutosaveStatus,
+    inlineError,
+    previewHref: "/preview#audio-portfolio",
+    onPublish: () => void handlePublish(),
+    onDiscardConfirm: handleDiscardConfirm,
+    flush: flushAllAutosaves,
+  });
+
+  // Stable ref — see the matching comment in `about-editor.tsx`. An inline
+  // arrow would detach/reattach each render, clearing the autosave debounce
+  // timer before a one-shot toggle can fire.
+  const handleEditorRef = useCallback(
+    (el: HTMLDivElement | null) => {
+      ffOnUnmount(el);
+      editorRef(el);
+    },
+    [ffOnUnmount, editorRef],
+  );
+
+  if (data === undefined || featureFlagsLoading) {
     return <p className="body-text text-foreground/80">Loading audio…</p>;
   }
 
@@ -824,6 +945,7 @@ function AudioEditorForm() {
 
   return (
     <div
+      ref={handleEditorRef}
       className={cn(
         "relative space-y-8 pb-24 transition",
         isDraggingOver &&
@@ -834,6 +956,30 @@ function AudioEditorForm() {
       onDragOver={handleDragOver}
       onDrop={(event) => void handleDrop(event)}
     >
+      <fieldset className="space-y-4">
+        <legend className="label-text text-muted-foreground">
+          Site visibility
+        </legend>
+        <div className="flex items-start gap-3">
+          <Switch
+            id="ff-recordings-embedded"
+            checked={featureFlagsSource?.recordingsPage ?? false}
+            onCheckedChange={setRecordingsPage}
+          />
+          <div className="space-y-1">
+            <label
+              htmlFor="ff-recordings-embedded"
+              className="body-text-small cursor-pointer text-foreground"
+            >
+              Recordings page (<code className="text-xs">/recordings</code>)
+            </label>
+            <p className="body-text-small text-muted-foreground">
+              When off, the route returns 404 and the header link is hidden.
+            </p>
+          </div>
+        </div>
+      </fieldset>
+
       {isDraggingOver && (
         <div
           className="pointer-events-none absolute inset-0 z-20 flex items-start justify-center rounded-xl bg-primary/5 pt-16 sm:pt-24"
@@ -1168,20 +1314,7 @@ function AudioEditorForm() {
         </div>
       )}
 
-      <CmsPublishToolbar
-        section="audio"
-        sectionLabel="Audio portfolio"
-        hasDraftOnServer={hasDraftOnServer}
-        hasLocalEdits={hasLocalEdits}
-        publishedAt={data.publishedAt}
-        publishedByLabel={publishedByLabel}
-        busy={busy}
-        onPublish={() => void handlePublish()}
-        onDiscardConfirm={handleDiscardConfirm}
-        previewHref="/preview#audio-portfolio"
-        inlineError={inlineError}
-        autosaveStatus="idle"
-      />
+      {toolbarPortal}
 
       <AlertDialog
         open={deleteStableId !== null}
