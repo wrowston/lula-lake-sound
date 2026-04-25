@@ -4,12 +4,14 @@ import type {
   aboutContentValidator,
   aboutTeamMemberValidator,
   cmsSectionValidator,
+  faqContentValidator,
   marketingFeatureFlagsSnapshotValidator,
   pricingBillingCadenceValidator,
   pricingContentValidator,
   pricingPackageValidator,
   settingsContentValidator,
 } from "./schema.shared";
+import { DEFAULT_FAQ_CATEGORIES } from "./faqSeedData";
 
 export type CmsSection = Infer<typeof cmsSectionValidator>;
 
@@ -22,7 +24,10 @@ export type CmsSection = Infer<typeof cmsSectionValidator>;
 export type CmsSnapshot =
   | Infer<typeof settingsContentValidator>
   | Infer<typeof pricingContentValidator>
-  | Infer<typeof aboutContentValidator>;
+  | Infer<typeof aboutContentValidator>
+  | Infer<typeof faqContentValidator>;
+
+export type FaqSnapshot = Infer<typeof faqContentValidator>;
 
 export type SettingsSnapshot = Infer<typeof settingsContentValidator>;
 export type PricingSnapshot = Infer<typeof pricingContentValidator>;
@@ -150,6 +155,22 @@ export const MARKETING_FEATURE_FLAGS_DEFAULTS: MarketingFeatureFlagsSnapshot = {
  * the published scope of `aboutContent` + `aboutHighlights` + `aboutTeamMembers`
  * so the public route renders before the owner has published.
  */
+/**
+ * Default FAQ shipped with seed / empty editor baseline (matches historical
+ * homepage copy).
+ */
+export const FAQ_DEFAULTS: FaqSnapshot = {
+  categories: DEFAULT_FAQ_CATEGORIES.map((c) => ({
+    stableId: c.stableId,
+    title: c.title,
+    questions: c.questions.map((q) => ({
+      stableId: q.stableId,
+      question: q.question,
+      answer: q.answer,
+    })),
+  })),
+};
+
 export const ABOUT_DEFAULTS: AboutSnapshot = {
   heroTitle: "About Lula Lake Sound",
   heroSubtitle: "A creative space for music production and recording.",
@@ -182,6 +203,8 @@ export function defaultSnapshotForSection(section: CmsSection): CmsSnapshot {
       // `recordings` has no content table; return an empty about-shaped
       // placeholder so the union typechecks. Nothing reads this branch.
       return { ...ABOUT_DEFAULTS };
+    case "faq":
+      return FAQ_DEFAULTS;
   }
 }
 

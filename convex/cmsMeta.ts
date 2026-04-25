@@ -14,6 +14,7 @@ import {
   loadSettingsContent,
   settingsDraftMatchesPublished,
 } from "./settingsTree";
+import { loadFaqTree, faqDraftMatchesPublished } from "./faqTree";
 
 /**
  * Default `isEnabled` value for a brand-new deployment / row. Matches the
@@ -25,6 +26,7 @@ export const DEFAULT_IS_ENABLED: Record<CmsSection, boolean> = {
   pricing: true,
   about: false,
   recordings: false,
+  faq: true,
 };
 
 export async function getSectionMetaRow(
@@ -104,12 +106,23 @@ export function publishedIsEnabled(
  * **Pricing** is different: an empty draft with a non-empty published catalogue
  * means the owner removed every package in draft and must be able to publish
  * that deletion.
+ *
+ * **FAQ** follows the same rule as pricing for an empty draft scope.
  */
 export async function sectionHasContentDraftDiff(
   ctx: QueryCtx | MutationCtx,
   section: CmsSection,
 ): Promise<boolean> {
   if (section === "recordings") return false;
+
+  if (section === "faq") {
+    const draft = await loadFaqTree(ctx, "draft");
+    const published = await loadFaqTree(ctx, "published");
+    if (draft.categories.length === 0) {
+      return published.categories.length > 0;
+    }
+    return !faqDraftMatchesPublished(draft, published);
+  }
 
   if (section === "about") {
     const draft = await loadAboutTree(ctx, "draft");

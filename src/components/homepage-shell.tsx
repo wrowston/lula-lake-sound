@@ -7,7 +7,7 @@ import { AmenitiesNearby } from "@/components/amenities-nearby";
 import { ArtistInquiries } from "@/components/artist-inquiries";
 import { MarketingPricingSection } from "@/components/dynamic-pricing";
 import { EquipmentSpecs, type GearPayload } from "@/components/equipment-specs";
-import { FAQ } from "@/components/faq";
+import { FAQ, type FaqCategoryProps } from "@/components/faq";
 import { Header } from "@/components/header";
 import { Hero } from "@/components/hero";
 import { SiteFooter } from "@/components/site-footer";
@@ -45,6 +45,8 @@ interface HomepageShellProps {
   readonly photos: GalleryPhoto[] | null | undefined;
   /** Published (or preview) audio portfolio; empty array hides the section. */
   readonly audioTracks: PublishedAudioTrack[] | null | undefined;
+  /** FAQ categories from Convex; omit to use client fallback defaults. */
+  readonly faqCategories?: readonly FaqCategoryProps[] | null | undefined;
   readonly banner?: React.ReactNode;
 }
 
@@ -54,6 +56,7 @@ export function HomepageShell({
   gear,
   photos,
   audioTracks,
+  faqCategories,
   banner,
 }: HomepageShellProps) {
   const { scrollY, containerRef } = useScrollAndReveal();
@@ -113,7 +116,13 @@ export function HomepageShell({
           isPreviewRoute={isPreview}
         />
         <AmenitiesNearby />
-        <FAQ />
+        <FAQ
+          categories={
+            faqCategories === undefined || faqCategories === null
+              ? undefined
+              : faqCategories
+          }
+        />
         <ArtistInquiries />
       </main>
 
