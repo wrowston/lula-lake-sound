@@ -678,7 +678,8 @@ export const removeDraftTrack = mutation({
  * On validation failure we delete the newly uploaded blob so it does not
  * linger as an orphan. Other metadata (title, artist, description, artwork,
  * streaming links) is preserved — call `updateDraftTrack` separately to edit
- * those.
+ * those. `createdAt` is set to the swap time so abandoned-draft GC (which keys
+ * off `createdAt`) cannot delete a draft-only row whose file was just replaced.
  */
 export const replaceDraftTrackFile = mutation({
   args: {
@@ -735,6 +736,7 @@ export const replaceDraftTrackFile = mutation({
     // keeps the document shape explicit and lets us clear the optional
     // `durationSec` / `originalFileName` fields when the new upload doesn't
     // provide them.
+    const now = Date.now();
     await ctx.db.replace(row._id, {
       scope: row.scope,
       stableId: row.stableId,
@@ -744,7 +746,7 @@ export const replaceDraftTrackFile = mutation({
       mimeType,
       sortOrder: row.sortOrder,
       sizeBytes,
-      createdAt: row.createdAt,
+      createdAt: now,
       ...(row.artist !== undefined ? { artist: row.artist } : {}),
       ...(nextDurationSec !== undefined ? { durationSec: nextDurationSec } : {}),
       ...(row.albumThumbnailUrl !== undefined
