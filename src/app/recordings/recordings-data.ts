@@ -3,8 +3,8 @@
  *
  * Fields are a superset of the four primary columns (`title`, `artist`, `genre`,
  * `year`) plus metadata for Convex / CMS (`id`, `order`, `role`, `audioUrl`,
- * `coverImageUrl`, `spotifyUrl`, `appleMusicUrl`). `genre` and `year` are
- * optional for CMS-sourced audio (portfolio tracks do not store them yet).
+ * `coverImageUrl`, `spotifyUrl`, `appleMusicUrl`). `genre`, `year`, and `role`
+ * are optional for rows where that metadata is not authored.
  */
 export interface Recording {
   readonly id: string;
@@ -43,6 +43,9 @@ export type CmsAudioTrackRow = {
   readonly url: string | null;
   readonly title: string;
   readonly artist: string | null;
+  readonly genre: string | null;
+  readonly year: number | null;
+  readonly role: string | null;
   readonly sortOrder: number;
   readonly albumThumbnailDisplayUrl: string | null;
   readonly spotifyUrl: string | null;
@@ -68,6 +71,9 @@ export function mapPublishedAudioToRecordings(
         id: t.stableId,
         title: t.title,
         artist,
+        ...(t.genre?.trim() ? { genre: t.genre } : {}),
+        ...(t.year !== null && t.year > 0 ? { year: t.year } : {}),
+        ...(t.role?.trim() ? { role: t.role } : {}),
         audioUrl: t.url,
         order: t.sortOrder,
         ...(t.albumThumbnailDisplayUrl

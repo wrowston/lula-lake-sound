@@ -35,9 +35,13 @@ import { requireCmsOwner } from "../lib/auth";
 
 const MAX_TITLE_LENGTH = 200;
 const MAX_ARTIST_LENGTH = 200;
+const MAX_GENRE_LENGTH = 100;
+const MAX_ROLE_LENGTH = 200;
 const MAX_DESCRIPTION_LENGTH = 2000;
 const MAX_FILENAME_LENGTH = 255;
 const MAX_EXTERNAL_URL_LENGTH = 2048;
+const MIN_RECORDING_YEAR = 1800;
+const MAX_RECORDING_YEAR = 3000;
 
 function hostnameOfHttpsUrl(raw: string): string | null {
   try {
@@ -147,6 +151,57 @@ function normalizeArtist(raw?: string | null): string | undefined {
     );
   }
   return value;
+}
+
+function normalizeGenre(raw?: string | null): string | undefined {
+  if (raw === undefined || raw === null) {
+    return undefined;
+  }
+  const value = raw.trim();
+  if (value.length === 0) {
+    return undefined;
+  }
+  if (value.length > MAX_GENRE_LENGTH) {
+    cmsValidationError(
+      `Genre must be at most ${MAX_GENRE_LENGTH} characters.`,
+      "genre",
+    );
+  }
+  return value;
+}
+
+function normalizeRole(raw?: string | null): string | undefined {
+  if (raw === undefined || raw === null) {
+    return undefined;
+  }
+  const value = raw.trim();
+  if (value.length === 0) {
+    return undefined;
+  }
+  if (value.length > MAX_ROLE_LENGTH) {
+    cmsValidationError(
+      `Role must be at most ${MAX_ROLE_LENGTH} characters.`,
+      "role",
+    );
+  }
+  return value;
+}
+
+function normalizeYear(raw: number | null | undefined): number | undefined {
+  if (raw === undefined || raw === null) {
+    return undefined;
+  }
+  if (
+    !Number.isInteger(raw) ||
+    raw < MIN_RECORDING_YEAR ||
+    raw > MAX_RECORDING_YEAR
+  ) {
+    cmsValidationError(
+      `Year must be a whole number between ${MIN_RECORDING_YEAR} and ${MAX_RECORDING_YEAR}.`,
+      "year",
+    );
+  }
+  return raw;
 }
 
 function normalizeDescription(raw: string): string {
@@ -288,6 +343,29 @@ function collectTrackIssues(
       issues.push({
         path: `${base}.artist`,
         message: `Artist must be at most ${MAX_ARTIST_LENGTH} characters.`,
+      });
+    }
+    if ((row.genre ?? "").length > MAX_GENRE_LENGTH) {
+      issues.push({
+        path: `${base}.genre`,
+        message: `Genre must be at most ${MAX_GENRE_LENGTH} characters.`,
+      });
+    }
+    if (
+      row.year !== undefined &&
+      (!Number.isInteger(row.year) ||
+        row.year < MIN_RECORDING_YEAR ||
+        row.year > MAX_RECORDING_YEAR)
+    ) {
+      issues.push({
+        path: `${base}.year`,
+        message: `Year must be between ${MIN_RECORDING_YEAR} and ${MAX_RECORDING_YEAR}.`,
+      });
+    }
+    if ((row.role ?? "").length > MAX_ROLE_LENGTH) {
+      issues.push({
+        path: `${base}.role`,
+        message: `Role must be at most ${MAX_ROLE_LENGTH} characters.`,
       });
     }
     if (row.description.trim().length === 0) {
@@ -527,6 +605,9 @@ export const saveUploadedTrack = mutation({
     storageId: v.id("_storage"),
     title: v.string(),
     artist: v.optional(v.union(v.string(), v.null())),
+    genre: v.optional(v.union(v.string(), v.null())),
+    year: v.optional(v.union(v.number(), v.null())),
+    role: v.optional(v.union(v.string(), v.null())),
     description: v.string(),
     durationSec: v.optional(v.union(v.number(), v.null())),
     originalFileName: v.optional(v.union(v.string(), v.null())),
@@ -562,6 +643,9 @@ export const saveUploadedTrack = mutation({
 
       const title = normalizeTitle(args.title);
       const artist = normalizeArtist(args.artist);
+      const genre = normalizeGenre(args.genre);
+      const year = normalizeYear(args.year);
+      const role = normalizeRole(args.role);
       const description = normalizeDescription(args.description);
       const durationSec = normalizeDurationSec(args.durationSec ?? undefined);
       const originalFileName = normalizeFileName(args.originalFileName);
@@ -601,6 +685,9 @@ export const saveUploadedTrack = mutation({
         storageId: args.storageId,
         title,
         ...(artist !== undefined ? { artist } : {}),
+        ...(genre !== undefined ? { genre } : {}),
+        ...(year !== undefined ? { year } : {}),
+        ...(role !== undefined ? { role } : {}),
         description,
         mimeType,
         ...(durationSec !== undefined ? { durationSec } : {}),
@@ -636,6 +723,9 @@ export const updateDraftTrack = mutation({
     stableId: v.string(),
     title: v.string(),
     artist: v.optional(v.union(v.string(), v.null())),
+    genre: v.optional(v.union(v.string(), v.null())),
+    year: v.optional(v.union(v.number(), v.null())),
+    role: v.optional(v.union(v.string(), v.null())),
     description: v.string(),
     durationSec: v.optional(v.union(v.number(), v.null())),
     albumThumbnailUrl: v.optional(v.union(v.string(), v.null())),
@@ -662,6 +752,33 @@ export const updateDraftTrack = mutation({
         nextArtist = normalizeArtist(args.artist);
       } else {
         nextArtist = row.artist;
+      }
+
+      let nextGenre: string | undefined;
+      if (args.genre === null) {
+        nextGenre = undefined;
+      } else if (args.genre !== undefined) {
+        nextGenre = normalizeGenre(args.genre);
+      } else {
+        nextGenre = row.genre;
+      }
+
+      let nextYear: number | undefined;
+      if (args.year === null) {
+        nextYear = undefined;
+      } else if (args.year !== undefined) {
+        nextYear = normalizeYear(args.year);
+      } else {
+        nextYear = row.year;
+      }
+
+      let nextRole: string | undefined;
+      if (args.role === null) {
+        nextRole = undefined;
+      } else if (args.role !== undefined) {
+        nextRole = normalizeRole(args.role);
+      } else {
+        nextRole = row.role;
       }
 
       let durationSec: number | undefined;
@@ -734,6 +851,9 @@ export const updateDraftTrack = mutation({
         sizeBytes: row.sizeBytes,
         createdAt: row.createdAt,
         ...(nextArtist !== undefined ? { artist: nextArtist } : {}),
+        ...(nextGenre !== undefined ? { genre: nextGenre } : {}),
+        ...(nextYear !== undefined ? { year: nextYear } : {}),
+        ...(nextRole !== undefined ? { role: nextRole } : {}),
         ...(durationSec !== undefined ? { durationSec } : {}),
         ...(nextAlbumThumbnailUrl !== undefined
           ? { albumThumbnailUrl: nextAlbumThumbnailUrl }
@@ -849,9 +969,10 @@ export const removeDraftTrack = mutation({
  *
  * On validation failure we delete the newly uploaded blob so it does not
  * linger as an orphan. Other metadata (title, artist, description, artwork,
- * streaming links) is preserved — call `updateDraftTrack` separately to edit
- * those. `createdAt` is set to the swap time so abandoned-draft GC (which keys
- * off `createdAt`) cannot delete a draft-only row whose file was just replaced.
+ * genre, year, role, streaming links) is preserved — call `updateDraftTrack`
+ * separately to edit those. `createdAt` is set to the swap time so abandoned-
+ * draft GC (which keys off `createdAt`) cannot delete a draft-only row whose
+ * file was just replaced.
  */
 export const replaceDraftTrackFile = mutation({
   args: {
@@ -923,6 +1044,9 @@ export const replaceDraftTrackFile = mutation({
       sizeBytes,
       createdAt: now,
       ...(row.artist !== undefined ? { artist: row.artist } : {}),
+      ...(row.genre !== undefined ? { genre: row.genre } : {}),
+      ...(row.year !== undefined ? { year: row.year } : {}),
+      ...(row.role !== undefined ? { role: row.role } : {}),
       ...(nextDurationSec !== undefined
         ? { durationSec: nextDurationSec }
         : {}),
