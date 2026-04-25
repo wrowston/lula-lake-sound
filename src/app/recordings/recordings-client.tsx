@@ -113,11 +113,11 @@ function Waveform({ seed, isActive, isPlaying }: WaveformProps) {
               isPlaying && isActive && "recordings-waveform-bar--playing",
             )}
             style={{
-              height: `${Math.min(h, 95)}%`,
+              height: `${Math.min(h, 95).toFixed(2)}%`,
               ...(isPlaying && isActive
                 ? {
-                    animationDuration: `${0.4 + (j % 5) * 0.07 + (seed % 3) * 0.05}s`,
-                    animationDelay: `${-((j * 11 + seed * 3) % 100) / 250}s`,
+                    animationDuration: `${(0.4 + (j % 5) * 0.07 + (seed % 3) * 0.05).toFixed(2)}s`,
+                    animationDelay: `${(-((j * 11 + seed * 3) % 100) / 250).toFixed(3)}s`,
                   }
                 : {}),
             }}
@@ -394,56 +394,61 @@ function TrackRow({
           </div>
         </div>
 
-        {/* Mobile row */}
-        <button
-          type="button"
-          onClick={() => onToggle(track.id)}
-          aria-label={rowLabel}
-          aria-pressed={isPlaying}
-          className="md:hidden flex w-full items-center gap-3 px-3 py-4 text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-gold/60"
-        >
-          <span
-            className={cn(
-              "flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-full border transition-all duration-300",
-              isPlaying
-                ? "bg-gold border-gold text-washed-black"
-                : "border-sand/30 text-sand/60",
-            )}
+        {/* Mobile row — play and title-block are siblings (rather than the
+            title-block being nested inside the play button) so streaming
+            anchors can sit inline with the metadata line without nesting
+            interactive elements inside a button. */}
+        <div className="md:hidden flex items-center gap-3 px-3 py-4">
+          <button
+            type="button"
+            onClick={() => onToggle(track.id)}
+            aria-label={rowLabel}
+            aria-pressed={isPlaying}
+            className="rounded-full focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-gold/60"
           >
-            <PlayPauseIcon isActive={isPlaying} className="h-3.5 w-3.5" />
-          </span>
-          <AlbumThumbnail track={track} />
-          <span className="min-w-0 flex-1">
             <span
               className={cn(
-                "headline-secondary block truncate text-base transition-colors",
-                isActive ? "text-gold" : "text-warm-white",
+                "flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-full border transition-all duration-300",
+                isPlaying
+                  ? "bg-gold border-gold text-washed-black"
+                  : "border-sand/30 text-sand/60",
               )}
-              title={track.title}
             >
-              {track.title}
+              <PlayPauseIcon isActive={isPlaying} className="h-3.5 w-3.5" />
             </span>
-            <span
-              className="body-text-small mt-0.5 block truncate text-xs text-ivory/55"
-              title={`${track.artist} — ${recordingGenreLabel(track)} — ${recordingYearLabel(track)}`}
-            >
-              {track.artist} · {recordingGenreLabel(track)} ·{" "}
-              {recordingYearLabel(track)}
+          </button>
+          <button
+            type="button"
+            tabIndex={-1}
+            onClick={() => onToggle(track.id)}
+            aria-label={rowLabel}
+            aria-pressed={isPlaying}
+            className="flex min-w-0 flex-1 items-center gap-3 text-left focus-visible:outline-none"
+          >
+            <AlbumThumbnail track={track} />
+            <span className="min-w-0 flex-1">
+              <span
+                className={cn(
+                  "headline-secondary block truncate text-base transition-colors",
+                  isActive ? "text-gold" : "text-warm-white",
+                )}
+                title={track.title}
+              >
+                {track.title}
+              </span>
+              <span
+                className="body-text-small mt-0.5 block truncate text-xs text-ivory/55"
+                title={`${track.artist} — ${recordingGenreLabel(track)} — ${recordingYearLabel(track)}`}
+              >
+                {track.artist} · {recordingGenreLabel(track)} ·{" "}
+                {recordingYearLabel(track)}
+              </span>
             </span>
-          </span>
-        </button>
-
-        {track.spotifyUrl || track.appleMusicUrl ? (
-          <div className="md:hidden flex items-center gap-3 border-t border-sand/10 px-3 py-3 pl-[7.25rem]">
-            <span className="label-text shrink-0 text-[9px] tracking-[0.2em] text-sand/45">
-              Stream
-            </span>
-            <StreamingLinks
-              track={track}
-              className="justify-start gap-3"
-            />
-          </div>
-        ) : null}
+          </button>
+          {track.spotifyUrl || track.appleMusicUrl ? (
+            <StreamingLinks track={track} className="shrink-0" />
+          ) : null}
+        </div>
 
         {/* In-playback duration UX — elapsed / total + progress bar, shown
             only for the active row so the required duration context is
