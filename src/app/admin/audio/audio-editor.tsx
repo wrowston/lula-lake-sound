@@ -1340,35 +1340,13 @@ function AudioEditorForm() {
 
             return (
               <Card key={track.stableId} className="space-y-4 p-4">
-                <div className="flex flex-wrap items-start justify-between gap-3">
-                  <div className="min-w-0 flex-1 space-y-1">
-                    <p className="body-text-small text-muted-foreground">
+                <div className="space-y-2">
+                  <div className="flex flex-wrap items-start justify-between gap-3">
+                    <p className="body-text-small min-w-0 flex-1 text-muted-foreground">
                       {formatBytes(track.sizeBytes)} · {track.mimeType}
                       {" · "}
                       {formatDuration(track.durationSec)}
                     </p>
-                    {track.url ? (
-                      <audio
-                        controls
-                        className="h-9 w-full max-w-md"
-                        src={track.url}
-                        crossOrigin="anonymous"
-                        preload="metadata"
-                      />
-                    ) : (
-                      <p className="text-sm text-destructive">
-                        Playback URL unavailable — re-upload if this persists.
-                      </p>
-                    )}
-                    {track.originalFileName ? (
-                      <p
-                        className="body-text-small truncate text-muted-foreground"
-                        title={track.originalFileName}
-                      >
-                        {track.originalFileName}
-                      </p>
-                    ) : null}
-                  </div>
                   <div className="flex shrink-0 flex-wrap items-center gap-1">
                     <Button
                       type="button"
@@ -1427,6 +1405,28 @@ function AudioEditorForm() {
                       <Trash2 className="size-4" />
                     </Button>
                   </div>
+                  </div>
+                  {track.url ? (
+                    <audio
+                      controls
+                      className="h-9 w-full"
+                      src={track.url}
+                      crossOrigin="anonymous"
+                      preload="metadata"
+                    />
+                  ) : (
+                    <p className="text-sm text-destructive">
+                      Playback URL unavailable — re-upload if this persists.
+                    </p>
+                  )}
+                  {track.originalFileName ? (
+                    <p
+                      className="body-text-small truncate text-muted-foreground"
+                      title={track.originalFileName}
+                    >
+                      {track.originalFileName}
+                    </p>
+                  ) : null}
                 </div>
 
                 <div className="space-y-3">

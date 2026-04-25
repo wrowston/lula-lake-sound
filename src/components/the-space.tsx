@@ -112,33 +112,35 @@ function StudioGallery({
           </div>
         </div>
 
-        <div className="mt-8 flex items-center justify-between px-2">
-          <div className="label-text text-[10px] text-ivory/55">
-            <span className="text-sand">
-              {String(safeIndex + 1).padStart(2, "0")}
-            </span>
-            <span className="mx-2 text-ivory/45">/</span>
-            <span>{String(availablePhotos.length).padStart(2, "0")}</span>
-          </div>
+        <div className="mt-8 flex flex-col gap-5 px-2 md:flex-row md:items-center md:justify-between md:gap-0">
+          <div className="flex items-center justify-between gap-3 md:contents">
+            <div className="label-text text-[10px] text-ivory/55">
+              <span className="text-sand">
+                {String(safeIndex + 1).padStart(2, "0")}
+              </span>
+              <span className="mx-2 text-ivory/45">/</span>
+              <span>{String(availablePhotos.length).padStart(2, "0")}</span>
+            </div>
 
-          <div className="flex items-center gap-1.5">
-            {availablePhotos.map((photo, index) => (
-              <button
-                key={photo.stableId}
-                type="button"
-                onClick={() => goToImage(index)}
-                aria-label={`View image ${index + 1}`}
-                className={`h-px transition-all duration-500 ease-[cubic-bezier(0.16,1,0.3,1)] ${
-                  index === safeIndex
-                    ? "w-8 bg-sand"
-                    : "w-4 bg-ivory/22 hover:bg-ivory/40"
-                }`}
-              />
-            ))}
+            <div className="flex items-center gap-1.5">
+              {availablePhotos.map((photo, index) => (
+                <button
+                  key={photo.stableId}
+                  type="button"
+                  onClick={() => goToImage(index)}
+                  aria-label={`View image ${index + 1}`}
+                  className={`h-px transition-all duration-500 ease-[cubic-bezier(0.16,1,0.3,1)] ${
+                    index === safeIndex
+                      ? "w-8 bg-sand"
+                      : "w-4 bg-ivory/22 hover:bg-ivory/40"
+                  }`}
+                />
+              ))}
+            </div>
           </div>
 
           {availablePhotos.length > 1 ? (
-            <div className="flex items-center gap-4 text-ivory/62">
+            <div className="flex items-center justify-between gap-4 text-ivory/62 md:justify-end">
               <button
                 type="button"
                 onClick={goToPrevious}
@@ -157,7 +159,7 @@ function StudioGallery({
               </button>
             </div>
           ) : (
-            <span className="w-20" aria-hidden />
+            <span className="hidden w-20 md:block" aria-hidden />
           )}
         </div>
       </div>
