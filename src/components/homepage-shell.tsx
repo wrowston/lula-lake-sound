@@ -43,7 +43,7 @@ interface HomepageShellProps {
   readonly gear: GearPayload | null | undefined;
   /** Published (or preview) gallery payload. */
   readonly photos: GalleryPhoto[] | null | undefined;
-  /** Published (or preview) audio portfolio; empty array hides the section. */
+  /** Published (or preview) audio portfolio; empty array shows an empty state. */
   readonly audioTracks: PublishedAudioTrack[] | null | undefined;
   /** FAQ categories from Convex; omit to use client fallback defaults. */
   readonly faqCategories?: readonly FaqCategoryProps[] | null | undefined;

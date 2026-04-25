@@ -57,8 +57,12 @@ import { cn } from "@/lib/utils";
 
 const MAX_TITLE_LENGTH = 200;
 const MAX_ARTIST_LENGTH = 200;
+const MAX_GENRE_LENGTH = 100;
+const MAX_ROLE_LENGTH = 200;
 const MAX_DESCRIPTION_LENGTH = 2000;
 const ALBUM_ART_ACCEPT = "image/jpeg,image/png,image/webp";
+const MIN_RECORDING_YEAR = 1800;
+const MAX_RECORDING_YEAR = 3000;
 
 /**
  * Filename fallback for audio files when the browser doesn't surface a usable
@@ -93,6 +97,9 @@ type TrackItem = {
   url: string | null;
   title: string;
   artist: string | null;
+  genre: string | null;
+  year: number | null;
+  role: string | null;
   description: string;
   mimeType: string;
   durationSec: number | null;
@@ -112,6 +119,9 @@ type TrackEdits = Record<
   {
     title: string;
     artist: string;
+    genre: string;
+    year: string;
+    role: string;
     description: string;
     albumThumbnailUrl: string;
     albumThumbnailStorageId: Id<"_storage"> | null;
@@ -159,6 +169,9 @@ export function formatDuration(sec: number | null): string {
 export function validateTrackFields(
   title: string,
   artist: string,
+  genre: string,
+  year: string,
+  role: string,
   description: string,
 ): string | null {
   const t = title.trim();
@@ -169,12 +182,34 @@ export function validateTrackFields(
   if (artist.trim().length > MAX_ARTIST_LENGTH) {
     return `Artist must be at most ${MAX_ARTIST_LENGTH} characters.`;
   }
+  if (genre.trim().length > MAX_GENRE_LENGTH) {
+    return `Genre must be at most ${MAX_GENRE_LENGTH} characters.`;
+  }
+  const y = year.trim();
+  if (y.length > 0) {
+    const n = Number(y);
+    if (
+      !Number.isInteger(n) ||
+      n < MIN_RECORDING_YEAR ||
+      n > MAX_RECORDING_YEAR
+    ) {
+      return `Year must be a whole number between ${MIN_RECORDING_YEAR} and ${MAX_RECORDING_YEAR}.`;
+    }
+  }
+  if (role.trim().length > MAX_ROLE_LENGTH) {
+    return `Role must be at most ${MAX_ROLE_LENGTH} characters.`;
+  }
   const d = description.trim();
   if (d.length === 0) return "Description is required.";
   if (d.length > MAX_DESCRIPTION_LENGTH) {
     return `Description must be at most ${MAX_DESCRIPTION_LENGTH} characters.`;
   }
   return null;
+}
+
+function parseOptionalYear(raw: string): number | null {
+  const trimmed = raw.trim();
+  return trimmed.length > 0 ? Number(trimmed) : null;
 }
 
 function validateOptionalHttpsUrl(raw: string, label: string): string | null {
@@ -470,6 +505,11 @@ function AudioEditorForm() {
     (track: TrackItem) => ({
       title: edits[track.stableId]?.title ?? track.title,
       artist: edits[track.stableId]?.artist ?? track.artist ?? "",
+      genre: edits[track.stableId]?.genre ?? track.genre ?? "",
+      year:
+        edits[track.stableId]?.year ??
+        (track.year !== null ? String(track.year) : ""),
+      role: edits[track.stableId]?.role ?? track.role ?? "",
       description: edits[track.stableId]?.description ?? track.description,
       albumThumbnailUrl:
         edits[track.stableId]?.albumThumbnailUrl ??
@@ -492,6 +532,9 @@ function AudioEditorForm() {
       patch: Partial<{
         title: string;
         artist: string;
+        genre: string;
+        year: string;
+        role: string;
         description: string;
         albumThumbnailUrl: string;
         spotifyUrl: string;
@@ -503,6 +546,11 @@ function AudioEditorForm() {
         const base = {
           title: current[track.stableId]?.title ?? track.title,
           artist: current[track.stableId]?.artist ?? track.artist ?? "",
+          genre: current[track.stableId]?.genre ?? track.genre ?? "",
+          year:
+            current[track.stableId]?.year ??
+            (track.year !== null ? String(track.year) : ""),
+          role: current[track.stableId]?.role ?? track.role ?? "",
           description:
             current[track.stableId]?.description ?? track.description,
           albumThumbnailUrl:
@@ -521,6 +569,9 @@ function AudioEditorForm() {
         const next = {
           title: patch.title ?? base.title,
           artist: patch.artist ?? base.artist,
+          genre: patch.genre ?? base.genre,
+          year: patch.year ?? base.year,
+          role: patch.role ?? base.role,
           description: patch.description ?? base.description,
           albumThumbnailUrl: patch.albumThumbnailUrl ?? base.albumThumbnailUrl,
           albumThumbnailStorageId:
@@ -533,6 +584,9 @@ function AudioEditorForm() {
         if (
           next.title === track.title &&
           next.artist === (track.artist ?? "") &&
+          next.genre === (track.genre ?? "") &&
+          next.year === (track.year !== null ? String(track.year) : "") &&
+          next.role === (track.role ?? "") &&
           next.description === track.description &&
           next.albumThumbnailUrl === (track.albumThumbnailUrl ?? "") &&
           next.albumThumbnailStorageId === track.albumThumbnailStorageId &&
@@ -563,6 +617,9 @@ function AudioEditorForm() {
       const validationError = validateTrackFields(
         fields.title,
         fields.artist,
+        fields.genre,
+        fields.year,
+        fields.role,
         fields.description,
       );
       if (validationError) {
@@ -590,6 +647,9 @@ function AudioEditorForm() {
             title: fields.title.trim(),
             artist:
               fields.artist.trim().length > 0 ? fields.artist.trim() : null,
+            genre: fields.genre.trim().length > 0 ? fields.genre.trim() : null,
+            year: parseOptionalYear(fields.year),
+            role: fields.role.trim().length > 0 ? fields.role.trim() : null,
             description: fields.description.trim(),
             albumThumbnailUrl:
               fields.albumThumbnailUrl.trim().length > 0
@@ -632,6 +692,9 @@ function AudioEditorForm() {
       const err = validateTrackFields(
         fields.title,
         fields.artist,
+        fields.genre,
+        fields.year,
+        fields.role,
         fields.description,
       );
       if (err) {
@@ -658,6 +721,9 @@ function AudioEditorForm() {
           stableId: track.stableId,
           title: fields.title.trim(),
           artist: fields.artist.trim().length > 0 ? fields.artist.trim() : null,
+          genre: fields.genre.trim().length > 0 ? fields.genre.trim() : null,
+          year: parseOptionalYear(fields.year),
+          role: fields.role.trim().length > 0 ? fields.role.trim() : null,
           description: fields.description.trim(),
           albumThumbnailUrl:
             fields.albumThumbnailUrl.trim().length > 0
@@ -773,6 +839,9 @@ function AudioEditorForm() {
             storageId,
             title: defaultTitleFromFileName(file.name),
             artist: null,
+            genre: null,
+            year: null,
+            role: null,
             description:
               "Studio recording sample — edit this description before publishing.",
             durationSec: durationSec ?? null,
@@ -958,6 +1027,9 @@ function AudioEditorForm() {
       const fieldError = validateTrackFields(
         fields.title,
         fields.artist,
+        fields.genre,
+        fields.year,
+        fields.role,
         fields.description,
       );
       if (fieldError) {
@@ -992,6 +1064,10 @@ function AudioEditorForm() {
               title: fields.title.trim(),
               artist:
                 fields.artist.trim().length > 0 ? fields.artist.trim() : null,
+              genre:
+                fields.genre.trim().length > 0 ? fields.genre.trim() : null,
+              year: parseOptionalYear(fields.year),
+              role: fields.role.trim().length > 0 ? fields.role.trim() : null,
               description: fields.description.trim(),
               albumThumbnailUrl:
                 fields.albumThumbnailUrl.trim().length > 0
@@ -1602,6 +1678,50 @@ function AudioEditorForm() {
                         updateTrackEdit(track, { artist: e.target.value })
                       }
                       maxLength={MAX_ARTIST_LENGTH + 20}
+                    />
+                  </div>
+                  <div className="grid gap-3 sm:grid-cols-[minmax(0,1fr)_8rem]">
+                    <div className="space-y-1">
+                      <label className="body-text-small font-medium text-foreground">
+                        Genre (optional)
+                      </label>
+                      <Input
+                        value={fields.genre}
+                        onChange={(e) =>
+                          updateTrackEdit(track, { genre: e.target.value })
+                        }
+                        maxLength={MAX_GENRE_LENGTH + 20}
+                        placeholder="Americana"
+                      />
+                    </div>
+                    <div className="space-y-1">
+                      <label className="body-text-small font-medium text-foreground">
+                        Year (optional)
+                      </label>
+                      <Input
+                        value={fields.year}
+                        onChange={(e) =>
+                          updateTrackEdit(track, { year: e.target.value })
+                        }
+                        type="number"
+                        inputMode="numeric"
+                        min={MIN_RECORDING_YEAR}
+                        max={MAX_RECORDING_YEAR}
+                        placeholder="2026"
+                      />
+                    </div>
+                  </div>
+                  <div className="space-y-1">
+                    <label className="body-text-small font-medium text-foreground">
+                      Role / credit (optional)
+                    </label>
+                    <Input
+                      value={fields.role}
+                      onChange={(e) =>
+                        updateTrackEdit(track, { role: e.target.value })
+                      }
+                      maxLength={MAX_ROLE_LENGTH + 20}
+                      placeholder="Recorded, mixed, and mastered at Lula Lake Sound"
                     />
                   </div>
                   <div className="space-y-1">

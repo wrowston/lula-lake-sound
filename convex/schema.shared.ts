@@ -8,7 +8,7 @@ import { v } from "convex/values";
  * - `settings`   — site metadata (title, description; extend as CMS grows).
  * - `pricing`    — pricing package catalogue that drives the public pricing block.
  * - `about`      — About page hero copy, body block array, optional highlights, SEO meta, optional team headshots.
- * - `recordings` — public recordings page (flag-only; content lives in `src/app/recordings/recordings-data.ts`).
+ * - `recordings` — public recordings page visibility flag; audio content lives in `audioTracks`.
  * - `faq`        — homepage FAQ (categories → questions → answers); scoped rows in `faqCategories` / `faqQuestions`.
  *
  * Content for each section (when any) lives in dedicated scoped tables using the
@@ -186,7 +186,7 @@ export const cmsSnapshotValidator = v.union(
 /**
  * The set of sections tracked in `cmsSections`. `recordings` was added when
  * flags moved off the `marketingFeatureFlags` singleton and onto `cmsSections`
- * rows; it has no content table today (flag-only).
+ * rows; its visibility is flag-only while audio content is stored separately.
  */
 export const cmsSectionValidator = v.union(
   v.literal("settings"),
