@@ -55,7 +55,7 @@ function TrackAudioPlayer({
   claimExclusive: (el: HTMLAudioElement | null) => void;
 }) {
   const audioRef = useRef<HTMLAudioElement>(null);
-  const [srcHydrated, setSrcHydrated] = useState(false);
+  const lastAssignedSrcRef = useRef<string | null>(null);
   const [isPlaying, setIsPlaying] = useState(false);
 
   const labelPlaying = `Pause audio sample: ${trackTitle}`;
@@ -65,9 +65,9 @@ function TrackAudioPlayer({
     const audio = audioRef.current;
     if (!audio) return;
 
-    if (!srcHydrated) {
+    if (lastAssignedSrcRef.current !== src) {
       audio.src = src;
-      setSrcHydrated(true);
+      lastAssignedSrcRef.current = src;
     }
 
     if (audio.paused) {
