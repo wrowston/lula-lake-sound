@@ -470,14 +470,17 @@ function AudioEditorForm() {
         edits[track.stableId]?.albumThumbnailUrl ??
         (track.albumThumbnailUrl ?? ""),
       albumThumbnailStorageId:
-        edits[track.stableId]?.albumThumbnailStorageId ??
-        track.albumThumbnailStorageId,
+        edits[track.stableId]?.albumThumbnailStorageId !== undefined
+          ? edits[track.stableId]!.albumThumbnailStorageId
+          : track.albumThumbnailStorageId,
       albumThumbnailStorageUrl:
-        edits[track.stableId]?.albumThumbnailStorageUrl ??
-        track.albumThumbnailStorageUrl,
+        edits[track.stableId]?.albumThumbnailStorageUrl !== undefined
+          ? edits[track.stableId]!.albumThumbnailStorageUrl
+          : track.albumThumbnailStorageUrl,
       albumThumbnailDisplayUrl:
-        edits[track.stableId]?.albumThumbnailDisplayUrl ??
-        track.albumThumbnailDisplayUrl,
+        edits[track.stableId]?.albumThumbnailDisplayUrl !== undefined
+          ? edits[track.stableId]!.albumThumbnailDisplayUrl
+          : track.albumThumbnailDisplayUrl,
       spotifyUrl: edits[track.stableId]?.spotifyUrl ?? (track.spotifyUrl ?? ""),
       appleMusicUrl:
         edits[track.stableId]?.appleMusicUrl ?? (track.appleMusicUrl ?? ""),
@@ -509,14 +512,17 @@ function AudioEditorForm() {
             current[track.stableId]?.albumThumbnailUrl ??
             (track.albumThumbnailUrl ?? ""),
           albumThumbnailStorageId:
-            current[track.stableId]?.albumThumbnailStorageId ??
-            track.albumThumbnailStorageId,
+            current[track.stableId]?.albumThumbnailStorageId !== undefined
+              ? current[track.stableId]!.albumThumbnailStorageId
+              : track.albumThumbnailStorageId,
           albumThumbnailStorageUrl:
-            current[track.stableId]?.albumThumbnailStorageUrl ??
-            track.albumThumbnailStorageUrl,
+            current[track.stableId]?.albumThumbnailStorageUrl !== undefined
+              ? current[track.stableId]!.albumThumbnailStorageUrl
+              : track.albumThumbnailStorageUrl,
           albumThumbnailDisplayUrl:
-            current[track.stableId]?.albumThumbnailDisplayUrl ??
-            track.albumThumbnailDisplayUrl,
+            current[track.stableId]?.albumThumbnailDisplayUrl !== undefined
+              ? current[track.stableId]!.albumThumbnailDisplayUrl
+              : track.albumThumbnailDisplayUrl,
           spotifyUrl:
             current[track.stableId]?.spotifyUrl ?? (track.spotifyUrl ?? ""),
           appleMusicUrl:
