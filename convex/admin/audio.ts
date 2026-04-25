@@ -211,7 +211,8 @@ function collectTrackIssues(
 
   for (let i = 0; i < rows.length; i++) {
     const row = rows[i];
-    const base = `audio[${i}]`;
+    /** Index-only paths — `publishSite` prefixes with `audio.` like `photos.*`. */
+    const base = `tracks[${i}]`;
 
     if (row.title.trim().length === 0) {
       issues.push({ path: `${base}.title`, message: "Title is required." });
