@@ -94,6 +94,7 @@ function TrackAudioPlayer({
         }}
         onPause={() => setIsPlaying(false)}
         onEnded={() => setIsPlaying(false)}
+        onError={() => setIsPlaying(false)}
       />
       <Button
         type="button"
