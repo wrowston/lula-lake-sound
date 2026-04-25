@@ -1,5 +1,16 @@
 import type { Doc, Id } from "./_generated/dataModel";
 import type { MutationCtx, QueryCtx } from "./_generated/server";
+import {
+  deleteStorageIfUnreferenced,
+  getStorageMetadata,
+  type StorageMetadataRecord,
+} from "./mediaStorage";
+
+export {
+  deleteStorageIfUnreferenced,
+  getStorageMetadata,
+  type StorageMetadataRecord,
+};
 
 export const ALLOWED_GALLERY_IMAGE_TYPES = [
   "image/jpeg",
@@ -15,13 +26,6 @@ export type GalleryScope = Doc<"galleryPhotos">["scope"];
 export type GalleryPhotoDoc = Doc<"galleryPhotos">;
 export type GalleryMetaDoc = Doc<"galleryPhotoMeta">;
 export type GalleryPublishIssue = { path: string; message: string };
-export type StorageMetadataRecord = {
-  _id: Id<"_storage">;
-  _creationTime: number;
-  contentType?: string;
-  sha256: string;
-  size: number;
-};
 
 function comparablePhoto(row: GalleryPhotoDoc) {
   return {
@@ -92,37 +96,6 @@ export async function ensureGalleryMeta(
     throw new Error("Failed to create gallery photo meta row.");
   }
   return { id, row };
-}
-
-export async function getStorageMetadata(
-  ctx: QueryCtx | MutationCtx,
-  storageId: Id<"_storage">,
-): Promise<StorageMetadataRecord | null> {
-  return (await ctx.db.system.get(
-    "_storage",
-    storageId,
-  )) as StorageMetadataRecord | null;
-}
-
-export async function deleteStorageIfUnreferenced(
-  ctx: MutationCtx,
-  storageId: Id<"_storage">,
-): Promise<boolean> {
-  const refs = await ctx.db
-    .query("galleryPhotos")
-    .withIndex("by_storageId", (q) => q.eq("storageId", storageId))
-    .take(1);
-  if (refs.length > 0) {
-    return false;
-  }
-
-  const storage = await getStorageMetadata(ctx, storageId);
-  if (!storage) {
-    return false;
-  }
-
-  await ctx.storage.delete(storageId);
-  return true;
 }
 
 export async function replaceGalleryScope(

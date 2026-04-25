@@ -5,6 +5,7 @@ import { Authenticated, Unauthenticated, AuthLoading } from "convex/react";
 import { api } from "../../../convex/_generated/api";
 import { HomepageShell } from "@/components/homepage-shell";
 import { PreviewBanner } from "@/components/preview-banner";
+import type { PublishedAudioTrack } from "@/components/audio-portfolio";
 
 function PreviewContent() {
   const pricingFlags = useQuery(
@@ -12,9 +13,9 @@ function PreviewContent() {
   );
   const gearPreview = useQuery(api.gearPreviewDraft.getPreviewGear);
   const photoPreview = useQuery(api.photosPreviewDraft.getPreviewGalleryPhotos);
-  // INF-46: surface the draft About visibility in the homepage nav so owners
-  // can confirm the feature-flag toggle before publishing. Preview query is
-  // owner-only and returns `null` for non-owners.
+  const audioPreview = useQuery(api.audioPreviewDraft.getPreviewAudioTracks);
+  // Tracks whether the About section has unpublished draft content so the
+  // preview banner can reflect it. Owner-only — returns `null` for non-owners.
   const aboutPreview = useQuery(api.aboutPreviewDraft.getPreviewAbout);
   const marketingPreview = useQuery(api.cms.getPreviewMarketingFeatureFlags);
 
@@ -22,6 +23,7 @@ function PreviewContent() {
     pricingFlags === undefined ||
     gearPreview === undefined ||
     photoPreview === undefined ||
+    audioPreview === undefined ||
     aboutPreview === undefined ||
     marketingPreview === undefined
   ) {
@@ -36,6 +38,7 @@ function PreviewContent() {
     pricingFlags === null ||
     gearPreview === null ||
     photoPreview === null ||
+    audioPreview === null ||
     aboutPreview === null ||
     marketingPreview === null
   ) {
@@ -52,8 +55,25 @@ function PreviewContent() {
     pricingFlags.hasDraftChanges ||
     gearPreview.hasDraftChanges ||
     photoPreview.hasDraftChanges ||
+    audioPreview.hasDraftChanges ||
     aboutPreview.hasDraftChanges ||
     marketingPreview.hasDraftChanges;
+
+  const audioTracks: PublishedAudioTrack[] = audioPreview.tracks
+    .filter((t): t is typeof t & { url: string } => t.url !== null)
+    .map((t) => ({
+      stableId: t.stableId,
+      url: t.url,
+      title: t.title,
+      artist: t.artist,
+      description: t.description,
+      mimeType: t.mimeType,
+      durationSec: t.durationSec,
+      sortOrder: t.sortOrder,
+      albumThumbnailUrl: t.albumThumbnailUrl,
+      spotifyUrl: t.spotifyUrl,
+      appleMusicUrl: t.appleMusicUrl,
+    }));
 
   return (
     <HomepageShell
@@ -68,6 +88,7 @@ function PreviewContent() {
       }}
       gear={{ categories: gearPreview.categories }}
       photos={photoPreview.photos}
+      audioTracks={audioTracks}
       banner={<PreviewBanner hasDraftChanges={hasDraftChanges} />}
     />
   );
