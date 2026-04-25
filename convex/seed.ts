@@ -3,6 +3,7 @@ import { internalMutation } from "./_generated/server";
 import {
   ABOUT_DEFAULTS,
   DEFAULT_PRICING_PACKAGES,
+  FAQ_DEFAULTS,
   SETTINGS_DEFAULTS,
 } from "./cmsShared";
 import {
@@ -12,7 +13,6 @@ import {
 import { ABOUT_CONTENT_DEFAULTS, loadAboutContent } from "./aboutTree";
 import { loadPricingPackages } from "./pricingTree";
 import { loadSettingsContent } from "./settingsTree";
-import { DEFAULT_FAQ_CATEGORIES } from "./faqSeedData";
 import { loadFaqTree, replaceFaqScopeFromCategories } from "./faqTree";
 import { LEGACY_EQUIPMENT_SEED } from "./gearEquipmentSeed";
 import { insertLegacyEquipmentSeedDraft } from "./gearLegacySeed";
@@ -119,15 +119,7 @@ export const seedSiteSettingsDefaults = internalMutation({
       await replaceFaqScopeFromCategories(
         ctx,
         "published",
-        DEFAULT_FAQ_CATEGORIES.map((c) => ({
-          stableId: c.stableId,
-          title: c.title,
-          questions: c.questions.map((q) => ({
-            stableId: q.stableId,
-            question: q.question,
-            answer: q.answer,
-          })),
-        })),
+        FAQ_DEFAULTS.categories,
       );
     }
 
@@ -155,15 +147,7 @@ export const migrateFaqPublishedIfEmpty = internalMutation({
     await replaceFaqScopeFromCategories(
       ctx,
       "published",
-      DEFAULT_FAQ_CATEGORIES.map((c) => ({
-        stableId: c.stableId,
-        title: c.title,
-        questions: c.questions.map((q) => ({
-          stableId: q.stableId,
-          question: q.question,
-          answer: q.answer,
-        })),
-      })),
+      FAQ_DEFAULTS.categories,
     );
     return { ok: true as const, kind: "inserted" as const };
   },
