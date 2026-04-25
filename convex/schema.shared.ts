@@ -9,6 +9,7 @@ import { v } from "convex/values";
  * - `pricing`    — pricing package catalogue that drives the public pricing block.
  * - `about`      — About page hero copy, body block array, optional highlights, SEO meta, optional team headshots.
  * - `recordings` — public recordings page (flag-only; content lives in `src/app/recordings/recordings-data.ts`).
+ * - `amenitiesNearby` — homepage "Local Favorites" cards (`amenitiesNearbyCopy` + `amenitiesNearbyItems`).
  *
  * Content for each section (when any) lives in dedicated scoped tables using the
  * gear/photos pattern (`scope: "draft" | "published"` column); `cmsSections`
@@ -161,6 +162,7 @@ export const cmsSectionValidator = v.union(
   v.literal("pricing"),
   v.literal("about"),
   v.literal("recordings"),
+  v.literal("amenitiesNearby"),
 );
 
 /**
@@ -226,6 +228,40 @@ export const settingsContentRowValidator = {
   title: v.optional(v.string()),
   description: v.optional(v.string()),
 } as const;
+
+/** Optional section chrome for homepage amenities block — one row per scope. */
+export const amenitiesNearbyCopyRowValidator = {
+  scope: cmsScopeValidator,
+  eyebrow: v.optional(v.string()),
+  heading: v.optional(v.string()),
+  intro: v.optional(v.string()),
+} as const;
+
+/** One amenity card per row; ordered by `sort`. */
+export const amenitiesNearbyItemRowValidator = {
+  scope: cmsScopeValidator,
+  stableId: v.string(),
+  name: v.string(),
+  type: v.string(),
+  description: v.string(),
+  website: v.string(),
+  sort: v.number(),
+} as const;
+
+export const amenitiesNearbyEntryValidator = v.object({
+  stableId: v.string(),
+  name: v.string(),
+  type: v.string(),
+  description: v.string(),
+  website: v.string(),
+});
+
+export const amenitiesNearbySnapshotValidator = v.object({
+  eyebrow: v.optional(v.string()),
+  heading: v.optional(v.string()),
+  intro: v.optional(v.string()),
+  rows: v.array(amenitiesNearbyEntryValidator),
+});
 
 /** Draft vs published rows in `gearCategories` / `gearItems` (INF-86). */
 export const gearScopeValidator = cmsScopeValidator;

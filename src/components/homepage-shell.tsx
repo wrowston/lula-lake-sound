@@ -15,6 +15,7 @@ import {
   AudioPortfolio,
   type PublishedAudioTrack,
 } from "@/components/audio-portfolio";
+import type { PublishedAmenitiesNearby } from "@/components/amenities-nearby";
 import { TheSpace, type GalleryPhoto } from "@/components/the-space";
 import { useScrollAndReveal } from "@/hooks/use-scroll-and-reveal";
 import {
@@ -45,6 +46,8 @@ interface HomepageShellProps {
   readonly photos: GalleryPhoto[] | null | undefined;
   /** Published (or preview) audio portfolio; empty array hides the section. */
   readonly audioTracks: PublishedAudioTrack[] | null | undefined;
+  /** When set (e.g. preview), skips live public subscription for amenities. */
+  readonly amenities?: PublishedAmenitiesNearby | null | undefined;
   readonly banner?: React.ReactNode;
 }
 
@@ -54,6 +57,7 @@ export function HomepageShell({
   gear,
   photos,
   audioTracks,
+  amenities,
   banner,
 }: HomepageShellProps) {
   const { scrollY, containerRef } = useScrollAndReveal();
@@ -112,7 +116,7 @@ export function HomepageShell({
           marketingFeatureFlags={marketing ?? null}
           isPreviewRoute={isPreview}
         />
-        <AmenitiesNearby />
+        <AmenitiesNearby amenities={amenities} />
         <FAQ />
         <ArtistInquiries />
       </main>

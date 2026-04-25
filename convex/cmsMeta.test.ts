@@ -32,6 +32,10 @@ describe("DEFAULT_IS_ENABLED", () => {
     expect(DEFAULT_IS_ENABLED.about).toBe(false);
     expect(DEFAULT_IS_ENABLED.recordings).toBe(false);
   });
+
+  test("amenities nearby ships on with the homepage", () => {
+    expect(DEFAULT_IS_ENABLED.amenitiesNearby).toBe(true);
+  });
 });
 
 describe("effectiveIsEnabled", () => {

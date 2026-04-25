@@ -14,6 +14,10 @@ import {
   loadSettingsContent,
   settingsDraftMatchesPublished,
 } from "./settingsTree";
+import {
+  amenitiesNearbyDraftMatchesPublished,
+  loadAmenitiesNearbyTree,
+} from "./amenitiesTree";
 
 /**
  * Default `isEnabled` value for a brand-new deployment / row. Matches the
@@ -25,6 +29,7 @@ export const DEFAULT_IS_ENABLED: Record<CmsSection, boolean> = {
   pricing: true,
   about: false,
   recordings: false,
+  amenitiesNearby: true,
 };
 
 export async function getSectionMetaRow(
@@ -110,6 +115,13 @@ export async function sectionHasContentDraftDiff(
   section: CmsSection,
 ): Promise<boolean> {
   if (section === "recordings") return false;
+
+  if (section === "amenitiesNearby") {
+    const draft = await loadAmenitiesNearbyTree(ctx, "draft");
+    const published = await loadAmenitiesNearbyTree(ctx, "published");
+    if (draft.items.length === 0 && draft.copy === null) return false;
+    return !amenitiesNearbyDraftMatchesPublished(draft, published);
+  }
 
   if (section === "about") {
     const draft = await loadAboutTree(ctx, "draft");

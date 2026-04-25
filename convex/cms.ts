@@ -2,6 +2,7 @@ import { query, mutation } from "./_generated/server";
 import { v } from "convex/values";
 import {
   aboutContentValidator,
+  amenitiesNearbySnapshotValidator,
   cmsSectionValidator,
   pricingContentValidator,
   settingsContentValidator,
@@ -9,6 +10,7 @@ import {
 import {
   defaultSnapshotForSection,
   type AboutSnapshot,
+  type AmenitiesNearbySnapshot,
   type PricingSnapshot,
   type SettingsSnapshot,
 } from "./cmsShared";
@@ -49,6 +51,12 @@ import {
   loadSettingsContent,
   replaceSettingsDraft,
 } from "./settingsTree";
+import {
+  copyAmenitiesNearbyScope,
+  loadAmenitiesNearbyTree,
+  replaceAmenitiesNearbyDraft,
+  snapshotFromAmenitiesTree,
+} from "./amenitiesTree";
 import { cmsValidationError } from "./errors";
 
 /**
@@ -107,6 +115,7 @@ export const saveDraft = mutation({
       settingsContentValidator,
       pricingContentValidator,
       aboutContentValidator,
+      amenitiesNearbySnapshotValidator,
     ),
   },
   handler: async (ctx, args) => {
@@ -123,6 +132,8 @@ export const saveDraft = mutation({
         ?.priceTabEnabled !== undefined;
     const isAboutPayload =
       "heroTitle" in args.content && "body" in args.content;
+    const isAmenitiesPayload =
+      "rows" in args.content && Array.isArray(args.content.rows);
 
     if (args.section === "settings") {
       if (!isSettingsPayload) {
@@ -151,6 +162,13 @@ export const saveDraft = mutation({
           "content",
         );
       }
+    } else if (args.section === "amenitiesNearby") {
+      if (!isAmenitiesPayload) {
+        cmsValidationError(
+          "Amenities content must include a rows array.",
+          "content",
+        );
+      }
     } else {
       cmsValidationError(
         "Recordings has no content; only the visibility flag is editable.",
@@ -168,6 +186,11 @@ export const saveDraft = mutation({
       const beforeUnion = await unionAboutTeamStorage(ctx);
       await replaceAboutDraftFromSnapshot(ctx, args.content as AboutSnapshot);
       await pruneAboutTeamBlobsAfterSaveDraftScoped(ctx, beforeUnion);
+    } else if (args.section === "amenitiesNearby") {
+      await replaceAmenitiesNearbyDraft(
+        ctx,
+        args.content as AmenitiesNearbySnapshot,
+      );
     }
 
     await recomputeSectionHasDraftChanges(ctx, args.section, updatedBy);
@@ -202,7 +225,13 @@ export const listPendingDrafts = query({
     if (identity === null) {
       return {
         sections: [] as Array<
-          "settings" | "pricing" | "about" | "recordings" | "gear" | "photos"
+          | "settings"
+          | "pricing"
+          | "about"
+          | "recordings"
+          | "amenitiesNearby"
+          | "gear"
+          | "photos"
         >,
       };
     }
@@ -222,7 +251,13 @@ export const listPendingDrafts = query({
     ]);
 
     const sections: Array<
-      "settings" | "pricing" | "about" | "recordings" | "gear" | "photos"
+      | "settings"
+      | "pricing"
+      | "about"
+      | "recordings"
+      | "amenitiesNearby"
+      | "gear"
+      | "photos"
     > = [];
     for (const row of cmsRows) {
       if (row.hasDraftChanges) sections.push(row.section);
@@ -567,6 +602,8 @@ export const discardDraft = mutation({
         await copyPricingScope(ctx, "published", "draft");
       } else if (args.section === "settings") {
         await copySettingsScope(ctx, "published", "draft");
+      } else if (args.section === "amenitiesNearby") {
+        await copyAmenitiesNearbyScope(ctx, "published", "draft");
       }
     }
 
@@ -664,6 +701,11 @@ async function readSnapshotForAdmin(
           }
         : {}),
     } satisfies AboutSnapshot;
+  }
+
+  if (section === "amenitiesNearby") {
+    const tree = await loadAmenitiesNearbyTree(ctx, scope);
+    return snapshotFromAmenitiesTree(tree);
   }
 
   // recordings — flag-only, no content. Return an empty about-shaped default

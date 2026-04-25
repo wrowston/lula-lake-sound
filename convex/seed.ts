@@ -2,6 +2,7 @@ import { v } from "convex/values";
 import { internalMutation } from "./_generated/server";
 import {
   ABOUT_DEFAULTS,
+  AMENITIES_NEARBY_DEFAULT_ROWS,
   DEFAULT_PRICING_PACKAGES,
   SETTINGS_DEFAULTS,
 } from "./cmsShared";
@@ -12,13 +13,17 @@ import {
 import { ABOUT_CONTENT_DEFAULTS, loadAboutContent } from "./aboutTree";
 import { loadPricingPackages } from "./pricingTree";
 import { loadSettingsContent } from "./settingsTree";
+import {
+  loadAmenitiesNearbyCopy,
+  loadAmenitiesNearbyItems,
+} from "./amenitiesTree";
 import { LEGACY_EQUIPMENT_SEED } from "./gearEquipmentSeed";
 import { insertLegacyEquipmentSeedDraft } from "./gearLegacySeed";
 import { deleteAllGearForScope, loadGearDocs } from "./gearTree";
 
 /**
- * Idempotent seed for local dev: creates the four `cmsSections` metadata rows
- * (settings, pricing, about, recordings) and seeds per-section published-scope
+ * Idempotent seed for local dev: creates the five `cmsSections` metadata rows
+ * (settings, pricing, about, recordings, amenitiesNearby) and seeds per-section published-scope
  * content so the admin editors and public queries have a consistent baseline.
  *
  * Run once after deploying schema:
@@ -28,13 +33,24 @@ export const seedSiteSettingsDefaults = internalMutation({
   args: {},
   handler: async (ctx) => {
     type SectionSeedResult = {
-      section: "settings" | "pricing" | "about" | "recordings";
+      section:
+        | "settings"
+        | "pricing"
+        | "about"
+        | "recordings"
+        | "amenitiesNearby";
       status: "already_seeded" | "inserted";
     };
 
     const results: SectionSeedResult[] = [];
 
-    for (const section of ["settings", "pricing", "about", "recordings"] as const) {
+    for (const section of [
+      "settings",
+      "pricing",
+      "about",
+      "recordings",
+      "amenitiesNearby",
+    ] as const) {
       const before = await ctx.db
         .query("cmsSections")
         .withIndex("by_section", (q) => q.eq("section", section))
@@ -102,6 +118,29 @@ export const seedSiteSettingsDefaults = internalMutation({
           sortOrder: pkg.sortOrder,
           isActive: pkg.isActive,
           ...(pkg.features !== undefined ? { features: pkg.features } : {}),
+        });
+      }
+    }
+
+    const amenitiesCopyPublished = await loadAmenitiesNearbyCopy(
+      ctx,
+      "published",
+    );
+    const amenitiesItemsPublished = await loadAmenitiesNearbyItems(
+      ctx,
+      "published",
+    );
+    if (amenitiesCopyPublished === null && amenitiesItemsPublished.length === 0) {
+      for (let i = 0; i < AMENITIES_NEARBY_DEFAULT_ROWS.length; i++) {
+        const row = AMENITIES_NEARBY_DEFAULT_ROWS[i];
+        await ctx.db.insert("amenitiesNearbyItems", {
+          scope: "published",
+          stableId: row.stableId,
+          name: row.name,
+          type: row.type,
+          description: row.description,
+          website: row.website,
+          sort: i,
         });
       }
     }

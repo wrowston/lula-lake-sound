@@ -19,6 +19,10 @@ import {
 } from "./pricingTree";
 import { copySettingsScope, loadSettingsContent } from "./settingsTree";
 import {
+  collectAmenitiesNearbyPublishIssues,
+  copyAmenitiesNearbyScope,
+} from "./amenitiesTree";
+import {
   DEFAULT_IS_ENABLED,
   effectiveIsEnabled,
   ensureSectionMetaRow,
@@ -291,6 +295,9 @@ export async function collectPublishIssues(
       : await loadAboutTree(ctx, "published");
     return collectAboutIssuesFromTree(ctx, tree);
   }
+  if (section === "amenitiesNearby") {
+    return collectAmenitiesNearbyPublishIssues(ctx);
+  }
   return [];
 }
 
@@ -368,6 +375,8 @@ export async function publishSectionCore(
       await copyPricingScope(ctx, "draft", "published");
     } else if (section === "settings") {
       await copySettingsScope(ctx, "draft", "published");
+    } else if (section === "amenitiesNearby") {
+      await copyAmenitiesNearbyScope(ctx, "draft", "published");
     }
   }
 
