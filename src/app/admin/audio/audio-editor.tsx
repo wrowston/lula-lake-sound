@@ -115,8 +115,6 @@ type TrackEdits = Record<
     description: string;
     albumThumbnailUrl: string;
     albumThumbnailStorageId: Id<"_storage"> | null;
-    albumThumbnailStorageUrl: string | null;
-    albumThumbnailDisplayUrl: string | null;
     spotifyUrl: string;
     appleMusicUrl: string;
   }
@@ -261,7 +259,11 @@ function sequentialEffects(
   effects: Array<Effect.Effect<unknown, CmsAppError>>,
 ): Effect.Effect<void, CmsAppError> {
   return effects.reduce(
-    (acc, effect) => pipe(acc, Effect.flatMap(() => effect)),
+    (acc, effect) =>
+      pipe(
+        acc,
+        Effect.flatMap(() => effect),
+      ),
     Effect.succeed(undefined) as Effect.Effect<void, CmsAppError>,
   );
 }
@@ -293,7 +295,10 @@ async function uploadFileWithProgress(
   return await new Promise<Id<"_storage">>((resolve, reject) => {
     const xhr = new XMLHttpRequest();
     xhr.open("POST", uploadUrl);
-    xhr.setRequestHeader("Content-Type", file.type || "application/octet-stream");
+    xhr.setRequestHeader(
+      "Content-Type",
+      file.type || "application/octet-stream",
+    );
     xhr.upload.addEventListener("progress", (event) => {
       if (event.lengthComputable && event.total > 0) {
         onProgress(Math.min(1, event.loaded / event.total));
@@ -464,26 +469,19 @@ function AudioEditorForm() {
   const getEditableFields = useCallback(
     (track: TrackItem) => ({
       title: edits[track.stableId]?.title ?? track.title,
-      artist: edits[track.stableId]?.artist ?? (track.artist ?? ""),
+      artist: edits[track.stableId]?.artist ?? track.artist ?? "",
       description: edits[track.stableId]?.description ?? track.description,
       albumThumbnailUrl:
         edits[track.stableId]?.albumThumbnailUrl ??
-        (track.albumThumbnailUrl ?? ""),
+        track.albumThumbnailUrl ??
+        "",
       albumThumbnailStorageId:
         edits[track.stableId]?.albumThumbnailStorageId !== undefined
           ? edits[track.stableId]!.albumThumbnailStorageId
           : track.albumThumbnailStorageId,
-      albumThumbnailStorageUrl:
-        edits[track.stableId]?.albumThumbnailStorageUrl !== undefined
-          ? edits[track.stableId]!.albumThumbnailStorageUrl
-          : track.albumThumbnailStorageUrl,
-      albumThumbnailDisplayUrl:
-        edits[track.stableId]?.albumThumbnailDisplayUrl !== undefined
-          ? edits[track.stableId]!.albumThumbnailDisplayUrl
-          : track.albumThumbnailDisplayUrl,
-      spotifyUrl: edits[track.stableId]?.spotifyUrl ?? (track.spotifyUrl ?? ""),
+      spotifyUrl: edits[track.stableId]?.spotifyUrl ?? track.spotifyUrl ?? "",
       appleMusicUrl:
-        edits[track.stableId]?.appleMusicUrl ?? (track.appleMusicUrl ?? ""),
+        edits[track.stableId]?.appleMusicUrl ?? track.appleMusicUrl ?? "",
     }),
     [edits],
   );
@@ -499,34 +497,26 @@ function AudioEditorForm() {
         spotifyUrl: string;
         appleMusicUrl: string;
         albumThumbnailStorageId: Id<"_storage"> | null;
-        albumThumbnailStorageUrl: string | null;
-        albumThumbnailDisplayUrl: string | null;
       }>,
     ) => {
       setEdits((current) => {
         const base = {
           title: current[track.stableId]?.title ?? track.title,
-          artist: current[track.stableId]?.artist ?? (track.artist ?? ""),
-          description: current[track.stableId]?.description ?? track.description,
+          artist: current[track.stableId]?.artist ?? track.artist ?? "",
+          description:
+            current[track.stableId]?.description ?? track.description,
           albumThumbnailUrl:
             current[track.stableId]?.albumThumbnailUrl ??
-            (track.albumThumbnailUrl ?? ""),
+            track.albumThumbnailUrl ??
+            "",
           albumThumbnailStorageId:
             current[track.stableId]?.albumThumbnailStorageId !== undefined
               ? current[track.stableId]!.albumThumbnailStorageId
               : track.albumThumbnailStorageId,
-          albumThumbnailStorageUrl:
-            current[track.stableId]?.albumThumbnailStorageUrl !== undefined
-              ? current[track.stableId]!.albumThumbnailStorageUrl
-              : track.albumThumbnailStorageUrl,
-          albumThumbnailDisplayUrl:
-            current[track.stableId]?.albumThumbnailDisplayUrl !== undefined
-              ? current[track.stableId]!.albumThumbnailDisplayUrl
-              : track.albumThumbnailDisplayUrl,
           spotifyUrl:
-            current[track.stableId]?.spotifyUrl ?? (track.spotifyUrl ?? ""),
+            current[track.stableId]?.spotifyUrl ?? track.spotifyUrl ?? "",
           appleMusicUrl:
-            current[track.stableId]?.appleMusicUrl ?? (track.appleMusicUrl ?? ""),
+            current[track.stableId]?.appleMusicUrl ?? track.appleMusicUrl ?? "",
         };
         const next = {
           title: patch.title ?? base.title,
@@ -537,14 +527,6 @@ function AudioEditorForm() {
             "albumThumbnailStorageId" in patch
               ? (patch.albumThumbnailStorageId ?? null)
               : base.albumThumbnailStorageId,
-          albumThumbnailStorageUrl:
-            "albumThumbnailStorageUrl" in patch
-              ? (patch.albumThumbnailStorageUrl ?? null)
-              : base.albumThumbnailStorageUrl,
-          albumThumbnailDisplayUrl:
-            "albumThumbnailDisplayUrl" in patch
-              ? (patch.albumThumbnailDisplayUrl ?? null)
-              : base.albumThumbnailDisplayUrl,
           spotifyUrl: patch.spotifyUrl ?? base.spotifyUrl,
           appleMusicUrl: patch.appleMusicUrl ?? base.appleMusicUrl,
         };
@@ -554,8 +536,6 @@ function AudioEditorForm() {
           next.description === track.description &&
           next.albumThumbnailUrl === (track.albumThumbnailUrl ?? "") &&
           next.albumThumbnailStorageId === track.albumThumbnailStorageId &&
-          next.albumThumbnailStorageUrl === track.albumThumbnailStorageUrl &&
-          next.albumThumbnailDisplayUrl === track.albumThumbnailDisplayUrl &&
           next.spotifyUrl === (track.spotifyUrl ?? "") &&
           next.appleMusicUrl === (track.appleMusicUrl ?? "")
         ) {
@@ -677,8 +657,7 @@ function AudioEditorForm() {
         updateDraftTrack({
           stableId: track.stableId,
           title: fields.title.trim(),
-          artist:
-            fields.artist.trim().length > 0 ? fields.artist.trim() : null,
+          artist: fields.artist.trim().length > 0 ? fields.artist.trim() : null,
           description: fields.description.trim(),
           albumThumbnailUrl:
             fields.albumThumbnailUrl.trim().length > 0
@@ -710,9 +689,7 @@ function AudioEditorForm() {
     async (orderedStableIds: string[]): Promise<boolean> => {
       const outcome = await runAction(
         "Reordering…",
-        convexMutationEffect(() =>
-          reorderDraftTracks({ orderedStableIds }),
-        ),
+        convexMutationEffect(() => reorderDraftTracks({ orderedStableIds })),
       );
       return outcome !== undefined;
     },
@@ -742,7 +719,9 @@ function AudioEditorForm() {
     async (files: File[]) => {
       if (!data) return;
       const allowedMime = new Set<string>(data.limits.acceptedMimeTypes);
-      const audioFiles = files.filter((f) => isAcceptedAudioFile(f, allowedMime));
+      const audioFiles = files.filter((f) =>
+        isAcceptedAudioFile(f, allowedMime),
+      );
       if (audioFiles.length === 0) {
         toast.error("Drop MP3 or WAV files only.");
         return;
@@ -804,14 +783,11 @@ function AudioEditorForm() {
           });
 
           setUploadQueue((q) =>
-            q.map((e) =>
-              e.id === entryId ? { ...e, status: "done" } : e,
-            ),
+            q.map((e) => (e.id === entryId ? { ...e, status: "done" } : e)),
           );
           toast.success(`Added ${file.name}`);
         } catch (e) {
-          const message =
-            e instanceof Error ? e.message : "Upload failed.";
+          const message = e instanceof Error ? e.message : "Upload failed.";
           setUploadQueue((q) =>
             q.map((entry) =>
               entry.id === entryId
@@ -925,9 +901,7 @@ function AudioEditorForm() {
         }
 
         setUploadQueue((q) =>
-          q.map((e) =>
-            e.id === entryId ? { ...e, status: "done" } : e,
-          ),
+          q.map((e) => (e.id === entryId ? { ...e, status: "done" } : e)),
         );
         toast.success(`Replaced audio file with ${file.name}.`);
       } catch (e) {
@@ -1006,7 +980,11 @@ function AudioEditorForm() {
       setRowAction(track.stableId, "art");
       try {
         const { uploadUrl } = await generateUploadUrl({});
-        const storageId = await uploadFileWithProgress(uploadUrl, file, () => {});
+        const storageId = await uploadFileWithProgress(
+          uploadUrl,
+          file,
+          () => {},
+        );
         const outcome = await runAdminEffect(
           convexMutationEffect(() =>
             updateDraftTrack({
@@ -1036,9 +1014,14 @@ function AudioEditorForm() {
         if (outcome !== undefined) {
           clearTrackEdit(track.stableId);
           toast.success("Album art uploaded.");
+        } else {
+          updateTrackEdit(track, {
+            albumThumbnailStorageId: track.albumThumbnailStorageId,
+          });
         }
       } catch (e) {
-        const message = e instanceof Error ? e.message : "Album art upload failed.";
+        const message =
+          e instanceof Error ? e.message : "Album art upload failed.";
         setInlineError(message);
         toast.error(message);
       } finally {
@@ -1051,6 +1034,7 @@ function AudioEditorForm() {
       getEditableFields,
       setRowAction,
       updateDraftTrack,
+      updateTrackEdit,
     ],
   );
 
@@ -1263,12 +1247,7 @@ function AudioEditorForm() {
       if (!ok) return false;
     }
     return true;
-  }, [
-    flushFFAutosave,
-    hasAudioLocalEdits,
-    hasFFLocalEdits,
-    savePendingEdits,
-  ]);
+  }, [flushFFAutosave, hasAudioLocalEdits, hasFFLocalEdits, savePendingEdits]);
 
   const { toolbarPortal, editorRef } = useRegisterCmsEditor({
     section: "audio",
@@ -1369,12 +1348,13 @@ function AudioEditorForm() {
             <p className="body-text-small max-w-2xl text-foreground/85">
               Upload MP3 or WAV samples for the homepage “Studio portfolio”
               section. Add optional album art with an HTTPS image URL or upload,
-              plus Spotify and Apple Music links per track. Playback uses Convex signed URLs (
+              plus Spotify and Apple Music links per track. Playback uses Convex
+              signed URLs (
               <code className="rounded bg-muted px-1 py-0.5 text-xs">
                 &lt;audio src&gt;
               </code>
-              ). Draft changes stay private until you publish. Abandoned draft-only
-              uploads are removed after 7 days (weekly job).
+              ). Draft changes stay private until you publish. Abandoned
+              draft-only uploads are removed after 7 days (weekly job).
             </p>
           </div>
 
@@ -1415,7 +1395,8 @@ function AudioEditorForm() {
               Upload audio
             </Button>
             <p className="body-text-small text-right text-foreground/70">
-              MP3 or WAV. Up to {Math.floor(data.limits.maxFileBytes / (1024 * 1024))}MB each.
+              MP3 or WAV. Up to{" "}
+              {Math.floor(data.limits.maxFileBytes / (1024 * 1024))}MB each.
               {tracks.length >= data.limits.maxTracks
                 ? ` Limit reached (${data.limits.maxTracks}).`
                 : ` ${tracks.length}/${data.limits.maxTracks} used.`}
@@ -1437,7 +1418,10 @@ function AudioEditorForm() {
             {uploadQueue.map((entry) => (
               <li key={entry.id} className="space-y-1">
                 <div className="flex items-center justify-between gap-3 text-sm">
-                  <span className="truncate text-foreground/85" title={entry.name}>
+                  <span
+                    className="truncate text-foreground/85"
+                    title={entry.name}
+                  >
                     {entry.name}
                   </span>
                   <span
@@ -1511,64 +1495,66 @@ function AudioEditorForm() {
                       {" · "}
                       {formatDuration(track.durationSec)}
                     </p>
-                  <div className="flex shrink-0 flex-wrap items-center gap-1">
-                    <Button
-                      type="button"
-                      variant="ghost"
-                      size="icon"
-                      className="size-8"
-                      aria-label="Move up"
-                      disabled={index === 0 || busy !== null || isRowBusy}
-                      onClick={() => void moveTrack(track.stableId, -1)}
-                    >
-                      <ArrowUp className="size-4" />
-                    </Button>
-                    <Button
-                      type="button"
-                      variant="ghost"
-                      size="icon"
-                      className="size-8"
-                      aria-label="Move down"
-                      disabled={
-                        index === tracks.length - 1 ||
-                        busy !== null ||
-                        isRowBusy
-                      }
-                      onClick={() => void moveTrack(track.stableId, 1)}
-                    >
-                      <ArrowDown className="size-4" />
-                    </Button>
-                    <Button
-                      type="button"
-                      variant="outline"
-                      size="sm"
-                      className="h-8 px-2"
-                      aria-label={`Replace audio file for ${track.title}`}
-                      disabled={busy !== null || isRowBusy}
-                      onClick={() => handleReplaceClick(track.stableId)}
-                    >
-                      {rowAction === "replacing" ? (
-                        <Loader2
-                          className="mr-1 size-3.5 animate-spin"
-                          aria-hidden
-                        />
-                      ) : (
-                        <Replace className="mr-1 size-3.5" aria-hidden />
-                      )}
-                      {rowAction === "replacing" ? "Replacing…" : "Replace file"}
-                    </Button>
-                    <Button
-                      type="button"
-                      variant="ghost"
-                      size="icon"
-                      className="size-8 text-destructive hover:text-destructive"
-                      aria-label="Remove track"
-                      disabled={busy !== null || isRowBusy}
-                      onClick={() => setDeleteStableId(track.stableId)}
-                    >
-                      <Trash2 className="size-4" />
-                    </Button>
-                  </div>
+                    <div className="flex shrink-0 flex-wrap items-center gap-1">
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="icon"
+                        className="size-8"
+                        aria-label="Move up"
+                        disabled={index === 0 || busy !== null || isRowBusy}
+                        onClick={() => void moveTrack(track.stableId, -1)}
+                      >
+                        <ArrowUp className="size-4" />
+                      </Button>
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="icon"
+                        className="size-8"
+                        aria-label="Move down"
+                        disabled={
+                          index === tracks.length - 1 ||
+                          busy !== null ||
+                          isRowBusy
+                        }
+                        onClick={() => void moveTrack(track.stableId, 1)}
+                      >
+                        <ArrowDown className="size-4" />
+                      </Button>
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        className="h-8 px-2"
+                        aria-label={`Replace audio file for ${track.title}`}
+                        disabled={busy !== null || isRowBusy}
+                        onClick={() => handleReplaceClick(track.stableId)}
+                      >
+                        {rowAction === "replacing" ? (
+                          <Loader2
+                            className="mr-1 size-3.5 animate-spin"
+                            aria-hidden
+                          />
+                        ) : (
+                          <Replace className="mr-1 size-3.5" aria-hidden />
+                        )}
+                        {rowAction === "replacing"
+                          ? "Replacing…"
+                          : "Replace file"}
+                      </Button>
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="icon"
+                        className="size-8 text-destructive hover:text-destructive"
+                        aria-label="Remove track"
+                        disabled={busy !== null || isRowBusy}
+                        onClick={() => setDeleteStableId(track.stableId)}
+                      >
+                        <Trash2 className="size-4" />
+                      </Button>
+                    </div>
                   </div>
                   {track.url ? (
                     <audio
@@ -1653,7 +1639,9 @@ function AudioEditorForm() {
                         size="sm"
                         className="h-8 px-2"
                         disabled={busy !== null || isRowBusy}
-                        onClick={() => handleAlbumArtUploadClick(track.stableId)}
+                        onClick={() =>
+                          handleAlbumArtUploadClick(track.stableId)
+                        }
                       >
                         {rowAction === "art" ? (
                           <Loader2
@@ -1675,9 +1663,6 @@ function AudioEditorForm() {
                           onClick={() =>
                             updateTrackEdit(track, {
                               albumThumbnailStorageId: null,
-                              albumThumbnailStorageUrl: null,
-                              albumThumbnailDisplayUrl:
-                                httpsImagePreviewUrl(fields.albumThumbnailUrl),
                             })
                           }
                         >
@@ -1687,8 +1672,9 @@ function AudioEditorForm() {
                     </div>
                     {(() => {
                       const preview =
-                        fields.albumThumbnailStorageUrl ??
-                        httpsImagePreviewUrl(fields.albumThumbnailUrl);
+                        fields.albumThumbnailStorageId != null
+                          ? track.albumThumbnailStorageUrl
+                          : httpsImagePreviewUrl(fields.albumThumbnailUrl);
                       return preview ? (
                         <div className="relative mt-2 aspect-square w-full max-w-[140px] overflow-hidden rounded-sm border border-border bg-muted">
                           <Image
@@ -1743,7 +1729,10 @@ function AudioEditorForm() {
                     onClick={() => void saveTrackDetails(track)}
                   >
                     {rowAction === "saving" ? (
-                      <Loader2 className="mr-1 size-3.5 animate-spin" aria-hidden />
+                      <Loader2
+                        className="mr-1 size-3.5 animate-spin"
+                        aria-hidden
+                      />
                     ) : (
                       <Save className="mr-1 size-3.5" aria-hidden />
                     )}

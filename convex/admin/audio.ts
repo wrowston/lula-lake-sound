@@ -1,5 +1,10 @@
 import { v } from "convex/values";
-import { internalMutation, mutation, query, type MutationCtx } from "../_generated/server";
+import {
+  internalMutation,
+  mutation,
+  query,
+  type MutationCtx,
+} from "../_generated/server";
 import type { Id } from "../_generated/dataModel";
 import {
   ABANDONED_DRAFT_AUDIO_MS,
@@ -21,7 +26,11 @@ import {
   ALLOWED_GALLERY_IMAGE_TYPES,
   MAX_GALLERY_IMAGE_BYTES,
 } from "../galleryPhotos";
-import { cmsNotFound, cmsPublishValidationFailed, cmsValidationError } from "../errors";
+import {
+  cmsNotFound,
+  cmsPublishValidationFailed,
+  cmsValidationError,
+} from "../errors";
 import { requireCmsOwner } from "../lib/auth";
 
 const MAX_TITLE_LENGTH = 200;
@@ -203,7 +212,10 @@ function validateStorageMetadataOrThrow(
   }
 
   if (!isAllowedAudioMimeType(storage.contentType)) {
-    cmsValidationError("Only MP3 and WAV audio files are allowed.", "storageId");
+    cmsValidationError(
+      "Only MP3 and WAV audio files are allowed.",
+      "storageId",
+    );
   }
 
   if (storage.size > MAX_AUDIO_FILE_BYTES) {
@@ -250,7 +262,10 @@ function validateAlbumArtStorageMetadataOrThrow(
 
 function collectTrackIssues(
   rows: AudioTrackDoc[],
-  storageById: Map<Id<"_storage">, Awaited<ReturnType<typeof getStorageMetadata>>>,
+  storageById: Map<
+    Id<"_storage">,
+    Awaited<ReturnType<typeof getStorageMetadata>>
+  >,
 ): AudioPublishIssue[] {
   const issues: AudioPublishIssue[] = [];
   const stableIds = new Set<string>();
@@ -465,10 +480,10 @@ export async function validateDraftAudioForPublish(
             : [row.storageId],
         ),
       ),
-    ).map(async (storageId) => [
-      storageId,
-      await getStorageMetadata(ctx, storageId),
-    ] as const),
+    ).map(
+      async (storageId) =>
+        [storageId, await getStorageMetadata(ctx, storageId)] as const,
+    ),
   );
   return collectTrackIssues(rows, new Map(storageRecords));
 }
@@ -527,6 +542,12 @@ export const saveUploadedTrack = mutation({
     const draft = await loadAudioTracks(ctx, "draft");
     if (draft.length >= MAX_AUDIO_TRACKS) {
       await deleteStorageIfUnreferenced(ctx, args.storageId);
+      if (
+        args.albumThumbnailStorageId !== null &&
+        args.albumThumbnailStorageId !== undefined
+      ) {
+        await deleteStorageIfUnreferenced(ctx, args.albumThumbnailStorageId);
+      }
       cmsValidationError(
         `Audio portfolio supports up to ${MAX_AUDIO_TRACKS} tracks.`,
         "storageId",
@@ -549,7 +570,10 @@ export const saveUploadedTrack = mutation({
         "albumThumbnailUrl",
       );
       let albumThumbnailStorageId: Id<"_storage"> | undefined;
-      if (args.albumThumbnailStorageId !== null && args.albumThumbnailStorageId !== undefined) {
+      if (
+        args.albumThumbnailStorageId !== null &&
+        args.albumThumbnailStorageId !== undefined
+      ) {
         const albumArtStorage = await getStorageMetadata(
           ctx,
           args.albumThumbnailStorageId,
@@ -557,7 +581,10 @@ export const saveUploadedTrack = mutation({
         validateAlbumArtStorageMetadataOrThrow(albumArtStorage);
         albumThumbnailStorageId = args.albumThumbnailStorageId;
       }
-      const spotifyUrl = normalizeOptionalExternalUrl(args.spotifyUrl, "spotifyUrl");
+      const spotifyUrl = normalizeOptionalExternalUrl(
+        args.spotifyUrl,
+        "spotifyUrl",
+      );
       const appleMusicUrl = normalizeOptionalExternalUrl(
         args.appleMusicUrl,
         "appleMusicUrl",
@@ -577,9 +604,7 @@ export const saveUploadedTrack = mutation({
         description,
         mimeType,
         ...(durationSec !== undefined ? { durationSec } : {}),
-        ...(albumThumbnailUrl !== undefined
-          ? { albumThumbnailUrl }
-          : {}),
+        ...(albumThumbnailUrl !== undefined ? { albumThumbnailUrl } : {}),
         ...(albumThumbnailStorageId !== undefined
           ? { albumThumbnailStorageId }
           : {}),
@@ -592,7 +617,10 @@ export const saveUploadedTrack = mutation({
       });
     } catch (error) {
       await deleteStorageIfUnreferenced(ctx, args.storageId);
-      if (args.albumThumbnailStorageId !== null && args.albumThumbnailStorageId !== undefined) {
+      if (
+        args.albumThumbnailStorageId !== null &&
+        args.albumThumbnailStorageId !== undefined
+      ) {
         await deleteStorageIfUnreferenced(ctx, args.albumThumbnailStorageId);
       }
       throw error;
@@ -622,105 +650,127 @@ export const updateDraftTrack = mutation({
       cmsNotFound("audioTrack", args.stableId);
     }
 
-    const title = normalizeTitle(args.title);
-    const description = normalizeDescription(args.description);
+    let draftRowReplaced = false;
+    try {
+      const title = normalizeTitle(args.title);
+      const description = normalizeDescription(args.description);
 
-    let nextArtist: string | undefined;
-    if (args.artist === null) {
-      nextArtist = undefined;
-    } else if (args.artist !== undefined) {
-      nextArtist = normalizeArtist(args.artist);
-    } else {
-      nextArtist = row.artist;
+      let nextArtist: string | undefined;
+      if (args.artist === null) {
+        nextArtist = undefined;
+      } else if (args.artist !== undefined) {
+        nextArtist = normalizeArtist(args.artist);
+      } else {
+        nextArtist = row.artist;
+      }
+
+      let durationSec: number | undefined;
+      if (args.durationSec === null) {
+        durationSec = undefined;
+      } else if (args.durationSec !== undefined) {
+        durationSec = normalizeDurationSec(args.durationSec);
+      } else {
+        durationSec = row.durationSec;
+      }
+
+      let nextAlbumThumbnailUrl: string | undefined;
+      if (args.albumThumbnailUrl === null) {
+        nextAlbumThumbnailUrl = undefined;
+      } else if (args.albumThumbnailUrl !== undefined) {
+        nextAlbumThumbnailUrl = normalizeOptionalExternalUrl(
+          args.albumThumbnailUrl,
+          "albumThumbnailUrl",
+        );
+      } else {
+        nextAlbumThumbnailUrl = row.albumThumbnailUrl;
+      }
+
+      let nextAlbumThumbnailStorageId: Id<"_storage"> | undefined;
+      if (args.albumThumbnailStorageId === null) {
+        nextAlbumThumbnailStorageId = undefined;
+      } else if (args.albumThumbnailStorageId !== undefined) {
+        const storage = await getStorageMetadata(
+          ctx,
+          args.albumThumbnailStorageId,
+        );
+        validateAlbumArtStorageMetadataOrThrow(storage);
+        nextAlbumThumbnailStorageId = args.albumThumbnailStorageId;
+      } else {
+        nextAlbumThumbnailStorageId = row.albumThumbnailStorageId;
+      }
+
+      let nextSpotifyUrl: string | undefined;
+      if (args.spotifyUrl === null) {
+        nextSpotifyUrl = undefined;
+      } else if (args.spotifyUrl !== undefined) {
+        nextSpotifyUrl = normalizeOptionalExternalUrl(
+          args.spotifyUrl,
+          "spotifyUrl",
+        );
+      } else {
+        nextSpotifyUrl = row.spotifyUrl;
+      }
+
+      let nextAppleMusicUrl: string | undefined;
+      if (args.appleMusicUrl === null) {
+        nextAppleMusicUrl = undefined;
+      } else if (args.appleMusicUrl !== undefined) {
+        nextAppleMusicUrl = normalizeOptionalExternalUrl(
+          args.appleMusicUrl,
+          "appleMusicUrl",
+        );
+      } else {
+        nextAppleMusicUrl = row.appleMusicUrl;
+      }
+
+      await ctx.db.replace(row._id, {
+        scope: row.scope,
+        stableId: row.stableId,
+        storageId: row.storageId,
+        title,
+        description,
+        mimeType: row.mimeType,
+        sortOrder: row.sortOrder,
+        sizeBytes: row.sizeBytes,
+        createdAt: row.createdAt,
+        ...(nextArtist !== undefined ? { artist: nextArtist } : {}),
+        ...(durationSec !== undefined ? { durationSec } : {}),
+        ...(nextAlbumThumbnailUrl !== undefined
+          ? { albumThumbnailUrl: nextAlbumThumbnailUrl }
+          : {}),
+        ...(nextAlbumThumbnailStorageId !== undefined
+          ? { albumThumbnailStorageId: nextAlbumThumbnailStorageId }
+          : {}),
+        ...(nextSpotifyUrl !== undefined ? { spotifyUrl: nextSpotifyUrl } : {}),
+        ...(nextAppleMusicUrl !== undefined
+          ? { appleMusicUrl: nextAppleMusicUrl }
+          : {}),
+        ...(row.originalFileName !== undefined
+          ? { originalFileName: row.originalFileName }
+          : {}),
+      });
+      draftRowReplaced = true;
+
+      if (
+        row.albumThumbnailStorageId !== undefined &&
+        row.albumThumbnailStorageId !== nextAlbumThumbnailStorageId
+      ) {
+        await deleteStorageIfUnreferenced(ctx, row.albumThumbnailStorageId);
+      }
+
+      await patchAudioMetaAfterDraftChange(ctx, updatedBy);
+      return { ok: true as const };
+    } catch (error) {
+      if (
+        !draftRowReplaced &&
+        args.albumThumbnailStorageId !== null &&
+        args.albumThumbnailStorageId !== undefined &&
+        args.albumThumbnailStorageId !== row.albumThumbnailStorageId
+      ) {
+        await deleteStorageIfUnreferenced(ctx, args.albumThumbnailStorageId);
+      }
+      throw error;
     }
-
-    let durationSec: number | undefined;
-    if (args.durationSec === null) {
-      durationSec = undefined;
-    } else if (args.durationSec !== undefined) {
-      durationSec = normalizeDurationSec(args.durationSec);
-    } else {
-      durationSec = row.durationSec;
-    }
-
-    let nextAlbumThumbnailUrl: string | undefined;
-    if (args.albumThumbnailUrl === null) {
-      nextAlbumThumbnailUrl = undefined;
-    } else if (args.albumThumbnailUrl !== undefined) {
-      nextAlbumThumbnailUrl = normalizeOptionalExternalUrl(
-        args.albumThumbnailUrl,
-        "albumThumbnailUrl",
-      );
-    } else {
-      nextAlbumThumbnailUrl = row.albumThumbnailUrl;
-    }
-
-    let nextAlbumThumbnailStorageId: Id<"_storage"> | undefined;
-    if (args.albumThumbnailStorageId === null) {
-      nextAlbumThumbnailStorageId = undefined;
-    } else if (args.albumThumbnailStorageId !== undefined) {
-      const storage = await getStorageMetadata(ctx, args.albumThumbnailStorageId);
-      validateAlbumArtStorageMetadataOrThrow(storage);
-      nextAlbumThumbnailStorageId = args.albumThumbnailStorageId;
-    } else {
-      nextAlbumThumbnailStorageId = row.albumThumbnailStorageId;
-    }
-
-    let nextSpotifyUrl: string | undefined;
-    if (args.spotifyUrl === null) {
-      nextSpotifyUrl = undefined;
-    } else if (args.spotifyUrl !== undefined) {
-      nextSpotifyUrl = normalizeOptionalExternalUrl(args.spotifyUrl, "spotifyUrl");
-    } else {
-      nextSpotifyUrl = row.spotifyUrl;
-    }
-
-    let nextAppleMusicUrl: string | undefined;
-    if (args.appleMusicUrl === null) {
-      nextAppleMusicUrl = undefined;
-    } else if (args.appleMusicUrl !== undefined) {
-      nextAppleMusicUrl = normalizeOptionalExternalUrl(
-        args.appleMusicUrl,
-        "appleMusicUrl",
-      );
-    } else {
-      nextAppleMusicUrl = row.appleMusicUrl;
-    }
-
-    await ctx.db.replace(row._id, {
-      scope: row.scope,
-      stableId: row.stableId,
-      storageId: row.storageId,
-      title,
-      description,
-      mimeType: row.mimeType,
-      sortOrder: row.sortOrder,
-      sizeBytes: row.sizeBytes,
-      createdAt: row.createdAt,
-      ...(nextArtist !== undefined ? { artist: nextArtist } : {}),
-      ...(durationSec !== undefined ? { durationSec } : {}),
-      ...(nextAlbumThumbnailUrl !== undefined
-        ? { albumThumbnailUrl: nextAlbumThumbnailUrl }
-        : {}),
-      ...(nextAlbumThumbnailStorageId !== undefined
-        ? { albumThumbnailStorageId: nextAlbumThumbnailStorageId }
-        : {}),
-      ...(nextSpotifyUrl !== undefined ? { spotifyUrl: nextSpotifyUrl } : {}),
-      ...(nextAppleMusicUrl !== undefined
-        ? { appleMusicUrl: nextAppleMusicUrl }
-        : {}),
-      ...(row.originalFileName !== undefined ? { originalFileName: row.originalFileName } : {}),
-    });
-
-    if (
-      row.albumThumbnailStorageId !== undefined &&
-      row.albumThumbnailStorageId !== nextAlbumThumbnailStorageId
-    ) {
-      await deleteStorageIfUnreferenced(ctx, row.albumThumbnailStorageId);
-    }
-
-    await patchAudioMetaAfterDraftChange(ctx, updatedBy);
-    return { ok: true as const };
   },
 });
 
@@ -841,7 +891,10 @@ export const replaceDraftTrackFile = mutation({
         nextDurationSec = normalizeDurationSec(args.durationSec);
       }
 
-      if (args.originalFileName === null || args.originalFileName === undefined) {
+      if (
+        args.originalFileName === null ||
+        args.originalFileName === undefined
+      ) {
         nextOriginalFileName = undefined;
       } else {
         nextOriginalFileName = normalizeFileName(args.originalFileName);
@@ -868,7 +921,9 @@ export const replaceDraftTrackFile = mutation({
       sizeBytes,
       createdAt: row.createdAt,
       ...(row.artist !== undefined ? { artist: row.artist } : {}),
-      ...(nextDurationSec !== undefined ? { durationSec: nextDurationSec } : {}),
+      ...(nextDurationSec !== undefined
+        ? { durationSec: nextDurationSec }
+        : {}),
       ...(row.albumThumbnailUrl !== undefined
         ? { albumThumbnailUrl: row.albumThumbnailUrl }
         : {}),
@@ -907,11 +962,7 @@ export async function publishAudioDraftCore(
   const draft = await loadAudioTracks(ctx, "draft");
   const issues = await validateDraftAudioForPublish(ctx, draft);
   if (issues.length > 0) {
-    cmsPublishValidationFailed(
-      "audio",
-      "Publish validation failed.",
-      issues,
-    );
+    cmsPublishValidationFailed("audio", "Publish validation failed.", issues);
   }
 
   await replaceAudioScope(ctx, "draft", "published");
