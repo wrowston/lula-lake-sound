@@ -905,13 +905,23 @@ function AudioEditorForm() {
     savePendingEdits,
   ]);
 
+  // Persists *all* in-memory dirty state so the workspace nav guard can
+  // safely let the user navigate away without losing work. In addition to
+  // the marketing-feature-flag autosave, per-track field edits live in
+  // `edits` and are only pushed to Convex via `savePendingEdits` (the same
+  // path used by `handlePublish`). Returning `false` here triggers the
+  // toolbar-level "couldn't save" toast and cancels navigation.
   const flushAllAutosaves = useCallback(async (): Promise<boolean> => {
+    if (hasAudioLocalEdits) {
+      const ok = await savePendingEdits();
+      if (!ok) return false;
+    }
     if (hasFFLocalEdits) {
       const ok = await flushFFAutosave();
       if (!ok) return false;
     }
     return true;
-  }, [flushFFAutosave, hasFFLocalEdits]);
+  }, [flushFFAutosave, hasAudioLocalEdits, hasFFLocalEdits, savePendingEdits]);
 
   const { toolbarPortal, editorRef } = useRegisterCmsEditor({
     section: "audio",
