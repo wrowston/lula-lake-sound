@@ -17,6 +17,10 @@ import {
   patchAudioMetaAfterDraftChange,
   replaceAudioScope,
 } from "../audioTracks";
+import {
+  ALLOWED_GALLERY_IMAGE_TYPES,
+  MAX_GALLERY_IMAGE_BYTES,
+} from "../galleryPhotos";
 import { cmsNotFound, cmsPublishValidationFailed, cmsValidationError } from "../errors";
 import { requireCmsOwner } from "../lib/auth";
 
@@ -91,6 +95,14 @@ function isAllowedAudioMimeType(
   contentType: string,
 ): contentType is (typeof ALLOWED_AUDIO_MIME_TYPES)[number] {
   return (ALLOWED_AUDIO_MIME_TYPES as readonly string[]).includes(contentType);
+}
+
+function isAllowedAlbumArtMimeType(
+  contentType: string,
+): contentType is (typeof ALLOWED_GALLERY_IMAGE_TYPES)[number] {
+  return (ALLOWED_GALLERY_IMAGE_TYPES as readonly string[]).includes(
+    contentType,
+  );
 }
 
 function generateTrackStableId(): string {
@@ -202,6 +214,40 @@ function validateStorageMetadataOrThrow(
   }
 }
 
+function validateAlbumArtStorageMetadataOrThrow(
+  storage: Awaited<ReturnType<typeof getStorageMetadata>>,
+): asserts storage is NonNullable<
+  Awaited<ReturnType<typeof getStorageMetadata>>
+> & { contentType: string } {
+  if (!storage) {
+    cmsValidationError(
+      "Uploaded album art was not found in storage.",
+      "albumThumbnailStorageId",
+    );
+  }
+
+  if (!storage.contentType) {
+    cmsValidationError(
+      "Uploaded album art is missing a content type. Upload JPEG, PNG, or WebP only.",
+      "albumThumbnailStorageId",
+    );
+  }
+
+  if (!isAllowedAlbumArtMimeType(storage.contentType)) {
+    cmsValidationError(
+      "Only JPEG, PNG, and WebP album art images are allowed.",
+      "albumThumbnailStorageId",
+    );
+  }
+
+  if (storage.size > MAX_GALLERY_IMAGE_BYTES) {
+    cmsValidationError(
+      `Album art images must be ${Math.floor(MAX_GALLERY_IMAGE_BYTES / (1024 * 1024))}MB or smaller.`,
+      "albumThumbnailStorageId",
+    );
+  }
+}
+
 function collectTrackIssues(
   rows: AudioTrackDoc[],
   storageById: Map<Id<"_storage">, Awaited<ReturnType<typeof getStorageMetadata>>>,
@@ -264,6 +310,33 @@ function collectTrackIssues(
         issues.push({
           path: `${base}.albumThumbnailUrl`,
           message: "Album thumbnail must be a valid https:// URL.",
+        });
+      }
+    }
+
+    if (row.albumThumbnailStorageId !== undefined) {
+      const storage = storageById.get(row.albumThumbnailStorageId) ?? null;
+      if (!storage) {
+        issues.push({
+          path: `${base}.albumThumbnailStorageId`,
+          message: "Uploaded album art is missing. Try uploading again.",
+        });
+      } else if (!storage.contentType) {
+        issues.push({
+          path: `${base}.albumThumbnailStorageId`,
+          message: "Uploaded album art is missing a content type.",
+        });
+      } else if (!isAllowedAlbumArtMimeType(storage.contentType)) {
+        issues.push({
+          path: `${base}.albumThumbnailStorageId`,
+          message: `Unsupported album art content type: ${storage.contentType}`,
+        });
+      } else if (storage.size > MAX_GALLERY_IMAGE_BYTES) {
+        issues.push({
+          path: `${base}.albumThumbnailStorageId`,
+          message: `Album art must be ${Math.floor(
+            MAX_GALLERY_IMAGE_BYTES / (1024 * 1024),
+          )}MB or smaller.`,
         });
       }
     }
@@ -384,7 +457,15 @@ export async function validateDraftAudioForPublish(
   rows: AudioTrackDoc[],
 ): Promise<AudioPublishIssue[]> {
   const storageRecords = await Promise.all(
-    Array.from(new Set(rows.map((row) => row.storageId))).map(async (storageId) => [
+    Array.from(
+      new Set(
+        rows.flatMap((row) =>
+          row.albumThumbnailStorageId !== undefined
+            ? [row.storageId, row.albumThumbnailStorageId]
+            : [row.storageId],
+        ),
+      ),
+    ).map(async (storageId) => [
       storageId,
       await getStorageMetadata(ctx, storageId),
     ] as const),
@@ -435,6 +516,7 @@ export const saveUploadedTrack = mutation({
     durationSec: v.optional(v.union(v.number(), v.null())),
     originalFileName: v.optional(v.union(v.string(), v.null())),
     albumThumbnailUrl: v.optional(v.union(v.string(), v.null())),
+    albumThumbnailStorageId: v.optional(v.union(v.id("_storage"), v.null())),
     spotifyUrl: v.optional(v.union(v.string(), v.null())),
     appleMusicUrl: v.optional(v.union(v.string(), v.null())),
   },
@@ -466,6 +548,15 @@ export const saveUploadedTrack = mutation({
         args.albumThumbnailUrl,
         "albumThumbnailUrl",
       );
+      let albumThumbnailStorageId: Id<"_storage"> | undefined;
+      if (args.albumThumbnailStorageId !== null && args.albumThumbnailStorageId !== undefined) {
+        const albumArtStorage = await getStorageMetadata(
+          ctx,
+          args.albumThumbnailStorageId,
+        );
+        validateAlbumArtStorageMetadataOrThrow(albumArtStorage);
+        albumThumbnailStorageId = args.albumThumbnailStorageId;
+      }
       const spotifyUrl = normalizeOptionalExternalUrl(args.spotifyUrl, "spotifyUrl");
       const appleMusicUrl = normalizeOptionalExternalUrl(
         args.appleMusicUrl,
@@ -489,6 +580,9 @@ export const saveUploadedTrack = mutation({
         ...(albumThumbnailUrl !== undefined
           ? { albumThumbnailUrl }
           : {}),
+        ...(albumThumbnailStorageId !== undefined
+          ? { albumThumbnailStorageId }
+          : {}),
         ...(spotifyUrl !== undefined ? { spotifyUrl } : {}),
         ...(appleMusicUrl !== undefined ? { appleMusicUrl } : {}),
         sortOrder,
@@ -498,6 +592,9 @@ export const saveUploadedTrack = mutation({
       });
     } catch (error) {
       await deleteStorageIfUnreferenced(ctx, args.storageId);
+      if (args.albumThumbnailStorageId !== null && args.albumThumbnailStorageId !== undefined) {
+        await deleteStorageIfUnreferenced(ctx, args.albumThumbnailStorageId);
+      }
       throw error;
     }
 
@@ -514,6 +611,7 @@ export const updateDraftTrack = mutation({
     description: v.string(),
     durationSec: v.optional(v.union(v.number(), v.null())),
     albumThumbnailUrl: v.optional(v.union(v.string(), v.null())),
+    albumThumbnailStorageId: v.optional(v.union(v.id("_storage"), v.null())),
     spotifyUrl: v.optional(v.union(v.string(), v.null())),
     appleMusicUrl: v.optional(v.union(v.string(), v.null())),
   },
@@ -557,6 +655,17 @@ export const updateDraftTrack = mutation({
       nextAlbumThumbnailUrl = row.albumThumbnailUrl;
     }
 
+    let nextAlbumThumbnailStorageId: Id<"_storage"> | undefined;
+    if (args.albumThumbnailStorageId === null) {
+      nextAlbumThumbnailStorageId = undefined;
+    } else if (args.albumThumbnailStorageId !== undefined) {
+      const storage = await getStorageMetadata(ctx, args.albumThumbnailStorageId);
+      validateAlbumArtStorageMetadataOrThrow(storage);
+      nextAlbumThumbnailStorageId = args.albumThumbnailStorageId;
+    } else {
+      nextAlbumThumbnailStorageId = row.albumThumbnailStorageId;
+    }
+
     let nextSpotifyUrl: string | undefined;
     if (args.spotifyUrl === null) {
       nextSpotifyUrl = undefined;
@@ -593,12 +702,22 @@ export const updateDraftTrack = mutation({
       ...(nextAlbumThumbnailUrl !== undefined
         ? { albumThumbnailUrl: nextAlbumThumbnailUrl }
         : {}),
+      ...(nextAlbumThumbnailStorageId !== undefined
+        ? { albumThumbnailStorageId: nextAlbumThumbnailStorageId }
+        : {}),
       ...(nextSpotifyUrl !== undefined ? { spotifyUrl: nextSpotifyUrl } : {}),
       ...(nextAppleMusicUrl !== undefined
         ? { appleMusicUrl: nextAppleMusicUrl }
         : {}),
       ...(row.originalFileName !== undefined ? { originalFileName: row.originalFileName } : {}),
     });
+
+    if (
+      row.albumThumbnailStorageId !== undefined &&
+      row.albumThumbnailStorageId !== nextAlbumThumbnailStorageId
+    ) {
+      await deleteStorageIfUnreferenced(ctx, row.albumThumbnailStorageId);
+    }
 
     await patchAudioMetaAfterDraftChange(ctx, updatedBy);
     return { ok: true as const };
@@ -658,6 +777,9 @@ export const removeDraftTrack = mutation({
     await ctx.db.delete(row._id);
     await resequenceDraftTracks(ctx);
     await deleteStorageIfUnreferenced(ctx, row.storageId);
+    if (row.albumThumbnailStorageId !== undefined) {
+      await deleteStorageIfUnreferenced(ctx, row.albumThumbnailStorageId);
+    }
     await patchAudioMetaAfterDraftChange(ctx, updatedBy);
     return { ok: true as const, removed: true };
   },
@@ -749,6 +871,9 @@ export const replaceDraftTrackFile = mutation({
       ...(nextDurationSec !== undefined ? { durationSec: nextDurationSec } : {}),
       ...(row.albumThumbnailUrl !== undefined
         ? { albumThumbnailUrl: row.albumThumbnailUrl }
+        : {}),
+      ...(row.albumThumbnailStorageId !== undefined
+        ? { albumThumbnailStorageId: row.albumThumbnailStorageId }
         : {}),
       ...(row.spotifyUrl !== undefined ? { spotifyUrl: row.spotifyUrl } : {}),
       ...(row.appleMusicUrl !== undefined
@@ -864,6 +989,9 @@ export const garbageCollectAbandonedDraftAudio = internalMutation({
       }
       await ctx.db.delete(row._id);
       await deleteStorageIfUnreferenced(ctx, row.storageId);
+      if (row.albumThumbnailStorageId !== undefined) {
+        await deleteStorageIfUnreferenced(ctx, row.albumThumbnailStorageId);
+      }
       removedRows += 1;
     }
 

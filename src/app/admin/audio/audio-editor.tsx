@@ -58,6 +58,7 @@ import { cn } from "@/lib/utils";
 const MAX_TITLE_LENGTH = 200;
 const MAX_ARTIST_LENGTH = 200;
 const MAX_DESCRIPTION_LENGTH = 2000;
+const ALBUM_ART_ACCEPT = "image/jpeg,image/png,image/webp";
 
 /**
  * Filename fallback for audio files when the browser doesn't surface a usable
@@ -99,6 +100,9 @@ type TrackItem = {
   sizeBytes: number;
   originalFileName: string | null;
   albumThumbnailUrl: string | null;
+  albumThumbnailStorageId: Id<"_storage"> | null;
+  albumThumbnailStorageUrl: string | null;
+  albumThumbnailDisplayUrl: string | null;
   spotifyUrl: string | null;
   appleMusicUrl: string | null;
 };
@@ -110,12 +114,15 @@ type TrackEdits = Record<
     artist: string;
     description: string;
     albumThumbnailUrl: string;
+    albumThumbnailStorageId: Id<"_storage"> | null;
+    albumThumbnailStorageUrl: string | null;
+    albumThumbnailDisplayUrl: string | null;
     spotifyUrl: string;
     appleMusicUrl: string;
   }
 >;
 
-type RowAction = "saving" | "deleting" | "replacing";
+type RowAction = "saving" | "deleting" | "replacing" | "art";
 type RowBusy = Record<string, RowAction | undefined>;
 
 type UploadProgressEntry = {
@@ -246,6 +253,10 @@ function httpsImagePreviewUrl(raw: string): string | null {
   }
 }
 
+function isAcceptedAlbumArtFile(file: File): boolean {
+  return ["image/jpeg", "image/png", "image/webp"].includes(file.type);
+}
+
 function sequentialEffects(
   effects: Array<Effect.Effect<unknown, CmsAppError>>,
 ): Effect.Effect<void, CmsAppError> {
@@ -359,12 +370,14 @@ function AudioEditorForm() {
 
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const replaceFileInputRef = useRef<HTMLInputElement | null>(null);
+  const albumArtFileInputRef = useRef<HTMLInputElement | null>(null);
   /**
    * Pending replace target captured on click so the hidden file input knows
    * which row to swap once the user picks a file. Using a ref avoids a render
    * between click → native file picker opening.
    */
   const pendingReplaceStableIdRef = useRef<string | null>(null);
+  const pendingAlbumArtStableIdRef = useRef<string | null>(null);
   const dragDepthRef = useRef(0);
   const uploadDismissTimerRef = useRef<number | null>(null);
 
@@ -456,6 +469,15 @@ function AudioEditorForm() {
       albumThumbnailUrl:
         edits[track.stableId]?.albumThumbnailUrl ??
         (track.albumThumbnailUrl ?? ""),
+      albumThumbnailStorageId:
+        edits[track.stableId]?.albumThumbnailStorageId ??
+        track.albumThumbnailStorageId,
+      albumThumbnailStorageUrl:
+        edits[track.stableId]?.albumThumbnailStorageUrl ??
+        track.albumThumbnailStorageUrl,
+      albumThumbnailDisplayUrl:
+        edits[track.stableId]?.albumThumbnailDisplayUrl ??
+        track.albumThumbnailDisplayUrl,
       spotifyUrl: edits[track.stableId]?.spotifyUrl ?? (track.spotifyUrl ?? ""),
       appleMusicUrl:
         edits[track.stableId]?.appleMusicUrl ?? (track.appleMusicUrl ?? ""),
@@ -473,6 +495,9 @@ function AudioEditorForm() {
         albumThumbnailUrl: string;
         spotifyUrl: string;
         appleMusicUrl: string;
+        albumThumbnailStorageId: Id<"_storage"> | null;
+        albumThumbnailStorageUrl: string | null;
+        albumThumbnailDisplayUrl: string | null;
       }>,
     ) => {
       setEdits((current) => {
@@ -483,6 +508,15 @@ function AudioEditorForm() {
           albumThumbnailUrl:
             current[track.stableId]?.albumThumbnailUrl ??
             (track.albumThumbnailUrl ?? ""),
+          albumThumbnailStorageId:
+            current[track.stableId]?.albumThumbnailStorageId ??
+            track.albumThumbnailStorageId,
+          albumThumbnailStorageUrl:
+            current[track.stableId]?.albumThumbnailStorageUrl ??
+            track.albumThumbnailStorageUrl,
+          albumThumbnailDisplayUrl:
+            current[track.stableId]?.albumThumbnailDisplayUrl ??
+            track.albumThumbnailDisplayUrl,
           spotifyUrl:
             current[track.stableId]?.spotifyUrl ?? (track.spotifyUrl ?? ""),
           appleMusicUrl:
@@ -493,6 +527,18 @@ function AudioEditorForm() {
           artist: patch.artist ?? base.artist,
           description: patch.description ?? base.description,
           albumThumbnailUrl: patch.albumThumbnailUrl ?? base.albumThumbnailUrl,
+          albumThumbnailStorageId:
+            "albumThumbnailStorageId" in patch
+              ? (patch.albumThumbnailStorageId ?? null)
+              : base.albumThumbnailStorageId,
+          albumThumbnailStorageUrl:
+            "albumThumbnailStorageUrl" in patch
+              ? (patch.albumThumbnailStorageUrl ?? null)
+              : base.albumThumbnailStorageUrl,
+          albumThumbnailDisplayUrl:
+            "albumThumbnailDisplayUrl" in patch
+              ? (patch.albumThumbnailDisplayUrl ?? null)
+              : base.albumThumbnailDisplayUrl,
           spotifyUrl: patch.spotifyUrl ?? base.spotifyUrl,
           appleMusicUrl: patch.appleMusicUrl ?? base.appleMusicUrl,
         };
@@ -501,6 +547,9 @@ function AudioEditorForm() {
           next.artist === (track.artist ?? "") &&
           next.description === track.description &&
           next.albumThumbnailUrl === (track.albumThumbnailUrl ?? "") &&
+          next.albumThumbnailStorageId === track.albumThumbnailStorageId &&
+          next.albumThumbnailStorageUrl === track.albumThumbnailStorageUrl &&
+          next.albumThumbnailDisplayUrl === track.albumThumbnailDisplayUrl &&
           next.spotifyUrl === (track.spotifyUrl ?? "") &&
           next.appleMusicUrl === (track.appleMusicUrl ?? "")
         ) {
@@ -560,6 +609,7 @@ function AudioEditorForm() {
               fields.albumThumbnailUrl.trim().length > 0
                 ? fields.albumThumbnailUrl.trim()
                 : null,
+            albumThumbnailStorageId: fields.albumThumbnailStorageId,
             spotifyUrl:
               fields.spotifyUrl.trim().length > 0
                 ? fields.spotifyUrl.trim()
@@ -628,6 +678,7 @@ function AudioEditorForm() {
             fields.albumThumbnailUrl.trim().length > 0
               ? fields.albumThumbnailUrl.trim()
               : null,
+          albumThumbnailStorageId: fields.albumThumbnailStorageId,
           spotifyUrl:
             fields.spotifyUrl.trim().length > 0
               ? fields.spotifyUrl.trim()
@@ -779,10 +830,10 @@ function AudioEditorForm() {
 
   const handleFileSelection = useCallback(
     async (event: ChangeEvent<HTMLInputElement>) => {
-      const list = event.target.files;
-      event.target.value = "";
-      if (!list || list.length === 0) return;
-      await processFiles(Array.from(list));
+      const files = Array.from(event.currentTarget.files ?? []);
+      event.currentTarget.value = "";
+      if (files.length === 0) return;
+      await processFiles(files);
     },
     [processFiles],
   );
@@ -906,14 +957,114 @@ function AudioEditorForm() {
 
   const handleReplaceFileSelection = useCallback(
     async (event: ChangeEvent<HTMLInputElement>) => {
-      const list = event.target.files;
+      const files = Array.from(event.currentTarget.files ?? []);
       const stableId = pendingReplaceStableIdRef.current;
       pendingReplaceStableIdRef.current = null;
-      event.target.value = "";
-      if (!list || list.length === 0 || !stableId) return;
-      await replaceTrackFile(stableId, list[0]);
+      event.currentTarget.value = "";
+      if (files.length === 0 || !stableId) return;
+      await replaceTrackFile(stableId, files[0]);
     },
     [replaceTrackFile],
+  );
+
+  const uploadAlbumArt = useCallback(
+    async (track: TrackItem, file: File) => {
+      if (!isAcceptedAlbumArtFile(file)) {
+        toast.error("Choose a JPEG, PNG, or WebP image.");
+        return;
+      }
+
+      const fields = getEditableFields(track);
+      const fieldError = validateTrackFields(
+        fields.title,
+        fields.artist,
+        fields.description,
+      );
+      if (fieldError) {
+        setInlineError(fieldError);
+        toast.error(fieldError);
+        return;
+      }
+      const urlErr = validateStreamingUrls(
+        fields.albumThumbnailUrl,
+        fields.spotifyUrl,
+        fields.appleMusicUrl,
+      );
+      if (urlErr) {
+        setInlineError(urlErr);
+        toast.error(urlErr);
+        return;
+      }
+
+      setInlineError(null);
+      setRowAction(track.stableId, "art");
+      try {
+        const { uploadUrl } = await generateUploadUrl({});
+        const storageId = await uploadFileWithProgress(uploadUrl, file, () => {});
+        const outcome = await runAdminEffect(
+          convexMutationEffect(() =>
+            updateDraftTrack({
+              stableId: track.stableId,
+              title: fields.title.trim(),
+              artist:
+                fields.artist.trim().length > 0 ? fields.artist.trim() : null,
+              description: fields.description.trim(),
+              albumThumbnailUrl:
+                fields.albumThumbnailUrl.trim().length > 0
+                  ? fields.albumThumbnailUrl.trim()
+                  : null,
+              albumThumbnailStorageId: storageId,
+              spotifyUrl:
+                fields.spotifyUrl.trim().length > 0
+                  ? fields.spotifyUrl.trim()
+                  : null,
+              appleMusicUrl:
+                fields.appleMusicUrl.trim().length > 0
+                  ? fields.appleMusicUrl.trim()
+                  : null,
+            }),
+          ),
+          { onErrorMessage: setInlineError },
+        );
+
+        if (outcome !== undefined) {
+          clearTrackEdit(track.stableId);
+          toast.success("Album art uploaded.");
+        }
+      } catch (e) {
+        const message = e instanceof Error ? e.message : "Album art upload failed.";
+        setInlineError(message);
+        toast.error(message);
+      } finally {
+        setRowAction(track.stableId, undefined);
+      }
+    },
+    [
+      clearTrackEdit,
+      generateUploadUrl,
+      getEditableFields,
+      setRowAction,
+      updateDraftTrack,
+    ],
+  );
+
+  const handleAlbumArtUploadClick = useCallback((stableId: string) => {
+    pendingAlbumArtStableIdRef.current = stableId;
+    albumArtFileInputRef.current?.click();
+  }, []);
+
+  const handleAlbumArtSelection = useCallback(
+    async (event: ChangeEvent<HTMLInputElement>) => {
+      const files = Array.from(event.currentTarget.files ?? []);
+      const stableId = pendingAlbumArtStableIdRef.current;
+      pendingAlbumArtStableIdRef.current = null;
+      event.currentTarget.value = "";
+      if (files.length === 0 || !stableId) return;
+      const track = tracks.find((candidate) => candidate.stableId === stableId);
+      if (!track) return;
+      await uploadAlbumArt(track, files[0]);
+    },
+    [tracks, uploadAlbumArt],
   );
 
   const canAcceptDrop =
@@ -1211,8 +1362,8 @@ function AudioEditorForm() {
             </h2>
             <p className="body-text-small max-w-2xl text-foreground/85">
               Upload MP3 or WAV samples for the homepage “Studio portfolio”
-              section. Add optional album art (HTTPS image URL), Spotify, and Apple
-              Music links per track. Playback uses Convex signed URLs (
+              section. Add optional album art with an HTTPS image URL or upload,
+              plus Spotify and Apple Music links per track. Playback uses Convex signed URLs (
               <code className="rounded bg-muted px-1 py-0.5 text-xs">
                 &lt;audio src&gt;
               </code>
@@ -1236,6 +1387,13 @@ function AudioEditorForm() {
               accept="audio/mpeg,audio/mp3,audio/wav,audio/x-wav,.mp3,.wav"
               className="hidden"
               onChange={(event) => void handleReplaceFileSelection(event)}
+            />
+            <input
+              ref={albumArtFileInputRef}
+              type="file"
+              accept={ALBUM_ART_ACCEPT}
+              className="hidden"
+              onChange={(event) => void handleAlbumArtSelection(event)}
             />
             <Button
               type="button"
@@ -1482,10 +1640,49 @@ function AudioEditorForm() {
                       inputMode="url"
                       autoComplete="off"
                     />
+                    <div className="mt-2 flex flex-wrap items-center gap-2">
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        className="h-8 px-2"
+                        disabled={busy !== null || isRowBusy}
+                        onClick={() => handleAlbumArtUploadClick(track.stableId)}
+                      >
+                        {rowAction === "art" ? (
+                          <Loader2
+                            className="mr-1 size-3.5 animate-spin"
+                            aria-hidden
+                          />
+                        ) : (
+                          <Upload className="mr-1 size-3.5" aria-hidden />
+                        )}
+                        {rowAction === "art" ? "Uploading…" : "Upload image"}
+                      </Button>
+                      {fields.albumThumbnailStorageId ? (
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="sm"
+                          className="h-8 px-2 text-destructive hover:text-destructive"
+                          disabled={busy !== null || isRowBusy}
+                          onClick={() =>
+                            updateTrackEdit(track, {
+                              albumThumbnailStorageId: null,
+                              albumThumbnailStorageUrl: null,
+                              albumThumbnailDisplayUrl:
+                                httpsImagePreviewUrl(fields.albumThumbnailUrl),
+                            })
+                          }
+                        >
+                          Clear upload
+                        </Button>
+                      ) : null}
+                    </div>
                     {(() => {
-                      const preview = httpsImagePreviewUrl(
-                        fields.albumThumbnailUrl,
-                      );
+                      const preview =
+                        fields.albumThumbnailStorageUrl ??
+                        httpsImagePreviewUrl(fields.albumThumbnailUrl);
                       return preview ? (
                         <div className="relative mt-2 aspect-square w-full max-w-[140px] overflow-hidden rounded-sm border border-border bg-muted">
                           <Image

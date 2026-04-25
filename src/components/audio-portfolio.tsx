@@ -14,6 +14,8 @@ export type PublishedAudioTrack = {
   durationSec: number | null;
   sortOrder: number;
   albumThumbnailUrl: string | null;
+  albumThumbnailStorageUrl: string | null;
+  albumThumbnailDisplayUrl: string | null;
   spotifyUrl: string | null;
   appleMusicUrl: string | null;
 };
@@ -84,9 +86,9 @@ export function AudioPortfolio({
               className="rounded-sm border border-sage/30 bg-washed-black/60 p-6 transition-colors hover:border-sand/50"
             >
               <div className="relative mb-4 aspect-square overflow-hidden rounded-sm bg-sage/20">
-                {track.albumThumbnailUrl ? (
+                {track.albumThumbnailDisplayUrl ? (
                   <Image
-                    src={track.albumThumbnailUrl}
+                    src={track.albumThumbnailDisplayUrl}
                     alt=""
                     fill
                     className="object-cover"

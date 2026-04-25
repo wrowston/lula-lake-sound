@@ -41,6 +41,7 @@ function comparableTrack(row: AudioTrackDoc) {
     mimeType: row.mimeType,
     durationSec: row.durationSec ?? null,
     albumThumbnailUrl: row.albumThumbnailUrl ?? null,
+    albumThumbnailStorageId: row.albumThumbnailStorageId ?? null,
     spotifyUrl: row.spotifyUrl ?? null,
     appleMusicUrl: row.appleMusicUrl ?? null,
     sortOrder: row.sortOrder,
@@ -113,11 +114,21 @@ export async function replaceAudioScope(
     loadAudioTracks(ctx, toScope),
   ]);
 
-  const sourceStorageIds = new Set(source.map((row) => row.storageId));
+  const sourceStorageIds = new Set(
+    source.flatMap((row) =>
+      row.albumThumbnailStorageId !== undefined
+        ? [row.storageId, row.albumThumbnailStorageId]
+        : [row.storageId],
+    ),
+  );
   const targetOnlyStorageIds = Array.from(
     new Set(
       target
-        .map((row) => row.storageId)
+        .flatMap((row) =>
+          row.albumThumbnailStorageId !== undefined
+            ? [row.storageId, row.albumThumbnailStorageId]
+            : [row.storageId],
+        )
         .filter((storageId) => !sourceStorageIds.has(storageId)),
     ),
   );
@@ -138,6 +149,9 @@ export async function replaceAudioScope(
       ...(row.durationSec !== undefined ? { durationSec: row.durationSec } : {}),
       ...(row.albumThumbnailUrl !== undefined
         ? { albumThumbnailUrl: row.albumThumbnailUrl }
+        : {}),
+      ...(row.albumThumbnailStorageId !== undefined
+        ? { albumThumbnailStorageId: row.albumThumbnailStorageId }
         : {}),
       ...(row.spotifyUrl !== undefined ? { spotifyUrl: row.spotifyUrl } : {}),
       ...(row.appleMusicUrl !== undefined
@@ -191,26 +205,40 @@ export async function materializeAudioTracks(
     sizeBytes: number;
     originalFileName: string | null;
     albumThumbnailUrl: string | null;
+    albumThumbnailStorageId: Id<"_storage"> | null;
+    albumThumbnailStorageUrl: string | null;
+    albumThumbnailDisplayUrl: string | null;
     spotifyUrl: string | null;
     appleMusicUrl: string | null;
   }>
 > {
   return await Promise.all(
-    rows.map(async (row) => ({
-      stableId: row.stableId,
-      storageId: row.storageId,
-      url: await ctx.storage.getUrl(row.storageId),
-      title: row.title,
-      artist: row.artist ?? null,
-      description: row.description,
-      mimeType: row.mimeType,
-      durationSec: row.durationSec ?? null,
-      sortOrder: row.sortOrder,
-      sizeBytes: row.sizeBytes,
-      originalFileName: row.originalFileName ?? null,
-      albumThumbnailUrl: row.albumThumbnailUrl ?? null,
-      spotifyUrl: row.spotifyUrl ?? null,
-      appleMusicUrl: row.appleMusicUrl ?? null,
-    })),
+    rows.map(async (row) => {
+      const albumThumbnailStorageUrl =
+        row.albumThumbnailStorageId !== undefined
+          ? await ctx.storage.getUrl(row.albumThumbnailStorageId)
+          : null;
+
+      return {
+        stableId: row.stableId,
+        storageId: row.storageId,
+        url: await ctx.storage.getUrl(row.storageId),
+        title: row.title,
+        artist: row.artist ?? null,
+        description: row.description,
+        mimeType: row.mimeType,
+        durationSec: row.durationSec ?? null,
+        sortOrder: row.sortOrder,
+        sizeBytes: row.sizeBytes,
+        originalFileName: row.originalFileName ?? null,
+        albumThumbnailUrl: row.albumThumbnailUrl ?? null,
+        albumThumbnailStorageId: row.albumThumbnailStorageId ?? null,
+        albumThumbnailStorageUrl,
+        albumThumbnailDisplayUrl:
+          albumThumbnailStorageUrl ?? row.albumThumbnailUrl ?? null,
+        spotifyUrl: row.spotifyUrl ?? null,
+        appleMusicUrl: row.appleMusicUrl ?? null,
+      };
+    }),
   );
 }
