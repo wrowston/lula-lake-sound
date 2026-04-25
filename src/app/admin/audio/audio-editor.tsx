@@ -27,6 +27,7 @@ import {
   Headphones,
   Loader2,
   Music,
+  Replace,
   Save,
   Trash2,
   Upload,
@@ -58,6 +59,27 @@ const MAX_TITLE_LENGTH = 200;
 const MAX_ARTIST_LENGTH = 200;
 const MAX_DESCRIPTION_LENGTH = 2000;
 
+/**
+ * Client-side MIME allowlist for audio uploads. The server enforces the
+ * authoritative list from `ALLOWED_AUDIO_MIME_TYPES`; this set is only used
+ * for early rejection in the file picker / drag-drop so the user doesn't wait
+ * for a round-trip to learn the file is unsupported.
+ */
+const ALLOWED_AUDIO_MIME_TYPES = new Set<string>([
+  "audio/mpeg",
+  "audio/mp3",
+  "audio/wav",
+  "audio/x-wav",
+  "audio/wave",
+]);
+const AUDIO_FILENAME_PATTERN = /\.(mp3|wav|mpeg)$/i;
+
+export function isAcceptedAudioFile(file: File): boolean {
+  if (file.type && ALLOWED_AUDIO_MIME_TYPES.has(file.type)) return true;
+  if (file.type && file.type.startsWith("audio/")) return true;
+  return AUDIO_FILENAME_PATTERN.test(file.name);
+}
+
 type TrackItem = {
   stableId: string;
   storageId: Id<"_storage">;
@@ -87,7 +109,7 @@ type TrackEdits = Record<
   }
 >;
 
-type RowAction = "saving" | "deleting";
+type RowAction = "saving" | "deleting" | "replacing";
 type RowBusy = Record<string, RowAction | undefined>;
 
 type UploadProgressEntry = {
@@ -98,7 +120,7 @@ type UploadProgressEntry = {
   readonly error?: string;
 };
 
-function defaultTitleFromFileName(fileName: string): string {
+export function defaultTitleFromFileName(fileName: string): string {
   const withoutExtension = fileName.replace(/\.[^.]+$/, "");
   const normalized = withoutExtension
     .replace(/[_-]+/g, " ")
@@ -110,20 +132,20 @@ function defaultTitleFromFileName(fileName: string): string {
   return normalized[0].toUpperCase() + normalized.slice(1);
 }
 
-function formatBytes(bytes: number): string {
+export function formatBytes(bytes: number): string {
   if (bytes < 1024) return `${bytes} B`;
   if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
   return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
 }
 
-function formatDuration(sec: number | null): string {
+export function formatDuration(sec: number | null): string {
   if (sec === null || !Number.isFinite(sec) || sec < 0) return "—";
   const m = Math.floor(sec / 60);
   const s = Math.floor(sec % 60);
   return `${m}:${String(s).padStart(2, "0")}`;
 }
 
-function validateTrackFields(
+export function validateTrackFields(
   title: string,
   artist: string,
   description: string,
@@ -316,6 +338,9 @@ function AudioEditorForm() {
   const generateUploadUrl = useMutation(api.admin.audio.generateUploadUrl);
   const saveUploadedTrack = useMutation(api.admin.audio.saveUploadedTrack);
   const updateDraftTrack = useMutation(api.admin.audio.updateDraftTrack);
+  const replaceDraftTrackFile = useMutation(
+    api.admin.audio.replaceDraftTrackFile,
+  );
   const reorderDraftTracks = useMutation(api.admin.audio.reorderDraftTracks);
   const removeDraftTrack = useMutation(api.admin.audio.removeDraftTrack);
   const publishAudioTracks = useMutation(api.admin.audio.publishAudioTracks);
@@ -324,6 +349,13 @@ function AudioEditorForm() {
   );
 
   const fileInputRef = useRef<HTMLInputElement | null>(null);
+  const replaceFileInputRef = useRef<HTMLInputElement | null>(null);
+  /**
+   * Pending replace target captured on click so the hidden file input knows
+   * which row to swap once the user picks a file. Using a ref avoids a render
+   * between click → native file picker opening.
+   */
+  const pendingReplaceStableIdRef = useRef<string | null>(null);
   const dragDepthRef = useRef(0);
   const uploadDismissTimerRef = useRef<number | null>(null);
 
@@ -643,11 +675,7 @@ function AudioEditorForm() {
   const processFiles = useCallback(
     async (files: File[]) => {
       if (!data) return;
-      const audioFiles = files.filter(
-        (f) =>
-          f.type.startsWith("audio/") ||
-          /\.(mp3|wav|mpeg)$/i.test(f.name),
-      );
+      const audioFiles = files.filter(isAcceptedAudioFile);
       if (audioFiles.length === 0) {
         toast.error("Drop MP3 or WAV files only.");
         return;
@@ -747,6 +775,135 @@ function AudioEditorForm() {
       await processFiles(Array.from(list));
     },
     [processFiles],
+  );
+
+  /**
+   * Replace flow: uploads a new blob, then calls the Convex mutation that
+   * swaps the draft track's `storageId` atomically and best-effort deletes
+   * the old blob. Uses the shared upload tray for progress, and the existing
+   * `runAdminEffect` toast channel for mutation errors.
+   */
+  const replaceTrackFile = useCallback(
+    async (stableId: string, file: File) => {
+      if (!data) return;
+
+      if (!isAcceptedAudioFile(file)) {
+        toast.error("Replacement must be an MP3 or WAV file.");
+        return;
+      }
+      if (file.size > data.limits.maxFileBytes) {
+        toast.error(
+          `File is too large (max ${Math.floor(data.limits.maxFileBytes / (1024 * 1024))}MB).`,
+        );
+        return;
+      }
+
+      const entryId = `replace-${stableId}-${Date.now()}`;
+      setUploadQueue((q) => [
+        ...q,
+        {
+          id: entryId,
+          name: `Replacing: ${file.name}`,
+          progress: 0,
+          status: "uploading" as const,
+        },
+      ]);
+
+      setInlineError(null);
+      setRowAction(stableId, "replacing");
+
+      try {
+        const { uploadUrl } = await generateUploadUrl({});
+        const newStorageId = await uploadFileWithProgress(
+          uploadUrl,
+          file,
+          (fraction) => {
+            setUploadQueue((q) =>
+              q.map((e) =>
+                e.id === entryId ? { ...e, progress: fraction } : e,
+              ),
+            );
+          },
+        );
+
+        setUploadQueue((q) =>
+          q.map((e) =>
+            e.id === entryId ? { ...e, status: "saving", progress: 1 } : e,
+          ),
+        );
+
+        const durationSec = await readAudioDurationSec(file);
+
+        const outcome = await runAdminEffect(
+          convexMutationEffect(() =>
+            replaceDraftTrackFile({
+              stableId,
+              storageId: newStorageId,
+              durationSec: durationSec ?? null,
+              originalFileName: file.name,
+            }),
+          ),
+          { onErrorMessage: setInlineError },
+        );
+
+        if (outcome === undefined) {
+          setUploadQueue((q) =>
+            q.map((e) =>
+              e.id === entryId
+                ? { ...e, status: "error", error: "Replace failed." }
+                : e,
+            ),
+          );
+          return;
+        }
+
+        setUploadQueue((q) =>
+          q.map((e) =>
+            e.id === entryId ? { ...e, status: "done" } : e,
+          ),
+        );
+        toast.success(`Replaced audio file with ${file.name}.`);
+      } catch (e) {
+        const message = e instanceof Error ? e.message : "Replace failed.";
+        setUploadQueue((q) =>
+          q.map((entry) =>
+            entry.id === entryId
+              ? { ...entry, status: "error", error: message }
+              : entry,
+          ),
+        );
+        setInlineError(message);
+        toast.error(message);
+      } finally {
+        setRowAction(stableId, undefined);
+      }
+
+      if (uploadDismissTimerRef.current !== null) {
+        window.clearTimeout(uploadDismissTimerRef.current);
+      }
+      uploadDismissTimerRef.current = window.setTimeout(() => {
+        setUploadQueue((q) => q.filter((e) => e.status !== "done"));
+        uploadDismissTimerRef.current = null;
+      }, 4000);
+    },
+    [data, generateUploadUrl, replaceDraftTrackFile, setRowAction],
+  );
+
+  const handleReplaceClick = useCallback((stableId: string) => {
+    pendingReplaceStableIdRef.current = stableId;
+    replaceFileInputRef.current?.click();
+  }, []);
+
+  const handleReplaceFileSelection = useCallback(
+    async (event: ChangeEvent<HTMLInputElement>) => {
+      const list = event.target.files;
+      const stableId = pendingReplaceStableIdRef.current;
+      pendingReplaceStableIdRef.current = null;
+      event.target.value = "";
+      if (!list || list.length === 0 || !stableId) return;
+      await replaceTrackFile(stableId, list[0]);
+    },
+    [replaceTrackFile],
   );
 
   const canAcceptDrop =
@@ -1026,6 +1183,13 @@ function AudioEditorForm() {
               className="hidden"
               onChange={(event) => void handleFileSelection(event)}
             />
+            <input
+              ref={replaceFileInputRef}
+              type="file"
+              accept="audio/mpeg,audio/mp3,audio/wav,audio/x-wav,.mp3,.wav"
+              className="hidden"
+              onChange={(event) => void handleReplaceFileSelection(event)}
+            />
             <Button
               type="button"
               variant="outline"
@@ -1149,8 +1313,16 @@ function AudioEditorForm() {
                         Playback URL unavailable — re-upload if this persists.
                       </p>
                     )}
+                    {track.originalFileName ? (
+                      <p
+                        className="body-text-small truncate text-muted-foreground"
+                        title={track.originalFileName}
+                      >
+                        {track.originalFileName}
+                      </p>
+                    ) : null}
                   </div>
-                  <div className="flex shrink-0 gap-1">
+                  <div className="flex shrink-0 flex-wrap items-center gap-1">
                     <Button
                       type="button"
                       variant="ghost"
@@ -1176,6 +1348,25 @@ function AudioEditorForm() {
                       onClick={() => void moveTrack(track.stableId, 1)}
                     >
                       <ArrowDown className="size-4" />
+                    </Button>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      className="h-8 px-2"
+                      aria-label={`Replace audio file for ${track.title}`}
+                      disabled={busy !== null || isRowBusy}
+                      onClick={() => handleReplaceClick(track.stableId)}
+                    >
+                      {rowAction === "replacing" ? (
+                        <Loader2
+                          className="mr-1 size-3.5 animate-spin"
+                          aria-hidden
+                        />
+                      ) : (
+                        <Replace className="mr-1 size-3.5" aria-hidden />
+                      )}
+                      {rowAction === "replacing" ? "Replacing…" : "Replace file"}
                     </Button>
                     <Button
                       type="button"

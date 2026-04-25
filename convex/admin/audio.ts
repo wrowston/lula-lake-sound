@@ -662,6 +662,112 @@ export const removeDraftTrack = mutation({
   },
 });
 
+/**
+ * Swap a draft track's audio file for a freshly uploaded blob. The new
+ * `storageId` must already exist in Convex storage (uploaded via the URL from
+ * `generateUploadUrl`). Within this single mutation transaction we:
+ *
+ *   1. Validate the new blob (allowlisted MIME, size cap).
+ *   2. Patch the draft row so `<audio src>` switches to the new signed URL
+ *      atomically — no window where the public URL is broken.
+ *   3. Best-effort delete the old blob if nothing else references it
+ *      (including the still-live `published` row, which we intentionally keep
+ *      working until the next publish).
+ *
+ * On validation failure we delete the newly uploaded blob so it does not
+ * linger as an orphan. Other metadata (title, artist, description, artwork,
+ * streaming links) is preserved — call `updateDraftTrack` separately to edit
+ * those.
+ */
+export const replaceDraftTrackFile = mutation({
+  args: {
+    stableId: v.string(),
+    storageId: v.id("_storage"),
+    durationSec: v.optional(v.union(v.number(), v.null())),
+    originalFileName: v.optional(v.union(v.string(), v.null())),
+  },
+  handler: async (ctx, args) => {
+    const { updatedBy } = await requireCmsOwner(ctx);
+    const row = await getDraftTrackByStableId(ctx, args.stableId);
+    if (!row) {
+      // Can't resolve the draft row — the uploaded blob has no home, clean it up.
+      await deleteStorageIfUnreferenced(ctx, args.storageId);
+      cmsNotFound("audioTrack", args.stableId);
+    }
+
+    if (row.storageId === args.storageId) {
+      // Same blob — caller re-picked the existing file. Nothing to swap, and
+      // no orphan to clean up (the row still references it).
+      return { ok: true as const, replaced: false };
+    }
+
+    const oldStorageId = row.storageId;
+    let mimeType: string;
+    let sizeBytes: number;
+    let nextDurationSec: number | undefined;
+    let nextOriginalFileName: string | undefined;
+    try {
+      const storage = await getStorageMetadata(ctx, args.storageId);
+      validateStorageMetadataOrThrow(storage);
+      mimeType = storage.contentType;
+      sizeBytes = storage.size;
+
+      if (args.durationSec === null || args.durationSec === undefined) {
+        nextDurationSec = undefined;
+      } else {
+        nextDurationSec = normalizeDurationSec(args.durationSec);
+      }
+
+      if (args.originalFileName === null || args.originalFileName === undefined) {
+        nextOriginalFileName = undefined;
+      } else {
+        nextOriginalFileName = normalizeFileName(args.originalFileName);
+      }
+    } catch (error) {
+      // Validation failed — the draft row is untouched, but the new blob is
+      // now orphaned. Remove it so we don't leak storage.
+      await deleteStorageIfUnreferenced(ctx, args.storageId);
+      throw error;
+    }
+
+    // Swap the reference. Using `ctx.db.replace` here (like `updateDraftTrack`)
+    // keeps the document shape explicit and lets us clear the optional
+    // `durationSec` / `originalFileName` fields when the new upload doesn't
+    // provide them.
+    await ctx.db.replace(row._id, {
+      scope: row.scope,
+      stableId: row.stableId,
+      storageId: args.storageId,
+      title: row.title,
+      description: row.description,
+      mimeType,
+      sortOrder: row.sortOrder,
+      sizeBytes,
+      createdAt: row.createdAt,
+      ...(row.artist !== undefined ? { artist: row.artist } : {}),
+      ...(nextDurationSec !== undefined ? { durationSec: nextDurationSec } : {}),
+      ...(row.albumThumbnailUrl !== undefined
+        ? { albumThumbnailUrl: row.albumThumbnailUrl }
+        : {}),
+      ...(row.spotifyUrl !== undefined ? { spotifyUrl: row.spotifyUrl } : {}),
+      ...(row.appleMusicUrl !== undefined
+        ? { appleMusicUrl: row.appleMusicUrl }
+        : {}),
+      ...(nextOriginalFileName !== undefined
+        ? { originalFileName: nextOriginalFileName }
+        : {}),
+    });
+
+    // Old blob may still be referenced by the published row or by another
+    // draft track (rare, but possible). `deleteStorageIfUnreferenced` checks
+    // every `audioTracks` and `galleryPhotos` row before deleting, so this is
+    // a safe best-effort cleanup.
+    await deleteStorageIfUnreferenced(ctx, oldStorageId);
+    await patchAudioMetaAfterDraftChange(ctx, updatedBy);
+    return { ok: true as const, replaced: true };
+  },
+});
+
 export async function publishAudioDraftCore(
   ctx: MutationCtx,
   args: { userId: string; updatedBy: string },
