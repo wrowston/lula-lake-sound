@@ -71,6 +71,7 @@ function TrackAudioPlayer({
     }
 
     if (audio.paused) {
+      claimExclusive(audio);
       void audio.play().catch(() => {
         /* Autoplay policy / decode errors — leave paused */
       });
@@ -90,7 +91,6 @@ function TrackAudioPlayer({
         aria-label={trackTitle}
         onPlay={() => {
           setIsPlaying(true);
-          claimExclusive(audioRef.current);
         }}
         onPause={() => setIsPlaying(false)}
         onEnded={() => setIsPlaying(false)}
