@@ -3,12 +3,16 @@ import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { cache } from "react";
 import { api } from "../../../convex/_generated/api";
-import { RecordingsClient } from "./recordings-client";
-import { RECORDINGS } from "./recordings-data";
+import { mapPublishedAudioToRecordings } from "./recordings-data";
+import { RecordingsPageClient } from "./recordings-page-client";
 
 /** One preload per request for metadata + page (same render pass). */
 const preloadMarketingForRecordings = cache(() =>
   preloadQuery(api.public.getPublishedMarketingFeatureFlags),
+);
+
+const preloadAudioForRecordings = cache(() =>
+  preloadQuery(api.public.getPublishedAudioTracks),
 );
 
 /**
@@ -40,13 +44,25 @@ export async function generateMetadata(): Promise<Metadata> {
 }
 
 export default async function RecordingsPage() {
-  const preloaded = await preloadMarketingForRecordings();
+  const [preloaded, preloadedAudio] = await Promise.all([
+    preloadMarketingForRecordings(),
+    preloadAudioForRecordings(),
+  ]);
   const data = preloadedQueryResult(preloaded);
   if (!data.recordingsPage) {
     notFound();
   }
 
+  const initialAudio = preloadedQueryResult(preloadedAudio);
+  const initialRecordings = mapPublishedAudioToRecordings(
+    initialAudio ?? [],
+  );
+
   return (
-    <RecordingsClient recordings={RECORDINGS} marketing={data} />
+    <RecordingsPageClient
+      preloadedAudio={preloadedAudio}
+      initialRecordings={initialRecordings}
+      marketing={data}
+    />
   );
 }

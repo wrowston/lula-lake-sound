@@ -18,6 +18,17 @@ import {
 
 import type { Recording } from "./recordings-data";
 
+function recordingGenreLabel(track: Recording): string {
+  const g = track.genre?.trim();
+  return g ? g : "—";
+}
+
+function recordingYearLabel(track: Recording): string {
+  return track.year !== undefined && track.year > 0
+    ? String(track.year)
+    : "—";
+}
+
 /**
  * Public Recordings page shell (INF-48).
  *
@@ -342,13 +353,13 @@ function TrackRow({
 
             <span
               className="label-text truncate pr-1 text-right text-[10px] tracking-[0.12em] text-ivory/45"
-              title={track.genre}
+              title={recordingGenreLabel(track)}
             >
-              {track.genre}
+              {recordingGenreLabel(track)}
             </span>
 
             <span className="label-text pl-1 text-right text-[10px] tabular-nums tracking-[0.12em] text-ivory/45">
-              {track.year}
+              {recordingYearLabel(track)}
             </span>
           </button>
 
@@ -388,9 +399,10 @@ function TrackRow({
             </span>
             <span
               className="body-text-small mt-0.5 block truncate text-xs text-ivory/55"
-              title={`${track.artist} — ${track.genre} — ${track.year}`}
+              title={`${track.artist} — ${recordingGenreLabel(track)} — ${recordingYearLabel(track)}`}
             >
-              {track.artist} · {track.genre} · {track.year}
+              {track.artist} · {recordingGenreLabel(track)} ·{" "}
+              {recordingYearLabel(track)}
             </span>
           </span>
         </button>
@@ -706,6 +718,8 @@ export function RecordingsClient({
       <audio
         ref={setAudioEl}
         preload="none"
+        playsInline
+        crossOrigin="anonymous"
         onLoadedMetadata={handleLoadedMetadata}
         onTimeUpdate={handleTimeUpdate}
         onPlay={handlePlay}
