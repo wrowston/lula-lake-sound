@@ -4,7 +4,7 @@ import { Music } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { useState, type ReactNode } from "react";
+import { useRef, useState, type ReactNode } from "react";
 
 import { Header } from "@/components/header";
 import { SiteFooter } from "@/components/site-footer";
@@ -251,11 +251,37 @@ function TrackRow({
   const progress =
     duration > 0 ? Math.min(1, Math.max(0, currentTime / duration)) : 0;
 
-  function handleProgressClick(e: React.MouseEvent<HTMLDivElement>) {
-    if (!isActive) return;
-    const rect = e.currentTarget.getBoundingClientRect();
-    const fraction = (e.clientX - rect.left) / rect.width;
-    onSeekFraction(fraction);
+  const sliderRef = useRef<HTMLDivElement | null>(null);
+  const [isScrubbing, setIsScrubbing] = useState(false);
+
+  function fractionFromClientX(clientX: number): number {
+    const el = sliderRef.current;
+    if (!el) return 0;
+    const rect = el.getBoundingClientRect();
+    if (rect.width <= 0) return 0;
+    const fraction = (clientX - rect.left) / rect.width;
+    return Math.max(0, Math.min(1, fraction));
+  }
+
+  function handleSliderPointerDown(e: React.PointerEvent<HTMLDivElement>) {
+    if (!isActive || duration <= 0) return;
+    if (e.button !== 0 && e.pointerType === "mouse") return;
+    e.currentTarget.setPointerCapture(e.pointerId);
+    setIsScrubbing(true);
+    onSeekFraction(fractionFromClientX(e.clientX));
+  }
+
+  function handleSliderPointerMove(e: React.PointerEvent<HTMLDivElement>) {
+    if (!isScrubbing) return;
+    onSeekFraction(fractionFromClientX(e.clientX));
+  }
+
+  function handleSliderPointerEnd(e: React.PointerEvent<HTMLDivElement>) {
+    if (!isScrubbing) return;
+    if (e.currentTarget.hasPointerCapture(e.pointerId)) {
+      e.currentTarget.releasePointerCapture(e.pointerId);
+    }
+    setIsScrubbing(false);
   }
 
   const rowLabel = isPlaying
@@ -429,6 +455,7 @@ function TrackRow({
                 {formatTime(currentTime)}
               </span>
               <div
+                ref={sliderRef}
                 role="slider"
                 aria-label={`Seek — ${track.title}`}
                 aria-valuemin={0}
@@ -436,7 +463,10 @@ function TrackRow({
                 aria-valuenow={Math.floor(currentTime)}
                 aria-valuetext={`${formatTime(currentTime)} of ${formatTime(duration)}`}
                 tabIndex={0}
-                onClick={handleProgressClick}
+                onPointerDown={handleSliderPointerDown}
+                onPointerMove={handleSliderPointerMove}
+                onPointerUp={handleSliderPointerEnd}
+                onPointerCancel={handleSliderPointerEnd}
                 onKeyDown={(e) => {
                   if (duration <= 0) return;
                   if (e.key === "ArrowRight") {
@@ -449,17 +479,36 @@ function TrackRow({
                     onSeekFraction(
                       Math.max(0, (currentTime - 5) / duration),
                     );
+                  } else if (e.key === "Home") {
+                    e.preventDefault();
+                    onSeekFraction(0);
+                  } else if (e.key === "End") {
+                    e.preventDefault();
+                    onSeekFraction(1);
                   }
                 }}
-                className="group/bar relative h-1 flex-1 cursor-pointer rounded-full bg-sand/15 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-gold/60"
+                className={cn(
+                  "group/bar relative h-1 flex-1 rounded-full bg-sand/15 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-gold/60",
+                  isScrubbing ? "cursor-grabbing" : "cursor-pointer",
+                  "touch-none select-none",
+                )}
+                style={{ touchAction: "none" }}
               >
                 <div
-                  className="absolute inset-y-0 left-0 rounded-full bg-gold/85 transition-[width]"
+                  className={cn(
+                    "absolute inset-y-0 left-0 rounded-full bg-gold/85",
+                    isScrubbing ? "" : "transition-[width]",
+                  )}
                   style={{ width: `${progress * 100}%` }}
                 />
                 <div
                   aria-hidden
-                  className="absolute top-1/2 -translate-y-1/2 -translate-x-1/2 h-3 w-3 rounded-full bg-gold shadow-[0_0_0_3px_rgba(31,30,28,0.6)] opacity-0 transition-opacity group-hover/bar:opacity-100"
+                  className={cn(
+                    "absolute top-1/2 -translate-y-1/2 -translate-x-1/2 h-3 w-3 rounded-full bg-gold shadow-[0_0_0_3px_rgba(31,30,28,0.6)] transition-opacity",
+                    isScrubbing
+                      ? "opacity-100"
+                      : "opacity-0 group-hover/bar:opacity-100 group-focus-visible/bar:opacity-100",
+                  )}
                   style={{ left: `${progress * 100}%` }}
                 />
               </div>
