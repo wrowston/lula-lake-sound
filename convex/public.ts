@@ -10,6 +10,12 @@ import type { Doc } from "./_generated/dataModel";
 import { loadGalleryPhotos, materializeGalleryPhotos } from "./galleryPhotos";
 import { loadAudioTracks, materializeAudioTracks } from "./audioTracks";
 import { getSectionMetaRow, publishedIsEnabled } from "./cmsMeta";
+import {
+  loadAmenitiesNearbyTree,
+  materializePublicAmenitiesNearby,
+  materializePublicAmenitiesNearbyFromSnapshot,
+} from "./amenitiesTree";
+import { AMENITIES_NEARBY_DEFAULT_ROWS } from "./cmsShared";
 
 /**
  * **Public (anonymous) site reads** — published only.
@@ -114,6 +120,57 @@ export const getPublishedAudioTracks = query({
  * and returns the historical shape `{ aboutPage, recordingsPage, pricingSection }`
  * so the existing frontend consumers keep working without changes.
  */
+/**
+ * Published homepage "Local Favorites" block.
+ * When `isEnabled` is false the section is hidden (empty payload).
+ * When enabled and published rows are empty, falls back to
+ * {@link AMENITIES_NEARBY_DEFAULT_ROWS}.
+ */
+export const getPublishedAmenitiesNearby = query({
+  args: {},
+  handler: async (ctx) => {
+    const row = await getSectionMetaRow(ctx, "amenitiesNearby");
+    if (!publishedIsEnabled(row, "amenitiesNearby")) {
+      return {
+        isEnabled: false as const,
+        eyebrow: null as string | null,
+        heading: null as string | null,
+        intro: null as string | null,
+        rows: [] as Array<{
+          stableId: string;
+          name: string;
+          type: string;
+          description: string;
+          website: string;
+        }>,
+      };
+    }
+    const defaultsPayload = materializePublicAmenitiesNearbyFromSnapshot({
+      rows: AMENITIES_NEARBY_DEFAULT_ROWS,
+    });
+    const tree = await loadAmenitiesNearbyTree(ctx, "published");
+    const out = materializePublicAmenitiesNearby(tree);
+    if (out.rows.length === 0) {
+      return {
+        isEnabled: true as const,
+        ...materializePublicAmenitiesNearbyFromSnapshot({
+          ...(tree.copy?.eyebrow !== undefined && tree.copy.eyebrow.trim().length > 0
+            ? { eyebrow: tree.copy.eyebrow }
+            : {}),
+          ...(tree.copy?.heading !== undefined && tree.copy.heading.trim().length > 0
+            ? { heading: tree.copy.heading }
+            : {}),
+          ...(tree.copy?.intro !== undefined && tree.copy.intro.trim().length > 0
+            ? { intro: tree.copy.intro }
+            : {}),
+          rows: AMENITIES_NEARBY_DEFAULT_ROWS,
+        }),
+      };
+    }
+    return { isEnabled: true as const, ...out };
+  },
+});
+
 export const getPublishedMarketingFeatureFlags = query({
   args: {},
   handler: async (ctx) => {

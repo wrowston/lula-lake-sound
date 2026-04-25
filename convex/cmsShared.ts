@@ -3,6 +3,7 @@ import type {
   aboutBlockValidator,
   aboutContentValidator,
   aboutTeamMemberValidator,
+  amenitiesNearbySnapshotValidator,
   cmsSectionValidator,
   marketingFeatureFlagsSnapshotValidator,
   pricingBillingCadenceValidator,
@@ -22,7 +23,12 @@ export type CmsSection = Infer<typeof cmsSectionValidator>;
 export type CmsSnapshot =
   | Infer<typeof settingsContentValidator>
   | Infer<typeof pricingContentValidator>
-  | Infer<typeof aboutContentValidator>;
+  | Infer<typeof aboutContentValidator>
+  | Infer<typeof amenitiesNearbySnapshotValidator>;
+
+export type AmenitiesNearbySnapshot = Infer<
+  typeof amenitiesNearbySnapshotValidator
+>;
 
 export type SettingsSnapshot = Infer<typeof settingsContentValidator>;
 export type PricingSnapshot = Infer<typeof pricingContentValidator>;
@@ -150,6 +156,42 @@ export const MARKETING_FEATURE_FLAGS_DEFAULTS: MarketingFeatureFlagsSnapshot = {
  * the published scope of `aboutContent` + `aboutHighlights` + `aboutTeamMembers`
  * so the public route renders before the owner has published.
  */
+/** Initial homepage "Local Favorites" cards (INF-122 seed + public fallback). */
+export const AMENITIES_NEARBY_DEFAULT_ROWS: AmenitiesNearbySnapshot["rows"] = [
+  {
+    stableId: "amenity_masseys_kitchen",
+    name: "Massey's Kitchen",
+    type: "Mediterranean Cuisine",
+    description:
+      "Elevated dining experience featuring made-from-scratch Mediterranean dishes. Authentic flavors crafted with imported ingredients and techniques learned from travels across the Mediterranean region.",
+    website: "https://www.masseyskitchen.com",
+  },
+  {
+    stableId: "amenity_canopy_coffee",
+    name: "Canopy Coffee & Wine Bar",
+    type: "Coffee · Wine · Craft Beer",
+    description:
+      "Authentic Lookout Mountain experience in a casual, cozy atmosphere. Perfect community gathering spot with excellent coffee, local beer selections, and wine in a trendy yet laid-back setting.",
+    website: "https://www.canopylkt.com",
+  },
+  {
+    stableId: "amenity_canyon_grill",
+    name: "Canyon Grill",
+    type: "Fine Dining · Fresh Seafood",
+    description:
+      "Relaxed fine dining featuring sustainably sourced seafood and hickory wood-grilled specialties. Simple, careful preparation highlights natural flavors with ingredients stored on ice for optimal freshness.",
+    website: "https://www.canyongrill.com",
+  },
+  {
+    stableId: "amenity_mountain_escape_spa",
+    name: "Mountain Escape Spa",
+    type: "Spa · Wellness · Relaxation",
+    description:
+      "Full-service spa offering a range of treatments designed to rejuvenate and restore balance. Massages, facials, body treatments, and more, all designed to help guests feel relaxed and refreshed.",
+    website: "https://www.mountainescapespa.com/",
+  },
+];
+
 export const ABOUT_DEFAULTS: AboutSnapshot = {
   heroTitle: "About Lula Lake Sound",
   heroSubtitle: "A creative space for music production and recording.",
@@ -182,6 +224,8 @@ export function defaultSnapshotForSection(section: CmsSection): CmsSnapshot {
       // `recordings` has no content table; return an empty about-shaped
       // placeholder so the union typechecks. Nothing reads this branch.
       return { ...ABOUT_DEFAULTS };
+    case "amenitiesNearby":
+      return { rows: [] };
   }
 }
 

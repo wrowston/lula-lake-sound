@@ -4,6 +4,8 @@ import {
   aboutContentRowValidator,
   aboutHighlightRowValidator,
   aboutTeamMemberRowValidator,
+  amenitiesNearbyCopyRowValidator,
+  amenitiesNearbyItemRowValidator,
   cmsSectionValidator,
   gearScopeValidator,
   gearSpecsValidator,
@@ -24,6 +26,8 @@ import {
  *   scope onto the published scope in a single mutation.
  * - The `recordings` section is flag-only (no content table); the public page
  *   reads copy from `src/app/recordings/recordings-data.ts`.
+ * - `amenitiesNearby` — homepage local favorites (`amenitiesNearbyCopy` +
+ *   `amenitiesNearbyItems` scoped tables).
  */
 export default defineSchema({
   inquiries: defineTable({
@@ -69,6 +73,15 @@ export default defineSchema({
   settingsContent: defineTable(settingsContentRowValidator).index("by_scope", [
     "scope",
   ]),
+
+  amenitiesNearbyCopy: defineTable(amenitiesNearbyCopyRowValidator).index(
+    "by_scope",
+    ["scope"],
+  ),
+
+  amenitiesNearbyItems: defineTable(amenitiesNearbyItemRowValidator)
+    .index("by_scope_and_sort", ["scope", "sort"])
+    .index("by_scope_and_stableId", ["scope", "stableId"]),
 
   gearMeta: defineTable({
     singletonKey: v.literal("default"),

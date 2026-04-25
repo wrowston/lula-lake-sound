@@ -7,6 +7,7 @@ import {
   Music,
   User,
   Settings,
+  MapPin,
 } from "lucide-react";
 
 /** Shared routes for admin sidebar and dashboard cards (excludes /admin root). */
@@ -53,6 +54,12 @@ export const ADMIN_MANAGE_NAV_ITEMS: {
     description: "Studio bio & story",
   },
   {
+    title: "Amenities nearby",
+    href: "/admin/amenities-nearby",
+    icon: MapPin,
+    description: "Local favorites on the homepage",
+  },
+  {
     title: "Settings",
     href: "/admin/settings",
     icon: Settings,
@@ -70,6 +77,7 @@ export type PendingDraftKey =
   | "pricing"
   | "about"
   | "recordings"
+  | "amenitiesNearby"
   | "gear"
   | "photos";
 
@@ -85,6 +93,10 @@ export const PENDING_SECTION_NAV: Record<
   pricing: { href: "/admin/pricing", label: "Pricing" },
   about: { href: "/admin/about", label: "About" },
   recordings: { href: "/admin/audio", label: "Audio" },
+  amenitiesNearby: {
+    href: "/admin/amenities-nearby",
+    label: "Amenities nearby",
+  },
   gear: { href: "/admin/gear", label: "Gear" },
   photos: { href: "/admin/photos", label: "Photos" },
 };
@@ -94,6 +106,7 @@ export const PENDING_SECTION_ORDER: readonly PendingDraftKey[] = [
   "settings",
   "pricing",
   "about",
+  "amenitiesNearby",
   "gear",
   "photos",
   "recordings",
