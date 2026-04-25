@@ -19,19 +19,16 @@ type PreloadedAudio = Preloaded<typeof api.public.getPublishedAudioTracks>;
  */
 export function RecordingsPageClient({
   preloadedAudio,
-  initialRecordings,
   marketing,
 }: {
   readonly preloadedAudio: PreloadedAudio;
-  /** From server `preloadedQueryResult` to avoid a hydration flash before live data. */
-  readonly initialRecordings: Recording[];
   readonly marketing: MarketingFeatureFlags;
 }) {
   const raw = usePreloadedQuery(preloadedAudio);
-  const recordings = useMemo((): Recording[] => {
-    if (raw === undefined) return initialRecordings;
-    return mapPublishedAudioToRecordings(raw);
-  }, [raw, initialRecordings]);
+  const recordings = useMemo(
+    (): Recording[] => mapPublishedAudioToRecordings(raw),
+    [raw],
+  );
 
   return <RecordingsClient recordings={recordings} marketing={marketing} />;
 }

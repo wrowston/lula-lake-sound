@@ -3,7 +3,6 @@ import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { cache } from "react";
 import { api } from "../../../convex/_generated/api";
-import { mapPublishedAudioToRecordings } from "./recordings-data";
 import { RecordingsPageClient } from "./recordings-page-client";
 
 /** One preload per request for metadata + page (same render pass). */
@@ -53,15 +52,9 @@ export default async function RecordingsPage() {
     notFound();
   }
 
-  const initialAudio = preloadedQueryResult(preloadedAudio);
-  const initialRecordings = mapPublishedAudioToRecordings(
-    initialAudio ?? [],
-  );
-
   return (
     <RecordingsPageClient
       preloadedAudio={preloadedAudio}
-      initialRecordings={initialRecordings}
       marketing={data}
     />
   );
