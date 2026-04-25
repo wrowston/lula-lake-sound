@@ -70,28 +70,60 @@ describe("formatDuration", () => {
 
 describe("validateTrackFields", () => {
   test("title is required", () => {
-    expect(validateTrackFields("", "", "something")).toContain("Title");
-    expect(validateTrackFields("   ", "", "something")).toContain("Title");
+    expect(validateTrackFields("", "", "", "", "", "something")).toContain(
+      "Title",
+    );
+    expect(validateTrackFields("   ", "", "", "", "", "something")).toContain(
+      "Title",
+    );
   });
 
   test("title at most 200 chars", () => {
-    expect(validateTrackFields("a".repeat(200), "", "desc")).toBeNull();
-    expect(validateTrackFields("a".repeat(201), "", "desc")).toContain("200");
+    expect(
+      validateTrackFields("a".repeat(200), "", "", "", "", "desc"),
+    ).toBeNull();
+    expect(validateTrackFields("a".repeat(201), "", "", "", "", "desc")).toContain(
+      "200",
+    );
   });
 
   test("artist over 200 chars rejected", () => {
-    expect(validateTrackFields("ok", "a".repeat(201), "desc")).toContain("200");
+    expect(
+      validateTrackFields("ok", "a".repeat(201), "", "", "", "desc"),
+    ).toContain("200");
+  });
+
+  test("recording metadata is capped and year is bounded", () => {
+    expect(validateTrackFields("ok", "", "a".repeat(101), "", "", "desc")).toContain(
+      "100",
+    );
+    expect(validateTrackFields("ok", "", "", "1799", "", "desc")).toContain(
+      "1800",
+    );
+    expect(validateTrackFields("ok", "", "", "2026", "a".repeat(201), "desc"))
+      .toContain("200");
   });
 
   test("description required and capped", () => {
-    expect(validateTrackFields("ok", "", "")).toContain("Description");
+    expect(validateTrackFields("ok", "", "", "", "", "")).toContain(
+      "Description",
+    );
     expect(
-      validateTrackFields("ok", "", "a".repeat(2001)),
+      validateTrackFields("ok", "", "", "", "", "a".repeat(2001)),
     ).toContain("2000");
   });
 
   test("valid input passes", () => {
-    expect(validateTrackFields("Track 1", "Artist", "Desc")).toBeNull();
+    expect(
+      validateTrackFields(
+        "Track 1",
+        "Artist",
+        "Americana",
+        "2026",
+        "Recorded and mixed",
+        "Desc",
+      ),
+    ).toBeNull();
   });
 });
 

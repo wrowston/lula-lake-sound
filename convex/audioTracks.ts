@@ -37,6 +37,9 @@ function comparableTrack(row: AudioTrackDoc) {
     storageId: row.storageId,
     title: row.title,
     artist: row.artist ?? null,
+    genre: row.genre ?? null,
+    year: row.year ?? null,
+    role: row.role ?? null,
     description: row.description,
     mimeType: row.mimeType,
     durationSec: row.durationSec ?? null,
@@ -144,6 +147,9 @@ export async function replaceAudioScope(
       storageId: row.storageId,
       title: row.title,
       ...(row.artist !== undefined ? { artist: row.artist } : {}),
+      ...(row.genre !== undefined ? { genre: row.genre } : {}),
+      ...(row.year !== undefined ? { year: row.year } : {}),
+      ...(row.role !== undefined ? { role: row.role } : {}),
       description: row.description,
       mimeType: row.mimeType,
       ...(row.durationSec !== undefined ? { durationSec: row.durationSec } : {}),
@@ -198,6 +204,9 @@ export async function materializeAudioTracks(
     url: string | null;
     title: string;
     artist: string | null;
+    genre: string | null;
+    year: number | null;
+    role: string | null;
     description: string;
     mimeType: string;
     durationSec: number | null;
@@ -225,6 +234,9 @@ export async function materializeAudioTracks(
         url: await ctx.storage.getUrl(row.storageId),
         title: row.title,
         artist: row.artist ?? null,
+        genre: row.genre ?? null,
+        year: row.year ?? null,
+        role: row.role ?? null,
         description: row.description,
         mimeType: row.mimeType,
         durationSec: row.durationSec ?? null,

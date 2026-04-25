@@ -8,13 +8,14 @@ import {
 } from "convex/react";
 import { api } from "../../../../convex/_generated/api";
 import { RecordingsClient } from "../../recordings/recordings-client";
-import { RECORDINGS } from "../../recordings/recordings-data";
+import { mapPublishedAudioToRecordings } from "../../recordings/recordings-data";
 import { PreviewBanner } from "@/components/preview-banner";
 
 function RecordingsPreviewContent() {
   const marketing = useQuery(api.cms.getPreviewMarketingFeatureFlags);
+  const audioPreview = useQuery(api.audioPreviewDraft.getPreviewAudioTracks);
 
-  if (marketing === undefined) {
+  if (marketing === undefined || audioPreview === undefined) {
     return (
       <div className="flex min-h-screen items-center justify-center bg-washed-black">
         <p className="text-ivory/60">Loading preview…</p>
@@ -22,7 +23,7 @@ function RecordingsPreviewContent() {
     );
   }
 
-  if (marketing === null) {
+  if (marketing === null || audioPreview === null) {
     return (
       <div className="flex min-h-screen items-center justify-center bg-washed-black">
         <p className="text-ivory/60">
@@ -49,11 +50,15 @@ function RecordingsPreviewContent() {
     );
   }
 
+  const recordings = mapPublishedAudioToRecordings(audioPreview.tracks);
+  const bannerHasDraft =
+    hasDraftChanges || audioPreview.hasDraftChanges;
+
   return (
     <RecordingsClient
-      recordings={RECORDINGS}
+      recordings={recordings}
       marketing={flags}
-      banner={<PreviewBanner hasDraftChanges={hasDraftChanges} />}
+      banner={<PreviewBanner hasDraftChanges={bannerHasDraft} />}
     />
   );
 }
