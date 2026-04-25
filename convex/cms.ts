@@ -3,7 +3,7 @@ import { v } from "convex/values";
 import {
   aboutContentValidator,
   cmsSectionValidator,
-  faqContentValidator,
+  cmsSnapshotValidator,
   pricingContentValidator,
   settingsContentValidator,
 } from "./schema.shared";
@@ -111,12 +111,7 @@ export const getSection = query({
 export const saveDraft = mutation({
   args: {
     section: cmsSectionValidator,
-    content: v.union(
-      settingsContentValidator,
-      pricingContentValidator,
-      aboutContentValidator,
-      faqContentValidator,
-    ),
+    content: cmsSnapshotValidator,
   },
   handler: async (ctx, args) => {
     const { updatedBy } = await requireCmsOwner(ctx);
@@ -704,6 +699,9 @@ async function readSnapshotForAdmin(
   if (section === "faq") {
     const tree = await loadFaqTree(ctx, scope);
     if (tree.categories.length === 0) {
+      if (scope === "draft") {
+        return { categories: [] } satisfies FaqSnapshot;
+      }
       return defaultSnapshotForSection("faq");
     }
     return {

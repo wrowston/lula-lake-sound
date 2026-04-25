@@ -305,7 +305,9 @@ async function collectFaqIssues(
   const tree =
     draft.categories.length > 0
       ? draft
-      : await loadFaqTree(ctx, "published");
+      : (await sectionHasContentDraftDiff(ctx, "faq"))
+        ? draft
+        : await loadFaqTree(ctx, "published");
   const issues: PublishIssue[] = [];
 
   if (tree.categories.length === 0) {
