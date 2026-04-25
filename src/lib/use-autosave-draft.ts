@@ -106,10 +106,13 @@ export function useAutosaveDraft({
     }
   }, []);
 
-  const runSave = useCallback(async (): Promise<boolean> => {
+  const runSave = useCallback(async (bypassPause = false): Promise<boolean> => {
     if (inFlightRef.current) return true;
     if (!isDirtyRef.current) return true;
-    if (pauseWhenRef.current) return false;
+    // `pauseWhenRef` updates on render; callers like `flush()` can run in the
+    // same tick as `setBusy(null)` while the ref still reflects the old pause.
+    // Debounced saves still respect pause via `scheduleKick`; flush is explicit.
+    if (!bypassPause && pauseWhenRef.current) return false;
     inFlightRef.current = true;
     clearLinger();
     setStatus("saving");
@@ -138,7 +141,7 @@ export function useAutosaveDraft({
     clearTimer();
     timerRef.current = setTimeout(() => {
       timerRef.current = null;
-      void runSave();
+      void runSave(false);
     }, delayMs);
   }, [clearTimer, delayMs, runSave]);
 
@@ -184,7 +187,7 @@ export function useAutosaveDraft({
         return true;
       }
     }
-    return await runSave();
+    return await runSave(true);
   }, [clearTimer, runSave]);
 
   return { status, kick, cancel, flush, onUnmount };
