@@ -1074,7 +1074,7 @@ function AudioEditorForm() {
               onClick={() => fileInputRef.current?.click()}
               disabled={busy !== null || tracks.length >= data.limits.maxTracks}
             >
-              {busy === "Uploading…" ? (
+              {anyUploading ? (
                 <Loader2 className="mr-1 size-4 animate-spin" aria-hidden />
               ) : (
                 <Upload className="mr-1 size-4" aria-hidden />
