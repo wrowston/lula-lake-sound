@@ -55,6 +55,8 @@ function materializePublishedAudio(
     durationSec: number | null;
     sortOrder: number;
     albumThumbnailUrl: string | null;
+    albumThumbnailStorageUrl: string | null;
+    albumThumbnailDisplayUrl: string | null;
     spotifyUrl: string | null;
     appleMusicUrl: string | null;
   }>,
@@ -71,6 +73,8 @@ function materializePublishedAudio(
       durationSec: t.durationSec,
       sortOrder: t.sortOrder,
       albumThumbnailUrl: t.albumThumbnailUrl,
+      albumThumbnailStorageUrl: t.albumThumbnailStorageUrl,
+      albumThumbnailDisplayUrl: t.albumThumbnailDisplayUrl,
       spotifyUrl: t.spotifyUrl,
       appleMusicUrl: t.appleMusicUrl,
     }));

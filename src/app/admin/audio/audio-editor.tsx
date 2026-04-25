@@ -58,6 +58,7 @@ import { cn } from "@/lib/utils";
 const MAX_TITLE_LENGTH = 200;
 const MAX_ARTIST_LENGTH = 200;
 const MAX_DESCRIPTION_LENGTH = 2000;
+const ALBUM_ART_ACCEPT = "image/jpeg,image/png,image/webp";
 
 /**
  * Filename fallback for audio files when the browser doesn't surface a usable
@@ -99,6 +100,9 @@ type TrackItem = {
   sizeBytes: number;
   originalFileName: string | null;
   albumThumbnailUrl: string | null;
+  albumThumbnailStorageId: Id<"_storage"> | null;
+  albumThumbnailStorageUrl: string | null;
+  albumThumbnailDisplayUrl: string | null;
   spotifyUrl: string | null;
   appleMusicUrl: string | null;
 };
@@ -110,12 +114,13 @@ type TrackEdits = Record<
     artist: string;
     description: string;
     albumThumbnailUrl: string;
+    albumThumbnailStorageId: Id<"_storage"> | null;
     spotifyUrl: string;
     appleMusicUrl: string;
   }
 >;
 
-type RowAction = "saving" | "deleting" | "replacing";
+type RowAction = "saving" | "deleting" | "replacing" | "art";
 type RowBusy = Record<string, RowAction | undefined>;
 
 type UploadProgressEntry = {
@@ -246,11 +251,19 @@ function httpsImagePreviewUrl(raw: string): string | null {
   }
 }
 
+function isAcceptedAlbumArtFile(file: File): boolean {
+  return ["image/jpeg", "image/png", "image/webp"].includes(file.type);
+}
+
 function sequentialEffects(
   effects: Array<Effect.Effect<unknown, CmsAppError>>,
 ): Effect.Effect<void, CmsAppError> {
   return effects.reduce(
-    (acc, effect) => pipe(acc, Effect.flatMap(() => effect)),
+    (acc, effect) =>
+      pipe(
+        acc,
+        Effect.flatMap(() => effect),
+      ),
     Effect.succeed(undefined) as Effect.Effect<void, CmsAppError>,
   );
 }
@@ -282,7 +295,10 @@ async function uploadFileWithProgress(
   return await new Promise<Id<"_storage">>((resolve, reject) => {
     const xhr = new XMLHttpRequest();
     xhr.open("POST", uploadUrl);
-    xhr.setRequestHeader("Content-Type", file.type || "application/octet-stream");
+    xhr.setRequestHeader(
+      "Content-Type",
+      file.type || "application/octet-stream",
+    );
     xhr.upload.addEventListener("progress", (event) => {
       if (event.lengthComputable && event.total > 0) {
         onProgress(Math.min(1, event.loaded / event.total));
@@ -359,12 +375,14 @@ function AudioEditorForm() {
 
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const replaceFileInputRef = useRef<HTMLInputElement | null>(null);
+  const albumArtFileInputRef = useRef<HTMLInputElement | null>(null);
   /**
    * Pending replace target captured on click so the hidden file input knows
    * which row to swap once the user picks a file. Using a ref avoids a render
    * between click → native file picker opening.
    */
   const pendingReplaceStableIdRef = useRef<string | null>(null);
+  const pendingAlbumArtStableIdRef = useRef<string | null>(null);
   const dragDepthRef = useRef(0);
   const uploadDismissTimerRef = useRef<number | null>(null);
 
@@ -451,14 +469,19 @@ function AudioEditorForm() {
   const getEditableFields = useCallback(
     (track: TrackItem) => ({
       title: edits[track.stableId]?.title ?? track.title,
-      artist: edits[track.stableId]?.artist ?? (track.artist ?? ""),
+      artist: edits[track.stableId]?.artist ?? track.artist ?? "",
       description: edits[track.stableId]?.description ?? track.description,
       albumThumbnailUrl:
         edits[track.stableId]?.albumThumbnailUrl ??
-        (track.albumThumbnailUrl ?? ""),
-      spotifyUrl: edits[track.stableId]?.spotifyUrl ?? (track.spotifyUrl ?? ""),
+        track.albumThumbnailUrl ??
+        "",
+      albumThumbnailStorageId:
+        edits[track.stableId]?.albumThumbnailStorageId !== undefined
+          ? edits[track.stableId]!.albumThumbnailStorageId
+          : track.albumThumbnailStorageId,
+      spotifyUrl: edits[track.stableId]?.spotifyUrl ?? track.spotifyUrl ?? "",
       appleMusicUrl:
-        edits[track.stableId]?.appleMusicUrl ?? (track.appleMusicUrl ?? ""),
+        edits[track.stableId]?.appleMusicUrl ?? track.appleMusicUrl ?? "",
     }),
     [edits],
   );
@@ -473,26 +496,37 @@ function AudioEditorForm() {
         albumThumbnailUrl: string;
         spotifyUrl: string;
         appleMusicUrl: string;
+        albumThumbnailStorageId: Id<"_storage"> | null;
       }>,
     ) => {
       setEdits((current) => {
         const base = {
           title: current[track.stableId]?.title ?? track.title,
-          artist: current[track.stableId]?.artist ?? (track.artist ?? ""),
-          description: current[track.stableId]?.description ?? track.description,
+          artist: current[track.stableId]?.artist ?? track.artist ?? "",
+          description:
+            current[track.stableId]?.description ?? track.description,
           albumThumbnailUrl:
             current[track.stableId]?.albumThumbnailUrl ??
-            (track.albumThumbnailUrl ?? ""),
+            track.albumThumbnailUrl ??
+            "",
+          albumThumbnailStorageId:
+            current[track.stableId]?.albumThumbnailStorageId !== undefined
+              ? current[track.stableId]!.albumThumbnailStorageId
+              : track.albumThumbnailStorageId,
           spotifyUrl:
-            current[track.stableId]?.spotifyUrl ?? (track.spotifyUrl ?? ""),
+            current[track.stableId]?.spotifyUrl ?? track.spotifyUrl ?? "",
           appleMusicUrl:
-            current[track.stableId]?.appleMusicUrl ?? (track.appleMusicUrl ?? ""),
+            current[track.stableId]?.appleMusicUrl ?? track.appleMusicUrl ?? "",
         };
         const next = {
           title: patch.title ?? base.title,
           artist: patch.artist ?? base.artist,
           description: patch.description ?? base.description,
           albumThumbnailUrl: patch.albumThumbnailUrl ?? base.albumThumbnailUrl,
+          albumThumbnailStorageId:
+            "albumThumbnailStorageId" in patch
+              ? (patch.albumThumbnailStorageId ?? null)
+              : base.albumThumbnailStorageId,
           spotifyUrl: patch.spotifyUrl ?? base.spotifyUrl,
           appleMusicUrl: patch.appleMusicUrl ?? base.appleMusicUrl,
         };
@@ -501,6 +535,7 @@ function AudioEditorForm() {
           next.artist === (track.artist ?? "") &&
           next.description === track.description &&
           next.albumThumbnailUrl === (track.albumThumbnailUrl ?? "") &&
+          next.albumThumbnailStorageId === track.albumThumbnailStorageId &&
           next.spotifyUrl === (track.spotifyUrl ?? "") &&
           next.appleMusicUrl === (track.appleMusicUrl ?? "")
         ) {
@@ -560,6 +595,7 @@ function AudioEditorForm() {
               fields.albumThumbnailUrl.trim().length > 0
                 ? fields.albumThumbnailUrl.trim()
                 : null,
+            albumThumbnailStorageId: fields.albumThumbnailStorageId,
             spotifyUrl:
               fields.spotifyUrl.trim().length > 0
                 ? fields.spotifyUrl.trim()
@@ -621,13 +657,13 @@ function AudioEditorForm() {
         updateDraftTrack({
           stableId: track.stableId,
           title: fields.title.trim(),
-          artist:
-            fields.artist.trim().length > 0 ? fields.artist.trim() : null,
+          artist: fields.artist.trim().length > 0 ? fields.artist.trim() : null,
           description: fields.description.trim(),
           albumThumbnailUrl:
             fields.albumThumbnailUrl.trim().length > 0
               ? fields.albumThumbnailUrl.trim()
               : null,
+          albumThumbnailStorageId: fields.albumThumbnailStorageId,
           spotifyUrl:
             fields.spotifyUrl.trim().length > 0
               ? fields.spotifyUrl.trim()
@@ -653,9 +689,7 @@ function AudioEditorForm() {
     async (orderedStableIds: string[]): Promise<boolean> => {
       const outcome = await runAction(
         "Reordering…",
-        convexMutationEffect(() =>
-          reorderDraftTracks({ orderedStableIds }),
-        ),
+        convexMutationEffect(() => reorderDraftTracks({ orderedStableIds })),
       );
       return outcome !== undefined;
     },
@@ -685,7 +719,9 @@ function AudioEditorForm() {
     async (files: File[]) => {
       if (!data) return;
       const allowedMime = new Set<string>(data.limits.acceptedMimeTypes);
-      const audioFiles = files.filter((f) => isAcceptedAudioFile(f, allowedMime));
+      const audioFiles = files.filter((f) =>
+        isAcceptedAudioFile(f, allowedMime),
+      );
       if (audioFiles.length === 0) {
         toast.error("Drop MP3 or WAV files only.");
         return;
@@ -747,14 +783,11 @@ function AudioEditorForm() {
           });
 
           setUploadQueue((q) =>
-            q.map((e) =>
-              e.id === entryId ? { ...e, status: "done" } : e,
-            ),
+            q.map((e) => (e.id === entryId ? { ...e, status: "done" } : e)),
           );
           toast.success(`Added ${file.name}`);
         } catch (e) {
-          const message =
-            e instanceof Error ? e.message : "Upload failed.";
+          const message = e instanceof Error ? e.message : "Upload failed.";
           setUploadQueue((q) =>
             q.map((entry) =>
               entry.id === entryId
@@ -779,10 +812,10 @@ function AudioEditorForm() {
 
   const handleFileSelection = useCallback(
     async (event: ChangeEvent<HTMLInputElement>) => {
-      const list = event.target.files;
-      event.target.value = "";
-      if (!list || list.length === 0) return;
-      await processFiles(Array.from(list));
+      const files = Array.from(event.currentTarget.files ?? []);
+      event.currentTarget.value = "";
+      if (files.length === 0) return;
+      await processFiles(files);
     },
     [processFiles],
   );
@@ -868,9 +901,7 @@ function AudioEditorForm() {
         }
 
         setUploadQueue((q) =>
-          q.map((e) =>
-            e.id === entryId ? { ...e, status: "done" } : e,
-          ),
+          q.map((e) => (e.id === entryId ? { ...e, status: "done" } : e)),
         );
         toast.success(`Replaced audio file with ${file.name}.`);
       } catch (e) {
@@ -906,14 +937,124 @@ function AudioEditorForm() {
 
   const handleReplaceFileSelection = useCallback(
     async (event: ChangeEvent<HTMLInputElement>) => {
-      const list = event.target.files;
+      const files = Array.from(event.currentTarget.files ?? []);
       const stableId = pendingReplaceStableIdRef.current;
       pendingReplaceStableIdRef.current = null;
-      event.target.value = "";
-      if (!list || list.length === 0 || !stableId) return;
-      await replaceTrackFile(stableId, list[0]);
+      event.currentTarget.value = "";
+      if (files.length === 0 || !stableId) return;
+      await replaceTrackFile(stableId, files[0]);
     },
     [replaceTrackFile],
+  );
+
+  const uploadAlbumArt = useCallback(
+    async (track: TrackItem, file: File) => {
+      if (!isAcceptedAlbumArtFile(file)) {
+        toast.error("Choose a JPEG, PNG, or WebP image.");
+        return;
+      }
+
+      const fields = getEditableFields(track);
+      const fieldError = validateTrackFields(
+        fields.title,
+        fields.artist,
+        fields.description,
+      );
+      if (fieldError) {
+        setInlineError(fieldError);
+        toast.error(fieldError);
+        return;
+      }
+      const urlErr = validateStreamingUrls(
+        fields.albumThumbnailUrl,
+        fields.spotifyUrl,
+        fields.appleMusicUrl,
+      );
+      if (urlErr) {
+        setInlineError(urlErr);
+        toast.error(urlErr);
+        return;
+      }
+
+      setInlineError(null);
+      setRowAction(track.stableId, "art");
+      try {
+        const { uploadUrl } = await generateUploadUrl({});
+        const storageId = await uploadFileWithProgress(
+          uploadUrl,
+          file,
+          () => {},
+        );
+        const outcome = await runAdminEffect(
+          convexMutationEffect(() =>
+            updateDraftTrack({
+              stableId: track.stableId,
+              title: fields.title.trim(),
+              artist:
+                fields.artist.trim().length > 0 ? fields.artist.trim() : null,
+              description: fields.description.trim(),
+              albumThumbnailUrl:
+                fields.albumThumbnailUrl.trim().length > 0
+                  ? fields.albumThumbnailUrl.trim()
+                  : null,
+              albumThumbnailStorageId: storageId,
+              spotifyUrl:
+                fields.spotifyUrl.trim().length > 0
+                  ? fields.spotifyUrl.trim()
+                  : null,
+              appleMusicUrl:
+                fields.appleMusicUrl.trim().length > 0
+                  ? fields.appleMusicUrl.trim()
+                  : null,
+            }),
+          ),
+          { onErrorMessage: setInlineError },
+        );
+
+        if (outcome !== undefined) {
+          clearTrackEdit(track.stableId);
+          toast.success("Album art uploaded.");
+        } else {
+          updateTrackEdit(track, {
+            albumThumbnailStorageId: track.albumThumbnailStorageId,
+          });
+        }
+      } catch (e) {
+        const message =
+          e instanceof Error ? e.message : "Album art upload failed.";
+        setInlineError(message);
+        toast.error(message);
+      } finally {
+        setRowAction(track.stableId, undefined);
+      }
+    },
+    [
+      clearTrackEdit,
+      generateUploadUrl,
+      getEditableFields,
+      setRowAction,
+      updateDraftTrack,
+      updateTrackEdit,
+    ],
+  );
+
+  const handleAlbumArtUploadClick = useCallback((stableId: string) => {
+    pendingAlbumArtStableIdRef.current = stableId;
+    albumArtFileInputRef.current?.click();
+  }, []);
+
+  const handleAlbumArtSelection = useCallback(
+    async (event: ChangeEvent<HTMLInputElement>) => {
+      const files = Array.from(event.currentTarget.files ?? []);
+      const stableId = pendingAlbumArtStableIdRef.current;
+      pendingAlbumArtStableIdRef.current = null;
+      event.currentTarget.value = "";
+      if (files.length === 0 || !stableId) return;
+      const track = tracks.find((candidate) => candidate.stableId === stableId);
+      if (!track) return;
+      await uploadAlbumArt(track, files[0]);
+    },
+    [tracks, uploadAlbumArt],
   );
 
   const canAcceptDrop =
@@ -1106,12 +1247,7 @@ function AudioEditorForm() {
       if (!ok) return false;
     }
     return true;
-  }, [
-    flushFFAutosave,
-    hasAudioLocalEdits,
-    hasFFLocalEdits,
-    savePendingEdits,
-  ]);
+  }, [flushFFAutosave, hasAudioLocalEdits, hasFFLocalEdits, savePendingEdits]);
 
   const { toolbarPortal, editorRef } = useRegisterCmsEditor({
     section: "audio",
@@ -1211,13 +1347,14 @@ function AudioEditorForm() {
             </h2>
             <p className="body-text-small max-w-2xl text-foreground/85">
               Upload MP3 or WAV samples for the homepage “Studio portfolio”
-              section. Add optional album art (HTTPS image URL), Spotify, and Apple
-              Music links per track. Playback uses Convex signed URLs (
+              section. Add optional album art with an HTTPS image URL or upload,
+              plus Spotify and Apple Music links per track. Playback uses Convex
+              signed URLs (
               <code className="rounded bg-muted px-1 py-0.5 text-xs">
                 &lt;audio src&gt;
               </code>
-              ). Draft changes stay private until you publish. Abandoned draft-only
-              uploads are removed after 7 days (weekly job).
+              ). Draft changes stay private until you publish. Abandoned
+              draft-only uploads are removed after 7 days (weekly job).
             </p>
           </div>
 
@@ -1237,6 +1374,13 @@ function AudioEditorForm() {
               className="hidden"
               onChange={(event) => void handleReplaceFileSelection(event)}
             />
+            <input
+              ref={albumArtFileInputRef}
+              type="file"
+              accept={ALBUM_ART_ACCEPT}
+              className="hidden"
+              onChange={(event) => void handleAlbumArtSelection(event)}
+            />
             <Button
               type="button"
               variant="outline"
@@ -1251,7 +1395,8 @@ function AudioEditorForm() {
               Upload audio
             </Button>
             <p className="body-text-small text-right text-foreground/70">
-              MP3 or WAV. Up to {Math.floor(data.limits.maxFileBytes / (1024 * 1024))}MB each.
+              MP3 or WAV. Up to{" "}
+              {Math.floor(data.limits.maxFileBytes / (1024 * 1024))}MB each.
               {tracks.length >= data.limits.maxTracks
                 ? ` Limit reached (${data.limits.maxTracks}).`
                 : ` ${tracks.length}/${data.limits.maxTracks} used.`}
@@ -1273,7 +1418,10 @@ function AudioEditorForm() {
             {uploadQueue.map((entry) => (
               <li key={entry.id} className="space-y-1">
                 <div className="flex items-center justify-between gap-3 text-sm">
-                  <span className="truncate text-foreground/85" title={entry.name}>
+                  <span
+                    className="truncate text-foreground/85"
+                    title={entry.name}
+                  >
                     {entry.name}
                   </span>
                   <span
@@ -1340,93 +1488,95 @@ function AudioEditorForm() {
 
             return (
               <Card key={track.stableId} className="space-y-4 p-4">
-                <div className="flex flex-wrap items-start justify-between gap-3">
-                  <div className="min-w-0 flex-1 space-y-1">
-                    <p className="body-text-small text-muted-foreground">
+                <div className="space-y-2">
+                  <div className="flex flex-wrap items-start justify-between gap-3">
+                    <p className="body-text-small min-w-0 flex-1 text-muted-foreground">
                       {formatBytes(track.sizeBytes)} · {track.mimeType}
                       {" · "}
                       {formatDuration(track.durationSec)}
                     </p>
-                    {track.url ? (
-                      <audio
-                        controls
-                        className="h-9 w-full max-w-md"
-                        src={track.url}
-                        crossOrigin="anonymous"
-                        preload="metadata"
-                      />
-                    ) : (
-                      <p className="text-sm text-destructive">
-                        Playback URL unavailable — re-upload if this persists.
-                      </p>
-                    )}
-                    {track.originalFileName ? (
-                      <p
-                        className="body-text-small truncate text-muted-foreground"
-                        title={track.originalFileName}
+                    <div className="flex shrink-0 flex-wrap items-center gap-1">
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="icon"
+                        className="size-8"
+                        aria-label="Move up"
+                        disabled={index === 0 || busy !== null || isRowBusy}
+                        onClick={() => void moveTrack(track.stableId, -1)}
                       >
-                        {track.originalFileName}
-                      </p>
-                    ) : null}
+                        <ArrowUp className="size-4" />
+                      </Button>
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="icon"
+                        className="size-8"
+                        aria-label="Move down"
+                        disabled={
+                          index === tracks.length - 1 ||
+                          busy !== null ||
+                          isRowBusy
+                        }
+                        onClick={() => void moveTrack(track.stableId, 1)}
+                      >
+                        <ArrowDown className="size-4" />
+                      </Button>
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        className="h-8 px-2"
+                        aria-label={`Replace audio file for ${track.title}`}
+                        disabled={busy !== null || isRowBusy}
+                        onClick={() => handleReplaceClick(track.stableId)}
+                      >
+                        {rowAction === "replacing" ? (
+                          <Loader2
+                            className="mr-1 size-3.5 animate-spin"
+                            aria-hidden
+                          />
+                        ) : (
+                          <Replace className="mr-1 size-3.5" aria-hidden />
+                        )}
+                        {rowAction === "replacing"
+                          ? "Replacing…"
+                          : "Replace file"}
+                      </Button>
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="icon"
+                        className="size-8 text-destructive hover:text-destructive"
+                        aria-label="Remove track"
+                        disabled={busy !== null || isRowBusy}
+                        onClick={() => setDeleteStableId(track.stableId)}
+                      >
+                        <Trash2 className="size-4" />
+                      </Button>
+                    </div>
                   </div>
-                  <div className="flex shrink-0 flex-wrap items-center gap-1">
-                    <Button
-                      type="button"
-                      variant="ghost"
-                      size="icon"
-                      className="size-8"
-                      aria-label="Move up"
-                      disabled={index === 0 || busy !== null || isRowBusy}
-                      onClick={() => void moveTrack(track.stableId, -1)}
+                  {track.url ? (
+                    <audio
+                      controls
+                      className="h-9 w-full"
+                      src={track.url}
+                      crossOrigin="anonymous"
+                      preload="metadata"
+                    />
+                  ) : (
+                    <p className="text-sm text-destructive">
+                      Playback URL unavailable — re-upload if this persists.
+                    </p>
+                  )}
+                  {track.originalFileName ? (
+                    <p
+                      className="body-text-small truncate text-muted-foreground"
+                      title={track.originalFileName}
                     >
-                      <ArrowUp className="size-4" />
-                    </Button>
-                    <Button
-                      type="button"
-                      variant="ghost"
-                      size="icon"
-                      className="size-8"
-                      aria-label="Move down"
-                      disabled={
-                        index === tracks.length - 1 ||
-                        busy !== null ||
-                        isRowBusy
-                      }
-                      onClick={() => void moveTrack(track.stableId, 1)}
-                    >
-                      <ArrowDown className="size-4" />
-                    </Button>
-                    <Button
-                      type="button"
-                      variant="outline"
-                      size="sm"
-                      className="h-8 px-2"
-                      aria-label={`Replace audio file for ${track.title}`}
-                      disabled={busy !== null || isRowBusy}
-                      onClick={() => handleReplaceClick(track.stableId)}
-                    >
-                      {rowAction === "replacing" ? (
-                        <Loader2
-                          className="mr-1 size-3.5 animate-spin"
-                          aria-hidden
-                        />
-                      ) : (
-                        <Replace className="mr-1 size-3.5" aria-hidden />
-                      )}
-                      {rowAction === "replacing" ? "Replacing…" : "Replace file"}
-                    </Button>
-                    <Button
-                      type="button"
-                      variant="ghost"
-                      size="icon"
-                      className="size-8 text-destructive hover:text-destructive"
-                      aria-label="Remove track"
-                      disabled={busy !== null || isRowBusy}
-                      onClick={() => setDeleteStableId(track.stableId)}
-                    >
-                      <Trash2 className="size-4" />
-                    </Button>
-                  </div>
+                      {track.originalFileName}
+                    </p>
+                  ) : null}
                 </div>
 
                 <div className="space-y-3">
@@ -1482,10 +1632,49 @@ function AudioEditorForm() {
                       inputMode="url"
                       autoComplete="off"
                     />
+                    <div className="mt-2 flex flex-wrap items-center gap-2">
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        className="h-8 px-2"
+                        disabled={busy !== null || isRowBusy}
+                        onClick={() =>
+                          handleAlbumArtUploadClick(track.stableId)
+                        }
+                      >
+                        {rowAction === "art" ? (
+                          <Loader2
+                            className="mr-1 size-3.5 animate-spin"
+                            aria-hidden
+                          />
+                        ) : (
+                          <Upload className="mr-1 size-3.5" aria-hidden />
+                        )}
+                        {rowAction === "art" ? "Uploading…" : "Upload image"}
+                      </Button>
+                      {fields.albumThumbnailStorageId ? (
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="sm"
+                          className="h-8 px-2 text-destructive hover:text-destructive"
+                          disabled={busy !== null || isRowBusy}
+                          onClick={() =>
+                            updateTrackEdit(track, {
+                              albumThumbnailStorageId: null,
+                            })
+                          }
+                        >
+                          Clear upload
+                        </Button>
+                      ) : null}
+                    </div>
                     {(() => {
-                      const preview = httpsImagePreviewUrl(
-                        fields.albumThumbnailUrl,
-                      );
+                      const preview =
+                        fields.albumThumbnailStorageId != null
+                          ? track.albumThumbnailStorageUrl
+                          : httpsImagePreviewUrl(fields.albumThumbnailUrl);
                       return preview ? (
                         <div className="relative mt-2 aspect-square w-full max-w-[140px] overflow-hidden rounded-sm border border-border bg-muted">
                           <Image
@@ -1540,7 +1729,10 @@ function AudioEditorForm() {
                     onClick={() => void saveTrackDetails(track)}
                   >
                     {rowAction === "saving" ? (
-                      <Loader2 className="mr-1 size-3.5 animate-spin" aria-hidden />
+                      <Loader2
+                        className="mr-1 size-3.5 animate-spin"
+                        aria-hidden
+                      />
                     ) : (
                       <Save className="mr-1 size-3.5" aria-hidden />
                     )}

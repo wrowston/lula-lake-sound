@@ -157,6 +157,8 @@ export default defineSchema({
     durationSec: v.optional(v.number()),
     /** HTTPS URL to album/track artwork (e.g. CDN). */
     albumThumbnailUrl: v.optional(v.string()),
+    /** Uploaded album/track artwork stored in Convex file storage. */
+    albumThumbnailStorageId: v.optional(v.id("_storage")),
     /** Public Spotify page for this release or track. */
     spotifyUrl: v.optional(v.string()),
     /** Public Apple Music page for this release or track. */
@@ -170,5 +172,6 @@ export default defineSchema({
     .index("by_scope_and_sort", ["scope", "sortOrder"])
     .index("by_scope_and_stableId", ["scope", "stableId"])
     .index("by_storageId", ["storageId"])
+    .index("by_albumThumbnailStorageId", ["albumThumbnailStorageId"])
     .index("by_scope_and_createdAt", ["scope", "createdAt"]),
 });

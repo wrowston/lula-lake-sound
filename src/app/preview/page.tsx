@@ -71,6 +71,8 @@ function PreviewContent() {
       durationSec: t.durationSec,
       sortOrder: t.sortOrder,
       albumThumbnailUrl: t.albumThumbnailUrl,
+      albumThumbnailStorageUrl: t.albumThumbnailStorageUrl,
+      albumThumbnailDisplayUrl: t.albumThumbnailDisplayUrl,
       spotifyUrl: t.spotifyUrl,
       appleMusicUrl: t.appleMusicUrl,
     }));

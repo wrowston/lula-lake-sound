@@ -23,7 +23,7 @@ export async function deleteStorageIfUnreferenced(
   ctx: MutationCtx,
   storageId: Id<"_storage">,
 ): Promise<boolean> {
-  const [galleryRefs, audioRefs] = await Promise.all([
+  const [galleryRefs, audioRefs, audioArtRefs] = await Promise.all([
     ctx.db
       .query("galleryPhotos")
       .withIndex("by_storageId", (q) => q.eq("storageId", storageId))
@@ -32,8 +32,18 @@ export async function deleteStorageIfUnreferenced(
       .query("audioTracks")
       .withIndex("by_storageId", (q) => q.eq("storageId", storageId))
       .take(1),
+    ctx.db
+      .query("audioTracks")
+      .withIndex("by_albumThumbnailStorageId", (q) =>
+        q.eq("albumThumbnailStorageId", storageId),
+      )
+      .take(1),
   ]);
-  if (galleryRefs.length > 0 || audioRefs.length > 0) {
+  if (
+    galleryRefs.length > 0 ||
+    audioRefs.length > 0 ||
+    audioArtRefs.length > 0
+  ) {
     return false;
   }
 
