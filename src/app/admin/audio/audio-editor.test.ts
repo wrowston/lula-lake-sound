@@ -12,6 +12,18 @@ function makeFile(name: string, type: string, size = 1024): File {
   return new File([data], name, { type });
 }
 
+/**
+ * Mirrors the server allowlist returned by `listDraftAudioTracks().limits`.
+ * Kept locally so the test doesn't depend on a Convex import.
+ */
+const ACCEPTED_MIME_TYPES: readonly string[] = [
+  "audio/mpeg",
+  "audio/mp3",
+  "audio/wav",
+  "audio/x-wav",
+  "audio/wave",
+];
+
 describe("defaultTitleFromFileName", () => {
   test("drops the extension", () => {
     expect(defaultTitleFromFileName("session.mp3")).toBe("Session");
@@ -85,35 +97,79 @@ describe("validateTrackFields", () => {
 
 describe("isAcceptedAudioFile", () => {
   test("accepts MP3 by mime type", () => {
-    expect(isAcceptedAudioFile(makeFile("a.mp3", "audio/mpeg"))).toBe(true);
-    expect(isAcceptedAudioFile(makeFile("a.mp3", "audio/mp3"))).toBe(true);
+    expect(
+      isAcceptedAudioFile(makeFile("a.mp3", "audio/mpeg"), ACCEPTED_MIME_TYPES),
+    ).toBe(true);
+    expect(
+      isAcceptedAudioFile(makeFile("a.mp3", "audio/mp3"), ACCEPTED_MIME_TYPES),
+    ).toBe(true);
   });
 
   test("accepts WAV by mime type variants", () => {
-    expect(isAcceptedAudioFile(makeFile("a.wav", "audio/wav"))).toBe(true);
-    expect(isAcceptedAudioFile(makeFile("a.wav", "audio/x-wav"))).toBe(true);
-    expect(isAcceptedAudioFile(makeFile("a.wav", "audio/wave"))).toBe(true);
+    expect(
+      isAcceptedAudioFile(makeFile("a.wav", "audio/wav"), ACCEPTED_MIME_TYPES),
+    ).toBe(true);
+    expect(
+      isAcceptedAudioFile(
+        makeFile("a.wav", "audio/x-wav"),
+        ACCEPTED_MIME_TYPES,
+      ),
+    ).toBe(true);
+    expect(
+      isAcceptedAudioFile(makeFile("a.wav", "audio/wave"), ACCEPTED_MIME_TYPES),
+    ).toBe(true);
   });
 
-  test("accepts any audio/* mime type as a best-effort fallback", () => {
-    // Server still enforces the strict allowlist — the client check only
-    // needs to reject obviously-wrong files before uploading.
-    expect(isAcceptedAudioFile(makeFile("a.flac", "audio/flac"))).toBe(true);
+  test("rejects audio/* MIME types not on the server allowlist", () => {
+    // The server enforces the same list, so refusing FLAC client-side avoids
+    // a wasted upload + round-trip rejection.
+    expect(
+      isAcceptedAudioFile(
+        makeFile("a.flac", "audio/flac"),
+        ACCEPTED_MIME_TYPES,
+      ),
+    ).toBe(false);
   });
 
   test("accepts by filename extension when mime type is missing", () => {
-    expect(isAcceptedAudioFile(makeFile("track.mp3", ""))).toBe(true);
-    expect(isAcceptedAudioFile(makeFile("track.wav", ""))).toBe(true);
-    expect(isAcceptedAudioFile(makeFile("track.mpeg", ""))).toBe(true);
+    expect(
+      isAcceptedAudioFile(makeFile("track.mp3", ""), ACCEPTED_MIME_TYPES),
+    ).toBe(true);
+    expect(
+      isAcceptedAudioFile(makeFile("track.wav", ""), ACCEPTED_MIME_TYPES),
+    ).toBe(true);
+  });
+
+  test("rejects .mpeg / unknown extensions when mime type is missing", () => {
+    // Server allowlist only accepts .mp3 / .wav files; the filename fallback
+    // mirrors that.
+    expect(
+      isAcceptedAudioFile(makeFile("track.mpeg", ""), ACCEPTED_MIME_TYPES),
+    ).toBe(false);
+  });
+
+  test("accepts a Set or array allowlist interchangeably", () => {
+    const asSet = new Set(ACCEPTED_MIME_TYPES);
+    expect(
+      isAcceptedAudioFile(makeFile("a.mp3", "audio/mpeg"), asSet),
+    ).toBe(true);
   });
 
   test("rejects non-audio files", () => {
-    expect(isAcceptedAudioFile(makeFile("doc.pdf", "application/pdf"))).toBe(
-      false,
-    );
-    expect(isAcceptedAudioFile(makeFile("image.png", "image/png"))).toBe(
-      false,
-    );
-    expect(isAcceptedAudioFile(makeFile("no-extension", ""))).toBe(false);
+    expect(
+      isAcceptedAudioFile(
+        makeFile("doc.pdf", "application/pdf"),
+        ACCEPTED_MIME_TYPES,
+      ),
+    ).toBe(false);
+    expect(
+      isAcceptedAudioFile(
+        makeFile("image.png", "image/png"),
+        ACCEPTED_MIME_TYPES,
+      ),
+    ).toBe(false);
+    expect(
+      isAcceptedAudioFile(makeFile("no-extension", ""), ACCEPTED_MIME_TYPES),
+    ).toBe(false);
   });
 });

@@ -60,23 +60,29 @@ const MAX_ARTIST_LENGTH = 200;
 const MAX_DESCRIPTION_LENGTH = 2000;
 
 /**
- * Client-side MIME allowlist for audio uploads. The server enforces the
- * authoritative list from `ALLOWED_AUDIO_MIME_TYPES`; this set is only used
- * for early rejection in the file picker / drag-drop so the user doesn't wait
- * for a round-trip to learn the file is unsupported.
+ * Filename fallback for audio files when the browser doesn't surface a usable
+ * MIME type. Mirrors the upload `accept` attribute (`.mp3`, `.wav`).
  */
-const ALLOWED_AUDIO_MIME_TYPES = new Set<string>([
-  "audio/mpeg",
-  "audio/mp3",
-  "audio/wav",
-  "audio/x-wav",
-  "audio/wave",
-]);
-const AUDIO_FILENAME_PATTERN = /\.(mp3|wav|mpeg)$/i;
+const AUDIO_FILENAME_PATTERN = /\.(mp3|wav)$/i;
 
-export function isAcceptedAudioFile(file: File): boolean {
-  if (file.type && ALLOWED_AUDIO_MIME_TYPES.has(file.type)) return true;
-  if (file.type && file.type.startsWith("audio/")) return true;
+/**
+ * Client-side check used for early rejection in the file picker / drag-drop.
+ * The server is authoritative — it enforces the same allowlist via
+ * `ALLOWED_AUDIO_MIME_TYPES` in `convex/audioTracks.ts` — so callers should
+ * pass the runtime list returned from `listDraftAudioTracks().limits` to keep
+ * the two in sync.
+ */
+export function isAcceptedAudioFile(
+  file: File,
+  acceptedMimeTypes: ReadonlySet<string> | readonly string[],
+): boolean {
+  if (file.type.length > 0) {
+    const set =
+      acceptedMimeTypes instanceof Set
+        ? acceptedMimeTypes
+        : new Set(acceptedMimeTypes);
+    if (set.has(file.type)) return true;
+  }
   return AUDIO_FILENAME_PATTERN.test(file.name);
 }
 
@@ -180,6 +186,10 @@ function validateOptionalHttpsUrl(raw: string, label: string): string | null {
   }
 }
 
+function isSpotifyHostname(host: string): boolean {
+  return host === "spotify.com" || host.endsWith(".spotify.com");
+}
+
 function validateStreamingUrls(
   albumThumbnailUrl: string,
   spotifyUrl: string,
@@ -194,8 +204,7 @@ function validateStreamingUrls(
     if (e) return e;
     try {
       const h = new URL(spotify).hostname.toLowerCase();
-      const spotifyOk = h === "spotify.com" || h.endsWith(".spotify.com");
-      if (!spotifyOk) {
+      if (!isSpotifyHostname(h)) {
         return "Spotify URL must be on spotify.com.";
       }
     } catch {
@@ -675,7 +684,8 @@ function AudioEditorForm() {
   const processFiles = useCallback(
     async (files: File[]) => {
       if (!data) return;
-      const audioFiles = files.filter(isAcceptedAudioFile);
+      const allowedMime = new Set<string>(data.limits.acceptedMimeTypes);
+      const audioFiles = files.filter((f) => isAcceptedAudioFile(f, allowedMime));
       if (audioFiles.length === 0) {
         toast.error("Drop MP3 or WAV files only.");
         return;
@@ -787,7 +797,7 @@ function AudioEditorForm() {
     async (stableId: string, file: File) => {
       if (!data) return;
 
-      if (!isAcceptedAudioFile(file)) {
+      if (!isAcceptedAudioFile(file, data.limits.acceptedMimeTypes)) {
         toast.error("Replacement must be an MP3 or WAV file.");
         return;
       }
@@ -1017,10 +1027,15 @@ function AudioEditorForm() {
     hasAudioDraftOnServer,
     hasFFDraftOnServer,
     runDiscardFF,
+    setEdits,
   ]);
 
   const handlePublish = useCallback(async () => {
     cancelFFAutosave();
+    const hadAudioLocalEdits = Object.keys(edits).length > 0;
+    const publishAudio = (data?.hasDraftChanges ?? false) || hadAudioLocalEdits;
+    const publishFf = hasFFDraftOnServer || hasFFLocalEdits;
+
     const saved = await savePendingEdits();
     if (!saved) {
       return;
@@ -1030,41 +1045,73 @@ function AudioEditorForm() {
       if (!flushed) return;
     }
 
-    setInlineError(null);
-    setBusy("Publishing…");
-    const audioOutcome = await runAdminEffect(
-      convexMutationEffect(() => publishAudioTracks({})),
-      { onErrorMessage: setInlineError },
-    );
-    if (audioOutcome === undefined) {
-      setBusy(null);
+    if (!publishAudio && !publishFf) {
       return;
     }
-    const ffOutcome = await runAdminEffect(runPublishFF(), {
-      onErrorMessage: setInlineError,
-    });
+
+    setInlineError(null);
+    setBusy("Publishing…");
+
+    if (publishAudio) {
+      const audioOutcome = await runAdminEffect(
+        convexMutationEffect(() => publishAudioTracks({})),
+        { onErrorMessage: setInlineError },
+      );
+      if (audioOutcome === undefined) {
+        setBusy(null);
+        return;
+      }
+    }
+
+    if (publishFf) {
+      const ffOutcome = await runAdminEffect(runPublishFF(), {
+        onErrorMessage: setInlineError,
+      });
+      setBusy(null);
+      if (ffOutcome !== undefined) {
+        clearFFLocal();
+        toast.success("Changes published.");
+      }
+      return;
+    }
+
     setBusy(null);
-    if (ffOutcome !== undefined) {
-      clearFFLocal();
+    if (publishAudio) {
       toast.success("Changes published.");
     }
   }, [
     cancelFFAutosave,
     clearFFLocal,
+    data?.hasDraftChanges,
+    edits,
     flushFFAutosave,
+    hasFFDraftOnServer,
     hasFFLocalEdits,
     publishAudioTracks,
     runPublishFF,
     savePendingEdits,
   ]);
 
+  /**
+   * Nav guard: persist in-debounce marketing toggles and unsaved track fields
+   * before leaving the page (mirrors `about-editor` composite flush).
+   */
   const flushAllAutosaves = useCallback(async (): Promise<boolean> => {
+    if (hasAudioLocalEdits) {
+      const ok = await savePendingEdits();
+      if (!ok) return false;
+    }
     if (hasFFLocalEdits) {
       const ok = await flushFFAutosave();
       if (!ok) return false;
     }
     return true;
-  }, [flushFFAutosave, hasFFLocalEdits]);
+  }, [
+    flushFFAutosave,
+    hasAudioLocalEdits,
+    hasFFLocalEdits,
+    savePendingEdits,
+  ]);
 
   const { toolbarPortal, editorRef } = useRegisterCmsEditor({
     section: "audio",
@@ -1196,7 +1243,7 @@ function AudioEditorForm() {
               onClick={() => fileInputRef.current?.click()}
               disabled={busy !== null || tracks.length >= data.limits.maxTracks}
             >
-              {busy === "Uploading…" ? (
+              {anyUploading ? (
                 <Loader2 className="mr-1 size-4 animate-spin" aria-hidden />
               ) : (
                 <Upload className="mr-1 size-4" aria-hidden />
