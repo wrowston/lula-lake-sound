@@ -1,6 +1,6 @@
 /**
- * Client-side URL normalization for the amenities editor (mirrors
- * `convex/lib/amenitiesUrl.ts`).
+ * Normalize user-entered URLs for amenities (editor + Convex save path).
+ * Returns `null` when the value should be treated as "no link" (empty / invalid).
  */
 export function normalizeAmenitiesWebsiteInput(raw: string): string | null {
   const t = raw.trim();
@@ -30,6 +30,7 @@ export function normalizeAmenitiesWebsiteInput(raw: string): string | null {
   }
 }
 
+/** Prefer https for storage when the URL parses as http. */
 export function websiteForStorage(normalized: string): string {
   try {
     const u = new URL(normalized);
