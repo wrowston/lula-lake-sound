@@ -18,7 +18,7 @@ import {
   loadPricingPackages,
 } from "./pricingTree";
 import { copySettingsScope, loadSettingsContent } from "./settingsTree";
-import { copyFaqScope, loadFaqTree } from "./faqTree";
+import { copyFaqScope, loadFaqTree, type FaqTree } from "./faqTree";
 import {
   DEFAULT_IS_ENABLED,
   effectiveIsEnabled,
@@ -302,12 +302,13 @@ async function collectFaqIssues(
   ctx: QueryCtx | MutationCtx,
 ): Promise<PublishIssue[]> {
   const draft = await loadFaqTree(ctx, "draft");
-  const tree =
-    draft.categories.length > 0
-      ? draft
-      : (await sectionHasContentDraftDiff(ctx, "faq"))
-        ? draft
-        : await loadFaqTree(ctx, "published");
+  let tree: FaqTree;
+  if (draft.categories.length > 0) {
+    tree = draft;
+  } else {
+    const published = await loadFaqTree(ctx, "published");
+    tree = published.categories.length > 0 ? draft : published;
+  }
   const issues: PublishIssue[] = [];
 
   if (tree.categories.length === 0) {
