@@ -5,11 +5,15 @@ import { api } from "../../convex/_generated/api";
 import { HomepageShell } from "@/components/homepage-shell";
 import type { PublishedAudioTrack } from "@/components/audio-portfolio";
 import type { GalleryPhoto } from "@/components/the-space";
+import type { FaqCategoryProps } from "@/components/faq";
 
 type PreloadedPricing = Preloaded<typeof api.public.getPublishedPricingFlags> | null;
 type PreloadedGear = Preloaded<typeof api.public.getPublishedGear> | null;
 type PreloadedPhotos = Preloaded<typeof api.public.getPublishedGalleryPhotos> | null;
 type PreloadedAudio = Preloaded<typeof api.public.getPublishedAudioTracks> | null;
+type PreloadedFaq = Preloaded<typeof api.public.getPublishedFaq> | null;
+
+type PublishedFaqPayload = { categories: readonly FaqCategoryProps[] };
 
 function PhotosData({
   preloaded,
@@ -116,16 +120,51 @@ function AudioLive({
   return <>{children(audio)}</>;
 }
 
+function FaqData({
+  preloaded,
+  children,
+}: {
+  preloaded: PreloadedFaq;
+  children: (faq: PublishedFaqPayload | undefined) => React.ReactNode;
+}) {
+  if (preloaded) {
+    return <FaqFromPreload preloaded={preloaded}>{children}</FaqFromPreload>;
+  }
+  return <FaqLive>{children}</FaqLive>;
+}
+
+function FaqFromPreload({
+  preloaded,
+  children,
+}: {
+  preloaded: NonNullable<PreloadedFaq>;
+  children: (faq: PublishedFaqPayload | undefined) => React.ReactNode;
+}) {
+  const faq = usePreloadedQuery(preloaded);
+  return <>{children(faq)}</>;
+}
+
+function FaqLive({
+  children,
+}: {
+  children: (faq: PublishedFaqPayload | undefined) => React.ReactNode;
+}) {
+  const faq = useQuery(api.public.getPublishedFaq);
+  return <>{children(faq)}</>;
+}
+
 function BothPreloaded({
   preloadedPricing,
   preloadedGear,
   photos,
   audioTracks,
+  faq,
 }: {
   preloadedPricing: NonNullable<PreloadedPricing>;
   preloadedGear: NonNullable<PreloadedGear>;
   photos: GalleryPhoto[] | undefined;
   audioTracks: PublishedAudioTrack[] | undefined;
+  faq: PublishedFaqPayload | undefined;
 }) {
   const pricingFlags = usePreloadedQuery(preloadedPricing);
   const gear = usePreloadedQuery(preloadedGear);
@@ -136,6 +175,7 @@ function BothPreloaded({
       gear={gear}
       photos={photos}
       audioTracks={audioTracks}
+      faqCategories={faq?.categories}
     />
   );
 }
@@ -144,10 +184,12 @@ function PricingPreloadedGearLive({
   preloadedPricing,
   photos,
   audioTracks,
+  faq,
 }: {
   preloadedPricing: NonNullable<PreloadedPricing>;
   photos: GalleryPhoto[] | undefined;
   audioTracks: PublishedAudioTrack[] | undefined;
+  faq: PublishedFaqPayload | undefined;
 }) {
   const pricingFlags = usePreloadedQuery(preloadedPricing);
   const gear = useQuery(api.public.getPublishedGear);
@@ -158,6 +200,7 @@ function PricingPreloadedGearLive({
       gear={gear}
       photos={photos}
       audioTracks={audioTracks}
+      faqCategories={faq?.categories}
     />
   );
 }
@@ -166,10 +209,12 @@ function PricingLiveGearPreloaded({
   preloadedGear,
   photos,
   audioTracks,
+  faq,
 }: {
   preloadedGear: NonNullable<PreloadedGear>;
   photos: GalleryPhoto[] | undefined;
   audioTracks: PublishedAudioTrack[] | undefined;
+  faq: PublishedFaqPayload | undefined;
 }) {
   const pricingFlags = useQuery(api.public.getPublishedPricingFlags);
   const gear = usePreloadedQuery(preloadedGear);
@@ -180,6 +225,7 @@ function PricingLiveGearPreloaded({
       gear={gear}
       photos={photos}
       audioTracks={audioTracks}
+      faqCategories={faq?.categories}
     />
   );
 }
@@ -187,9 +233,11 @@ function PricingLiveGearPreloaded({
 function BothLive({
   photos,
   audioTracks,
+  faq,
 }: {
   photos: GalleryPhoto[] | undefined;
   audioTracks: PublishedAudioTrack[] | undefined;
+  faq: PublishedFaqPayload | undefined;
 }) {
   const pricingFlags = useQuery(api.public.getPublishedPricingFlags);
   const gear = useQuery(api.public.getPublishedGear);
@@ -200,6 +248,7 @@ function BothLive({
       gear={gear}
       photos={photos}
       audioTracks={audioTracks}
+      faqCategories={faq?.categories}
     />
   );
 }
@@ -209,49 +258,62 @@ export function HomeClient({
   preloadedGear,
   preloadedPhotos,
   preloadedAudio,
+  preloadedFaq,
 }: {
   preloadedPricing: PreloadedPricing;
   preloadedGear: PreloadedGear;
   preloadedPhotos: PreloadedPhotos;
   preloadedAudio: PreloadedAudio;
+  preloadedFaq: PreloadedFaq;
 }) {
   return (
     <PhotosData preloaded={preloadedPhotos}>
       {(photos) => (
         <AudioData preloaded={preloadedAudio}>
-          {(audioTracks) => {
-            if (preloadedPricing && preloadedGear) {
-              return (
-                <BothPreloaded
-                  preloadedPricing={preloadedPricing}
-                  preloadedGear={preloadedGear}
-                  photos={photos}
-                  audioTracks={audioTracks}
-                />
-              );
-            }
-            if (preloadedPricing) {
-              return (
-                <PricingPreloadedGearLive
-                  preloadedPricing={preloadedPricing}
-                  photos={photos}
-                  audioTracks={audioTracks}
-                />
-              );
-            }
-            if (preloadedGear) {
-              return (
-                <PricingLiveGearPreloaded
-                  preloadedGear={preloadedGear}
-                  photos={photos}
-                  audioTracks={audioTracks}
-                />
-              );
-            }
-            return (
-              <BothLive photos={photos} audioTracks={audioTracks} />
-            );
-          }}
+          {(audioTracks) => (
+            <FaqData preloaded={preloadedFaq}>
+              {(faq) => {
+                if (preloadedPricing && preloadedGear) {
+                  return (
+                    <BothPreloaded
+                      preloadedPricing={preloadedPricing}
+                      preloadedGear={preloadedGear}
+                      photos={photos}
+                      audioTracks={audioTracks}
+                      faq={faq}
+                    />
+                  );
+                }
+                if (preloadedPricing) {
+                  return (
+                    <PricingPreloadedGearLive
+                      preloadedPricing={preloadedPricing}
+                      photos={photos}
+                      audioTracks={audioTracks}
+                      faq={faq}
+                    />
+                  );
+                }
+                if (preloadedGear) {
+                  return (
+                    <PricingLiveGearPreloaded
+                      preloadedGear={preloadedGear}
+                      photos={photos}
+                      audioTracks={audioTracks}
+                      faq={faq}
+                    />
+                  );
+                }
+                return (
+                  <BothLive
+                    photos={photos}
+                    audioTracks={audioTracks}
+                    faq={faq}
+                  />
+                );
+              }}
+            </FaqData>
+          )}
         </AudioData>
       )}
     </PhotosData>

@@ -32,6 +32,10 @@ describe("DEFAULT_IS_ENABLED", () => {
     expect(DEFAULT_IS_ENABLED.about).toBe(false);
     expect(DEFAULT_IS_ENABLED.recordings).toBe(false);
   });
+
+  test("faq defaults on (homepage block always available)", () => {
+    expect(DEFAULT_IS_ENABLED.faq).toBe(true);
+  });
 });
 
 describe("effectiveIsEnabled", () => {

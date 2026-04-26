@@ -3,12 +3,14 @@ import { v } from "convex/values";
 import {
   aboutContentValidator,
   cmsSectionValidator,
+  cmsSnapshotValidator,
   pricingContentValidator,
   settingsContentValidator,
 } from "./schema.shared";
 import {
   defaultSnapshotForSection,
   type AboutSnapshot,
+  type FaqSnapshot,
   type PricingSnapshot,
   type SettingsSnapshot,
 } from "./cmsShared";
@@ -49,6 +51,12 @@ import {
   loadSettingsContent,
   replaceSettingsDraft,
 } from "./settingsTree";
+import {
+  copyFaqScope,
+  loadFaqTree,
+  materializeFaqCategories,
+  replaceFaqDraftFromCategories,
+} from "./faqTree";
 import { cmsValidationError } from "./errors";
 
 /**
@@ -103,11 +111,7 @@ export const getSection = query({
 export const saveDraft = mutation({
   args: {
     section: cmsSectionValidator,
-    content: v.union(
-      settingsContentValidator,
-      pricingContentValidator,
-      aboutContentValidator,
-    ),
+    content: cmsSnapshotValidator,
   },
   handler: async (ctx, args) => {
     const { updatedBy } = await requireCmsOwner(ctx);
@@ -123,6 +127,9 @@ export const saveDraft = mutation({
         ?.priceTabEnabled !== undefined;
     const isAboutPayload =
       "heroTitle" in args.content && "body" in args.content;
+    const isFaqPayload =
+      "categories" in args.content &&
+      Array.isArray((args.content as { categories?: unknown }).categories);
 
     if (args.section === "settings") {
       if (!isSettingsPayload) {
@@ -151,6 +158,10 @@ export const saveDraft = mutation({
           "content",
         );
       }
+    } else if (args.section === "faq") {
+      if (!isFaqPayload) {
+        cmsValidationError("FAQ content must include a categories array.", "content");
+      }
     } else {
       cmsValidationError(
         "Recordings has no content; only the visibility flag is editable.",
@@ -168,6 +179,11 @@ export const saveDraft = mutation({
       const beforeUnion = await unionAboutTeamStorage(ctx);
       await replaceAboutDraftFromSnapshot(ctx, args.content as AboutSnapshot);
       await pruneAboutTeamBlobsAfterSaveDraftScoped(ctx, beforeUnion);
+    } else if (args.section === "faq") {
+      await replaceFaqDraftFromCategories(
+        ctx,
+        (args.content as FaqSnapshot).categories,
+      );
     }
 
     await recomputeSectionHasDraftChanges(ctx, args.section, updatedBy);
@@ -202,7 +218,13 @@ export const listPendingDrafts = query({
     if (identity === null) {
       return {
         sections: [] as Array<
-          "settings" | "pricing" | "about" | "recordings" | "gear" | "photos"
+          | "settings"
+          | "pricing"
+          | "about"
+          | "recordings"
+          | "faq"
+          | "gear"
+          | "photos"
         >,
       };
     }
@@ -222,7 +244,13 @@ export const listPendingDrafts = query({
     ]);
 
     const sections: Array<
-      "settings" | "pricing" | "about" | "recordings" | "gear" | "photos"
+      | "settings"
+      | "pricing"
+      | "about"
+      | "recordings"
+      | "faq"
+      | "gear"
+      | "photos"
     > = [];
     for (const row of cmsRows) {
       if (row.hasDraftChanges) sections.push(row.section);
@@ -567,6 +595,8 @@ export const discardDraft = mutation({
         await copyPricingScope(ctx, "published", "draft");
       } else if (args.section === "settings") {
         await copySettingsScope(ctx, "published", "draft");
+      } else if (args.section === "faq") {
+        await copyFaqScope(ctx, "published", "draft");
       }
     }
 
@@ -664,6 +694,19 @@ async function readSnapshotForAdmin(
           }
         : {}),
     } satisfies AboutSnapshot;
+  }
+
+  if (section === "faq") {
+    const tree = await loadFaqTree(ctx, scope);
+    if (tree.categories.length === 0) {
+      if (scope === "draft") {
+        return { categories: [] } satisfies FaqSnapshot;
+      }
+      return defaultSnapshotForSection("faq");
+    }
+    return {
+      categories: materializeFaqCategories(tree),
+    } satisfies FaqSnapshot;
   }
 
   // recordings — flag-only, no content. Return an empty about-shaped default

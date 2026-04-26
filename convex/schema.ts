@@ -5,6 +5,8 @@ import {
   aboutHighlightRowValidator,
   aboutTeamMemberRowValidator,
   cmsSectionValidator,
+  faqCategoryRowValidator,
+  faqQuestionRowValidator,
   gearScopeValidator,
   gearSpecsValidator,
   pricingPackageRowValidator,
@@ -24,6 +26,7 @@ import {
  *   scope onto the published scope in a single mutation.
  * - The `recordings` section row is flag-only; recording/audio content is
  *   authored separately in `audioTracks` and published through the audio CMS.
+ * - The `faq` section uses `faqCategories` + `faqQuestions` scoped tables.
  */
 export default defineSchema({
   inquiries: defineTable({
@@ -69,6 +72,18 @@ export default defineSchema({
   settingsContent: defineTable(settingsContentRowValidator).index("by_scope", [
     "scope",
   ]),
+
+  faqCategories: defineTable(faqCategoryRowValidator)
+    .index("by_scope_and_sort", ["scope", "sort"])
+    .index("by_scope_and_stableId", ["scope", "stableId"]),
+
+  faqQuestions: defineTable(faqQuestionRowValidator)
+    .index("by_scope_and_category_and_sort", [
+      "scope",
+      "categoryStableId",
+      "sort",
+    ])
+    .index("by_scope_and_stableId", ["scope", "stableId"]),
 
   gearMeta: defineTable({
     singletonKey: v.literal("default"),
