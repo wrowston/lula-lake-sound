@@ -2,6 +2,7 @@ import { describe, expect, test } from "bun:test";
 import {
   ABOUT_DEFAULTS,
   DEFAULT_PRICING_PACKAGES,
+  FAQ_DEFAULTS,
   MARKETING_FEATURE_FLAGS_DEFAULTS,
   PRICING_DEFAULTS,
   SETTINGS_DEFAULTS,
@@ -72,6 +73,22 @@ describe("MARKETING_FEATURE_FLAGS_DEFAULTS", () => {
   });
 });
 
+describe("FAQ_DEFAULTS", () => {
+  test("has categories with questions", () => {
+    expect(FAQ_DEFAULTS.categories.length).toBeGreaterThan(0);
+    for (const c of FAQ_DEFAULTS.categories) {
+      expect(c.stableId.length).toBeGreaterThan(0);
+      expect(c.title.length).toBeGreaterThan(0);
+      expect(c.questions.length).toBeGreaterThan(0);
+      for (const q of c.questions) {
+        expect(q.stableId.length).toBeGreaterThan(0);
+        expect(q.question.length).toBeGreaterThan(0);
+        expect(q.answer.length).toBeGreaterThan(0);
+      }
+    }
+  });
+});
+
 describe("ABOUT_DEFAULTS", () => {
   test("has a hero title and at least one body block", () => {
     expect(ABOUT_DEFAULTS.heroTitle.length).toBeGreaterThan(0);
@@ -91,6 +108,7 @@ describe("defaultSnapshotForSection", () => {
     expect(defaultSnapshotForSection("settings")).toEqual(SETTINGS_DEFAULTS);
     expect(defaultSnapshotForSection("pricing")).toEqual(PRICING_DEFAULTS);
     expect(defaultSnapshotForSection("about")).toEqual(ABOUT_DEFAULTS);
+    expect(defaultSnapshotForSection("faq")).toEqual(FAQ_DEFAULTS);
   });
 
   test("recordings returns an about-shaped placeholder (no content table)", () => {

@@ -27,6 +27,7 @@ import type * as cmsPublishHelpers from "../cmsPublishHelpers.js";
 import type * as cmsShared from "../cmsShared.js";
 import type * as crons from "../crons.js";
 import type * as errors from "../errors.js";
+import type * as faqPreviewDraft from "../faqPreviewDraft.js";
 import type * as galleryPhotos from "../galleryPhotos.js";
 import type * as gearEquipmentSeed from "../gearEquipmentSeed.js";
 import type * as gearLegacySeed from "../gearLegacySeed.js";
@@ -75,6 +76,7 @@ declare const fullApi: ApiFromModules<{
   cmsShared: typeof cmsShared;
   crons: typeof crons;
   errors: typeof errors;
+  faqPreviewDraft: typeof faqPreviewDraft;
   galleryPhotos: typeof galleryPhotos;
   gearEquipmentSeed: typeof gearEquipmentSeed;
   gearLegacySeed: typeof gearLegacySeed;

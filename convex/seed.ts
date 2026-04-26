@@ -3,6 +3,7 @@ import { internalMutation } from "./_generated/server";
 import {
   ABOUT_DEFAULTS,
   DEFAULT_PRICING_PACKAGES,
+  FAQ_DEFAULTS,
   SETTINGS_DEFAULTS,
 } from "./cmsShared";
 import {
@@ -12,13 +13,14 @@ import {
 import { ABOUT_CONTENT_DEFAULTS, loadAboutContent } from "./aboutTree";
 import { loadPricingPackages } from "./pricingTree";
 import { loadSettingsContent } from "./settingsTree";
+import { loadFaqTree, replaceFaqScopeFromCategories } from "./faqTree";
 import { LEGACY_EQUIPMENT_SEED } from "./gearEquipmentSeed";
 import { insertLegacyEquipmentSeedDraft } from "./gearLegacySeed";
 import { deleteAllGearForScope, loadGearDocs } from "./gearTree";
 
 /**
- * Idempotent seed for local dev: creates the four `cmsSections` metadata rows
- * (settings, pricing, about, recordings) and seeds per-section published-scope
+ * Idempotent seed for local dev: creates the `cmsSections` metadata rows
+ * (settings, pricing, about, recordings, faq) and seeds per-section published-scope
  * content so the admin editors and public queries have a consistent baseline.
  *
  * Run once after deploying schema:
@@ -28,13 +30,19 @@ export const seedSiteSettingsDefaults = internalMutation({
   args: {},
   handler: async (ctx) => {
     type SectionSeedResult = {
-      section: "settings" | "pricing" | "about" | "recordings";
+      section: "settings" | "pricing" | "about" | "recordings" | "faq";
       status: "already_seeded" | "inserted";
     };
 
     const results: SectionSeedResult[] = [];
 
-    for (const section of ["settings", "pricing", "about", "recordings"] as const) {
+    for (const section of [
+      "settings",
+      "pricing",
+      "about",
+      "recordings",
+      "faq",
+    ] as const) {
       const before = await ctx.db
         .query("cmsSections")
         .withIndex("by_section", (q) => q.eq("section", section))
@@ -106,11 +114,42 @@ export const seedSiteSettingsDefaults = internalMutation({
       }
     }
 
+    const faqPublished = await loadFaqTree(ctx, "published");
+    if (faqPublished.categories.length === 0) {
+      await replaceFaqScopeFromCategories(
+        ctx,
+        "published",
+        FAQ_DEFAULTS.categories,
+      );
+    }
+
     return {
       results,
       defaultIsEnabled: DEFAULT_IS_ENABLED,
       aboutDefaultsHeroTitle: ABOUT_DEFAULTS.heroTitle,
     };
+  },
+});
+
+/**
+ * One-time backfill: seeds `scope="published"` FAQ rows from shipped defaults
+ * when the published tree is empty. Safe to run on existing deployments
+ * (`bunx convex run internal.seed.migrateFaqPublishedIfEmpty`).
+ */
+export const migrateFaqPublishedIfEmpty = internalMutation({
+  args: {},
+  handler: async (ctx) => {
+    const published = await loadFaqTree(ctx, "published");
+    if (published.categories.length > 0) {
+      return { ok: true as const, kind: "already_has_content" as const };
+    }
+    await ensureSectionMetaRow(ctx, "faq", undefined);
+    await replaceFaqScopeFromCategories(
+      ctx,
+      "published",
+      FAQ_DEFAULTS.categories,
+    );
+    return { ok: true as const, kind: "inserted" as const };
   },
 });
 

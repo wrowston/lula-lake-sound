@@ -5,12 +5,13 @@ import { HomepageShell } from "@/components/homepage-shell";
 
 export default async function Home() {
   try {
-    const [pricingSettled, gearSettled, photosSettled, audioSettled] =
+    const [pricingSettled, gearSettled, photosSettled, audioSettled, faqSettled] =
       await Promise.allSettled([
         preloadQuery(api.public.getPublishedPricingFlags),
         preloadQuery(api.public.getPublishedGear),
         preloadQuery(api.public.getPublishedGalleryPhotos),
         preloadQuery(api.public.getPublishedAudioTracks),
+        preloadQuery(api.public.getPublishedFaq),
       ]);
     const preloadedPricing =
       pricingSettled.status === "fulfilled" ? pricingSettled.value : null;
@@ -20,11 +21,14 @@ export default async function Home() {
       photosSettled.status === "fulfilled" ? photosSettled.value : null;
     const preloadedAudio =
       audioSettled.status === "fulfilled" ? audioSettled.value : null;
+    const preloadedFaq =
+      faqSettled.status === "fulfilled" ? faqSettled.value : null;
     if (
       preloadedPricing === null &&
       preloadedGear === null &&
       preloadedPhotos === null &&
-      preloadedAudio === null
+      preloadedAudio === null &&
+      preloadedFaq === null
     ) {
       return (
         <HomepageShell
@@ -33,6 +37,7 @@ export default async function Home() {
           gear={null}
           photos={null}
           audioTracks={null}
+          faqCategories={null}
         />
       );
     }
@@ -42,6 +47,7 @@ export default async function Home() {
         preloadedGear={preloadedGear}
         preloadedPhotos={preloadedPhotos}
         preloadedAudio={preloadedAudio}
+        preloadedFaq={preloadedFaq}
       />
     );
   } catch {
@@ -52,6 +58,7 @@ export default async function Home() {
         gear={null}
         photos={null}
         audioTracks={null}
+        faqCategories={null}
       />
     );
   }

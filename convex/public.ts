@@ -10,6 +10,8 @@ import type { Doc } from "./_generated/dataModel";
 import { loadGalleryPhotos, materializeGalleryPhotos } from "./galleryPhotos";
 import { loadAudioTracks, materializeAudioTracks } from "./audioTracks";
 import { getSectionMetaRow, publishedIsEnabled } from "./cmsMeta";
+import { FAQ_DEFAULTS } from "./cmsShared";
+import { loadFaqTree, materializeFaqCategories } from "./faqTree";
 
 /**
  * **Public (anonymous) site reads** — published only.
@@ -114,6 +116,21 @@ export const getPublishedAudioTracks = query({
  * and returns the historical shape `{ aboutPage, recordingsPage, pricingSection }`
  * so the existing frontend consumers keep working without changes.
  */
+/**
+ * Published homepage FAQ (plain text answers). Falls back to shipped defaults
+ * when the published scope has not been seeded yet.
+ */
+export const getPublishedFaq = query({
+  args: {},
+  handler: async (ctx) => {
+    const tree = await loadFaqTree(ctx, "published");
+    if (tree.categories.length === 0) {
+      return { categories: FAQ_DEFAULTS.categories };
+    }
+    return { categories: materializeFaqCategories(tree) };
+  },
+});
+
 export const getPublishedMarketingFeatureFlags = query({
   args: {},
   handler: async (ctx) => {
