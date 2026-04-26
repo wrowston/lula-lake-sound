@@ -967,7 +967,7 @@ function QuestionRow({
           <CircleHelp className="size-3" aria-hidden />
           <span className="tabular-nums">Q · {pad(index + 1)}</span>
         </span>
-        <div className="flex items-center gap-1">
+        <div className="flex shrink-0 items-center gap-1">
           <Button
             type="button"
             size="icon"
@@ -975,9 +975,8 @@ function QuestionRow({
             aria-label={`Move question ${index + 1} up`}
             disabled={index === 0}
             onClick={onMoveUp}
-            className="size-8"
           >
-            <ArrowUp className="size-3.5" />
+            <ArrowUp className="size-4" />
           </Button>
           <Button
             type="button"
@@ -986,19 +985,18 @@ function QuestionRow({
             aria-label={`Move question ${index + 1} down`}
             disabled={index === total - 1}
             onClick={onMoveDown}
-            className="size-8"
           >
-            <ArrowDown className="size-3.5" />
+            <ArrowDown className="size-4" />
           </Button>
           <Button
             type="button"
-            size="sm"
+            size="icon"
             variant="ghost"
-            className="h-8 gap-1 text-muted-foreground hover:text-destructive"
+            className="text-destructive hover:bg-destructive/10 hover:text-destructive"
+            aria-label={`Remove question ${index + 1}`}
             onClick={onRemove}
           >
-            <Trash2 className="size-3.5" aria-hidden />
-            Remove
+            <Trash2 className="size-4" />
           </Button>
         </div>
       </div>
