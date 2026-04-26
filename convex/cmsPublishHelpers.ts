@@ -307,7 +307,7 @@ async function collectFaqIssues(
     tree = draft;
   } else {
     const published = await loadFaqTree(ctx, "published");
-    tree = published.categories.length > 0 ? draft : published;
+    tree = published;
   }
   const issues: PublishIssue[] = [];
 
