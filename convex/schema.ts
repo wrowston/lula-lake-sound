@@ -7,6 +7,8 @@ import {
   amenitiesNearbyCopyRowValidator,
   amenitiesNearbyItemRowValidator,
   cmsSectionValidator,
+  faqCategoryRowValidator,
+  faqQuestionRowValidator,
   gearScopeValidator,
   gearSpecsValidator,
   pricingPackageRowValidator,
@@ -24,8 +26,9 @@ import {
  *   `pricingPackages`, `settingsContent`) using the same `scope: "draft" | "published"`
  *   pattern as `gearCategories` / `galleryPhotos`. Publish copies the draft
  *   scope onto the published scope in a single mutation.
- * - The `recordings` section is flag-only (no content table); the public page
- *   reads copy from `src/app/recordings/recordings-data.ts`.
+ * - The `recordings` section row is flag-only; recording/audio content is
+ *   authored separately in `audioTracks` and published through the audio CMS.
+ * - The `faq` section uses `faqCategories` + `faqQuestions` scoped tables.
  * - `amenitiesNearby` — homepage local favorites (`amenitiesNearbyCopy` +
  *   `amenitiesNearbyItems` scoped tables).
  */
@@ -73,6 +76,18 @@ export default defineSchema({
   settingsContent: defineTable(settingsContentRowValidator).index("by_scope", [
     "scope",
   ]),
+
+  faqCategories: defineTable(faqCategoryRowValidator)
+    .index("by_scope_and_sort", ["scope", "sort"])
+    .index("by_scope_and_stableId", ["scope", "stableId"]),
+
+  faqQuestions: defineTable(faqQuestionRowValidator)
+    .index("by_scope_and_category_and_sort", [
+      "scope",
+      "categoryStableId",
+      "sort",
+    ])
+    .index("by_scope_and_stableId", ["scope", "stableId"]),
 
   amenitiesNearbyCopy: defineTable(amenitiesNearbyCopyRowValidator).index(
     "by_scope",
@@ -165,6 +180,12 @@ export default defineSchema({
     storageId: v.id("_storage"),
     title: v.string(),
     artist: v.optional(v.string()),
+    /** Displayed on the public recordings table. */
+    genre: v.optional(v.string()),
+    /** Release/recording year displayed on the public recordings table. */
+    year: v.optional(v.number()),
+    /** Optional engineering/production credit for the public recordings row. */
+    role: v.optional(v.string()),
     description: v.string(),
     mimeType: v.string(),
     durationSec: v.optional(v.number()),

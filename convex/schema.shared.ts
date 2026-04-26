@@ -8,7 +8,8 @@ import { v } from "convex/values";
  * - `settings`   — site metadata (title, description; extend as CMS grows).
  * - `pricing`    — pricing package catalogue that drives the public pricing block.
  * - `about`      — About page hero copy, body block array, optional highlights, SEO meta, optional team headshots.
- * - `recordings` — public recordings page (flag-only; content lives in `src/app/recordings/recordings-data.ts`).
+ * - `recordings` — public recordings page visibility flag; audio content lives in `audioTracks`.
+ * - `faq`        — homepage FAQ (categories → questions → answers); scoped rows in `faqCategories` / `faqQuestions`.
  * - `amenitiesNearby` — homepage "Local Favorites" cards (`amenitiesNearbyCopy` + `amenitiesNearbyItems`).
  *
  * Content for each section (when any) lives in dedicated scoped tables using the
@@ -133,6 +134,27 @@ export const aboutTeamMemberValidator = v.object({
   storageId: v.optional(v.id("_storage")),
 });
 
+/** One FAQ answer row as authored in admin / snapshot payloads (plain text). */
+export const faqQuestionValidator = v.object({
+  stableId: v.string(),
+  question: v.string(),
+  answer: v.string(),
+});
+
+/** One FAQ category with ordered questions. */
+export const faqCategoryValidator = v.object({
+  stableId: v.string(),
+  title: v.string(),
+  questions: v.array(faqQuestionValidator),
+});
+
+/**
+ * Homepage FAQ snapshot shape (admin `saveDraft` + `getSection` overlay).
+ */
+export const faqContentValidator = v.object({
+  categories: v.array(faqCategoryValidator),
+});
+
 /**
  * @deprecated `about` content now lives in `aboutContent` + `aboutHighlights`
  * + `aboutTeamMembers` scoped tables. This validator remains only so that
@@ -152,16 +174,43 @@ export const aboutContentValidator = v.object({
   teamMembers: v.optional(v.array(aboutTeamMemberValidator)),
 });
 
+export const amenitiesNearbyEntryValidator = v.object({
+  stableId: v.string(),
+  name: v.string(),
+  type: v.string(),
+  description: v.string(),
+  website: v.string(),
+});
+
+export const amenitiesNearbySnapshotValidator = v.object({
+  eyebrow: v.optional(v.string()),
+  heading: v.optional(v.string()),
+  intro: v.optional(v.string()),
+  rows: v.array(amenitiesNearbyEntryValidator),
+});
+
+/**
+ * Union of section snapshot payloads (admin `saveDraft` / `getSection` content).
+ */
+export const cmsSnapshotValidator = v.union(
+  settingsContentValidator,
+  pricingContentValidator,
+  aboutContentValidator,
+  faqContentValidator,
+  amenitiesNearbySnapshotValidator,
+);
+
 /**
  * The set of sections tracked in `cmsSections`. `recordings` was added when
  * flags moved off the `marketingFeatureFlags` singleton and onto `cmsSections`
- * rows; it has no content table today (flag-only).
+ * rows; its visibility is flag-only while audio content is stored separately.
  */
 export const cmsSectionValidator = v.union(
   v.literal("settings"),
   v.literal("pricing"),
   v.literal("about"),
   v.literal("recordings"),
+  v.literal("faq"),
   v.literal("amenitiesNearby"),
 );
 
@@ -229,6 +278,24 @@ export const settingsContentRowValidator = {
   description: v.optional(v.string()),
 } as const;
 
+/** FAQ category heading — one row per category per scope. */
+export const faqCategoryRowValidator = {
+  scope: cmsScopeValidator,
+  stableId: v.string(),
+  title: v.string(),
+  sort: v.number(),
+} as const;
+
+/** FAQ Q&A — one row per question per scope. */
+export const faqQuestionRowValidator = {
+  scope: cmsScopeValidator,
+  stableId: v.string(),
+  categoryStableId: v.string(),
+  sort: v.number(),
+  question: v.string(),
+  answer: v.string(),
+} as const;
+
 /** Optional section chrome for homepage amenities block — one row per scope. */
 export const amenitiesNearbyCopyRowValidator = {
   scope: cmsScopeValidator,
@@ -247,21 +314,6 @@ export const amenitiesNearbyItemRowValidator = {
   website: v.string(),
   sort: v.number(),
 } as const;
-
-export const amenitiesNearbyEntryValidator = v.object({
-  stableId: v.string(),
-  name: v.string(),
-  type: v.string(),
-  description: v.string(),
-  website: v.string(),
-});
-
-export const amenitiesNearbySnapshotValidator = v.object({
-  eyebrow: v.optional(v.string()),
-  heading: v.optional(v.string()),
-  intro: v.optional(v.string()),
-  rows: v.array(amenitiesNearbyEntryValidator),
-});
 
 /** Draft vs published rows in `gearCategories` / `gearItems` (INF-86). */
 export const gearScopeValidator = cmsScopeValidator;

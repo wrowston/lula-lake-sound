@@ -18,6 +18,7 @@ function PreviewContent() {
   // Tracks whether the About section has unpublished draft content so the
   // preview banner can reflect it. Owner-only — returns `null` for non-owners.
   const aboutPreview = useQuery(api.aboutPreviewDraft.getPreviewAbout);
+  const faqPreview = useQuery(api.faqPreviewDraft.getPreviewFaq);
   const marketingPreview = useQuery(api.cms.getPreviewMarketingFeatureFlags);
   const amenitiesPreview = useQuery(
     api.amenitiesPreviewDraft.getPreviewAmenitiesNearby,
@@ -29,6 +30,7 @@ function PreviewContent() {
     photoPreview === undefined ||
     audioPreview === undefined ||
     aboutPreview === undefined ||
+    faqPreview === undefined ||
     marketingPreview === undefined ||
     amenitiesPreview === undefined
   ) {
@@ -45,6 +47,7 @@ function PreviewContent() {
     photoPreview === null ||
     audioPreview === null ||
     aboutPreview === null ||
+    faqPreview === null ||
     marketingPreview === null ||
     amenitiesPreview === null
   ) {
@@ -63,6 +66,7 @@ function PreviewContent() {
     photoPreview.hasDraftChanges ||
     audioPreview.hasDraftChanges ||
     aboutPreview.hasDraftChanges ||
+    faqPreview.hasDraftChanges ||
     marketingPreview.hasDraftChanges ||
     amenitiesPreview.hasDraftChanges;
 
@@ -106,6 +110,7 @@ function PreviewContent() {
       gear={{ categories: gearPreview.categories }}
       photos={photoPreview.photos}
       audioTracks={audioTracks}
+      faqCategories={faqPreview.categories}
       amenities={amenitiesPayload}
       banner={<PreviewBanner hasDraftChanges={hasDraftChanges} />}
     />

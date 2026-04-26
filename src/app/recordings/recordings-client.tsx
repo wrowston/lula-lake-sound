@@ -4,7 +4,7 @@ import { Music } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { useState, type ReactNode } from "react";
+import { useRef, useState, type ReactNode } from "react";
 
 import { Header } from "@/components/header";
 import { SiteFooter } from "@/components/site-footer";
@@ -17,6 +17,17 @@ import {
 } from "@/lib/site-settings";
 
 import type { Recording } from "./recordings-data";
+
+function recordingGenreLabel(track: Recording): string {
+  const g = track.genre?.trim();
+  return g ? g : "—";
+}
+
+function recordingYearLabel(track: Recording): string {
+  return track.year !== undefined && track.year > 0
+    ? String(track.year)
+    : "—";
+}
 
 /**
  * Public Recordings page shell (INF-48).
@@ -102,11 +113,11 @@ function Waveform({ seed, isActive, isPlaying }: WaveformProps) {
               isPlaying && isActive && "recordings-waveform-bar--playing",
             )}
             style={{
-              height: `${Math.min(h, 95)}%`,
+              height: `${Math.min(h, 95).toFixed(2)}%`,
               ...(isPlaying && isActive
                 ? {
-                    animationDuration: `${0.4 + (j % 5) * 0.07 + (seed % 3) * 0.05}s`,
-                    animationDelay: `${-((j * 11 + seed * 3) % 100) / 250}s`,
+                    animationDuration: `${(0.4 + (j % 5) * 0.07 + (seed % 3) * 0.05).toFixed(2)}s`,
+                    animationDelay: `${(-((j * 11 + seed * 3) % 100) / 250).toFixed(3)}s`,
                   }
                 : {}),
             }}
@@ -240,11 +251,37 @@ function TrackRow({
   const progress =
     duration > 0 ? Math.min(1, Math.max(0, currentTime / duration)) : 0;
 
-  function handleProgressClick(e: React.MouseEvent<HTMLDivElement>) {
-    if (!isActive) return;
-    const rect = e.currentTarget.getBoundingClientRect();
-    const fraction = (e.clientX - rect.left) / rect.width;
-    onSeekFraction(fraction);
+  const sliderRef = useRef<HTMLDivElement | null>(null);
+  const [isScrubbing, setIsScrubbing] = useState(false);
+
+  function fractionFromClientX(clientX: number): number {
+    const el = sliderRef.current;
+    if (!el) return 0;
+    const rect = el.getBoundingClientRect();
+    if (rect.width <= 0) return 0;
+    const fraction = (clientX - rect.left) / rect.width;
+    return Math.max(0, Math.min(1, fraction));
+  }
+
+  function handleSliderPointerDown(e: React.PointerEvent<HTMLDivElement>) {
+    if (!isActive || duration <= 0) return;
+    if (e.button !== 0 && e.pointerType === "mouse") return;
+    e.currentTarget.setPointerCapture(e.pointerId);
+    setIsScrubbing(true);
+    onSeekFraction(fractionFromClientX(e.clientX));
+  }
+
+  function handleSliderPointerMove(e: React.PointerEvent<HTMLDivElement>) {
+    if (!isScrubbing) return;
+    onSeekFraction(fractionFromClientX(e.clientX));
+  }
+
+  function handleSliderPointerEnd(e: React.PointerEvent<HTMLDivElement>) {
+    if (!isScrubbing) return;
+    if (e.currentTarget.hasPointerCapture(e.pointerId)) {
+      e.currentTarget.releasePointerCapture(e.pointerId);
+    }
+    setIsScrubbing(false);
   }
 
   const rowLabel = isPlaying
@@ -342,13 +379,13 @@ function TrackRow({
 
             <span
               className="label-text truncate pr-1 text-right text-[10px] tracking-[0.12em] text-ivory/45"
-              title={track.genre}
+              title={recordingGenreLabel(track)}
             >
-              {track.genre}
+              {recordingGenreLabel(track)}
             </span>
 
             <span className="label-text pl-1 text-right text-[10px] tabular-nums tracking-[0.12em] text-ivory/45">
-              {track.year}
+              {recordingYearLabel(track)}
             </span>
           </button>
 
@@ -357,55 +394,61 @@ function TrackRow({
           </div>
         </div>
 
-        {/* Mobile row */}
-        <button
-          type="button"
-          onClick={() => onToggle(track.id)}
-          aria-label={rowLabel}
-          aria-pressed={isPlaying}
-          className="md:hidden flex w-full items-center gap-3 px-3 py-4 text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-gold/60"
-        >
-          <span
-            className={cn(
-              "flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-full border transition-all duration-300",
-              isPlaying
-                ? "bg-gold border-gold text-washed-black"
-                : "border-sand/30 text-sand/60",
-            )}
+        {/* Mobile row — play and title-block are siblings (rather than the
+            title-block being nested inside the play button) so streaming
+            anchors can sit inline with the metadata line without nesting
+            interactive elements inside a button. */}
+        <div className="md:hidden flex items-center gap-3 px-3 py-4">
+          <button
+            type="button"
+            onClick={() => onToggle(track.id)}
+            aria-label={rowLabel}
+            aria-pressed={isPlaying}
+            className="rounded-full focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-gold/60"
           >
-            <PlayPauseIcon isActive={isPlaying} className="h-3.5 w-3.5" />
-          </span>
-          <AlbumThumbnail track={track} />
-          <span className="min-w-0 flex-1">
             <span
               className={cn(
-                "headline-secondary block truncate text-base transition-colors",
-                isActive ? "text-gold" : "text-warm-white",
+                "flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-full border transition-all duration-300",
+                isPlaying
+                  ? "bg-gold border-gold text-washed-black"
+                  : "border-sand/30 text-sand/60",
               )}
-              title={track.title}
             >
-              {track.title}
+              <PlayPauseIcon isActive={isPlaying} className="h-3.5 w-3.5" />
             </span>
-            <span
-              className="body-text-small mt-0.5 block truncate text-xs text-ivory/55"
-              title={`${track.artist} — ${track.genre} — ${track.year}`}
-            >
-              {track.artist} · {track.genre} · {track.year}
+          </button>
+          <button
+            type="button"
+            tabIndex={-1}
+            onClick={() => onToggle(track.id)}
+            aria-label={rowLabel}
+            aria-pressed={isPlaying}
+            className="flex min-w-0 flex-1 items-center gap-3 text-left focus-visible:outline-none"
+          >
+            <AlbumThumbnail track={track} />
+            <span className="min-w-0 flex-1">
+              <span
+                className={cn(
+                  "headline-secondary block truncate text-base transition-colors",
+                  isActive ? "text-gold" : "text-warm-white",
+                )}
+                title={track.title}
+              >
+                {track.title}
+              </span>
+              <span
+                className="body-text-small mt-0.5 block truncate text-xs text-ivory/55"
+                title={`${track.artist} — ${recordingGenreLabel(track)} — ${recordingYearLabel(track)}`}
+              >
+                {track.artist} · {recordingGenreLabel(track)} ·{" "}
+                {recordingYearLabel(track)}
+              </span>
             </span>
-          </span>
-        </button>
-
-        {track.spotifyUrl || track.appleMusicUrl ? (
-          <div className="md:hidden flex items-center gap-3 border-t border-sand/10 px-3 py-3 pl-[7.25rem]">
-            <span className="label-text shrink-0 text-[9px] tracking-[0.2em] text-sand/45">
-              Stream
-            </span>
-            <StreamingLinks
-              track={track}
-              className="justify-start gap-3"
-            />
-          </div>
-        ) : null}
+          </button>
+          {track.spotifyUrl || track.appleMusicUrl ? (
+            <StreamingLinks track={track} className="shrink-0" />
+          ) : null}
+        </div>
 
         {/* In-playback duration UX — elapsed / total + progress bar, shown
             only for the active row so the required duration context is
@@ -417,6 +460,7 @@ function TrackRow({
                 {formatTime(currentTime)}
               </span>
               <div
+                ref={sliderRef}
                 role="slider"
                 aria-label={`Seek — ${track.title}`}
                 aria-valuemin={0}
@@ -424,7 +468,10 @@ function TrackRow({
                 aria-valuenow={Math.floor(currentTime)}
                 aria-valuetext={`${formatTime(currentTime)} of ${formatTime(duration)}`}
                 tabIndex={0}
-                onClick={handleProgressClick}
+                onPointerDown={handleSliderPointerDown}
+                onPointerMove={handleSliderPointerMove}
+                onPointerUp={handleSliderPointerEnd}
+                onPointerCancel={handleSliderPointerEnd}
                 onKeyDown={(e) => {
                   if (duration <= 0) return;
                   if (e.key === "ArrowRight") {
@@ -437,17 +484,36 @@ function TrackRow({
                     onSeekFraction(
                       Math.max(0, (currentTime - 5) / duration),
                     );
+                  } else if (e.key === "Home") {
+                    e.preventDefault();
+                    onSeekFraction(0);
+                  } else if (e.key === "End") {
+                    e.preventDefault();
+                    onSeekFraction(1);
                   }
                 }}
-                className="group/bar relative h-1 flex-1 cursor-pointer rounded-full bg-sand/15 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-gold/60"
+                className={cn(
+                  "group/bar relative h-1 flex-1 rounded-full bg-sand/15 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-gold/60",
+                  isScrubbing ? "cursor-grabbing" : "cursor-pointer",
+                  "touch-none select-none",
+                )}
+                style={{ touchAction: "none" }}
               >
                 <div
-                  className="absolute inset-y-0 left-0 rounded-full bg-gold/85 transition-[width]"
+                  className={cn(
+                    "absolute inset-y-0 left-0 rounded-full bg-gold/85",
+                    isScrubbing ? "" : "transition-[width]",
+                  )}
                   style={{ width: `${progress * 100}%` }}
                 />
                 <div
                   aria-hidden
-                  className="absolute top-1/2 -translate-y-1/2 -translate-x-1/2 h-3 w-3 rounded-full bg-gold shadow-[0_0_0_3px_rgba(31,30,28,0.6)] opacity-0 transition-opacity group-hover/bar:opacity-100"
+                  className={cn(
+                    "absolute top-1/2 -translate-y-1/2 -translate-x-1/2 h-3 w-3 rounded-full bg-gold shadow-[0_0_0_3px_rgba(31,30,28,0.6)] transition-opacity",
+                    isScrubbing
+                      ? "opacity-100"
+                      : "opacity-0 group-hover/bar:opacity-100 group-focus-visible/bar:opacity-100",
+                  )}
                   style={{ left: `${progress * 100}%` }}
                 />
               </div>
@@ -706,6 +772,8 @@ export function RecordingsClient({
       <audio
         ref={setAudioEl}
         preload="none"
+        playsInline
+        crossOrigin="anonymous"
         onLoadedMetadata={handleLoadedMetadata}
         onTimeUpdate={handleTimeUpdate}
         onPlay={handlePlay}

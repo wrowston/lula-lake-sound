@@ -19,6 +19,7 @@ so public readers never see a half-written structure.
 | `pricing`    | `pricingPackages` (scope)                                        | Homepage pricing block + primary-nav link      | `/admin/pricing`     |
 | `about`      | `aboutContent`, `aboutHighlights`, `aboutTeamMembers` (scope)    | Public `/about` route + homepage nav link      | `/admin/about`       |
 | `recordings` | (flag-only; copy lives in `src/app/recordings/recordings-data.ts`) | Public `/recordings` route + homepage nav link | `/admin/audio`       |
+| `faq`        | `faqCategories`, `faqQuestions` (scope)                          | Homepage FAQ block                               | `/admin/faq`         |
 
 Each section has its own `cmsSections` metadata row and therefore its own
 independent draft / publish lifecycle. The `isEnabled` flag and its draft
@@ -34,10 +35,12 @@ edits.
 | Anonymous / marketing site — pricing          | `pricingPackages` (published) + `cmsSections.pricing.isEnabled` — `api.public.getPublishedPricingFlags`         |
 | Anonymous / marketing site — marketing flags  | Reads each section row's `isEnabled` — `api.public.getPublishedMarketingFeatureFlags`                           |
 | Anonymous / marketing site — About copy       | `aboutContent` + `aboutHighlights` + `aboutTeamMembers` (published, resolved URLs) — `api.public.getPublishedAbout` |
+| Anonymous / marketing site — Homepage FAQ     | `faqCategories` + `faqQuestions` (published) — `api.public.getPublishedFaq` |
 | Studio / preview — metadata                   | `api.siteSettingsPreviewDraft.getPreviewSiteSettings` (draft when present, else published; owner-gated)         |
 | Studio / preview — pricing                    | `api.pricingPreviewDraft.getPreviewPricingFlags` (draft packages when present, else published; owner-gated)     |
 | Studio / preview — marketing flags            | `api.cms.getPreviewMarketingFeatureFlags` (owner-gated; applies `isEnabledDraft` overrides)                     |
 | Studio / preview — About copy                 | `api.aboutPreviewDraft.getPreviewAbout` (draft scope, falls back to published; owner-gated)                     |
+| Studio / preview — Homepage FAQ             | `api.faqPreviewDraft.getPreviewFaq` (owner-gated)                                                                 |
 
 ## Admin UI
 

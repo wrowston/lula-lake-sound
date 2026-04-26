@@ -18,6 +18,7 @@ import {
   amenitiesNearbyDraftMatchesPublished,
   loadAmenitiesNearbyTree,
 } from "./amenitiesTree";
+import { loadFaqTree, faqDraftMatchesPublished } from "./faqTree";
 
 /**
  * Default `isEnabled` value for a brand-new deployment / row. Matches the
@@ -29,6 +30,7 @@ export const DEFAULT_IS_ENABLED: Record<CmsSection, boolean> = {
   pricing: true,
   about: false,
   recordings: false,
+  faq: true,
   amenitiesNearby: true,
 };
 
@@ -109,12 +111,25 @@ export function publishedIsEnabled(
  * **Pricing** is different: an empty draft with a non-empty published catalogue
  * means the owner removed every package in draft and must be able to publish
  * that deletion.
+ *
+ * **FAQ** matches **about**: an empty draft scope means no in-progress FAQ
+ * edit. Publishing an empty FAQ tree is invalid (at least one category is
+ * required), so unlike pricing we must not treat "empty draft + published
+ * content" as a content diff — that would block flag-only visibility publishes
+ * and would incorrectly run validation against an empty draft.
  */
 export async function sectionHasContentDraftDiff(
   ctx: QueryCtx | MutationCtx,
   section: CmsSection,
 ): Promise<boolean> {
   if (section === "recordings") return false;
+
+  if (section === "faq") {
+    const draft = await loadFaqTree(ctx, "draft");
+    if (draft.categories.length === 0) return false;
+    const published = await loadFaqTree(ctx, "published");
+    return !faqDraftMatchesPublished(draft, published);
+  }
 
   if (section === "amenitiesNearby") {
     const draft = await loadAmenitiesNearbyTree(ctx, "draft");

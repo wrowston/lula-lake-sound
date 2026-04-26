@@ -18,6 +18,7 @@ import {
   loadPricingPackages,
 } from "./pricingTree";
 import { copySettingsScope, loadSettingsContent } from "./settingsTree";
+import { copyFaqScope, loadFaqTree, type FaqTree } from "./faqTree";
 import {
   collectAmenitiesNearbyPublishIssues,
   copyAmenitiesNearbyScope,
@@ -295,10 +296,122 @@ export async function collectPublishIssues(
       : await loadAboutTree(ctx, "published");
     return collectAboutIssuesFromTree(ctx, tree);
   }
+  if (section === "faq") {
+    return collectFaqIssues(ctx);
+  }
   if (section === "amenitiesNearby") {
     return collectAmenitiesNearbyPublishIssues(ctx);
   }
   return [];
+}
+
+async function collectFaqIssues(
+  ctx: QueryCtx | MutationCtx,
+): Promise<PublishIssue[]> {
+  const draft = await loadFaqTree(ctx, "draft");
+  const tree: FaqTree =
+    draft.categories.length > 0
+      ? draft
+      : await loadFaqTree(ctx, "published");
+  const issues: PublishIssue[] = [];
+
+  if (tree.categories.length === 0) {
+    issues.push({
+      path: "categories",
+      message: "At least one FAQ category is required to publish.",
+    });
+    return issues;
+  }
+
+  const seenCategoryIds = new Set<string>();
+  for (let i = 0; i < tree.categories.length; i++) {
+    const c = tree.categories[i];
+    const base = `categories[${i}]`;
+    if (c.stableId.trim().length === 0) {
+      issues.push({
+        path: `${base}.stableId`,
+        message: "Each category requires a stable id.",
+      });
+    } else if (seenCategoryIds.has(c.stableId)) {
+      issues.push({
+        path: `${base}.stableId`,
+        message: `Duplicate category id: ${c.stableId}`,
+      });
+    } else {
+      seenCategoryIds.add(c.stableId);
+    }
+    if (c.title.trim().length === 0) {
+      issues.push({
+        path: `${base}.title`,
+        message: "Category title cannot be empty.",
+      });
+    }
+  }
+
+  const qsInKnownCategories = tree.questions.filter((q) =>
+    seenCategoryIds.has(q.categoryStableId),
+  );
+  if (qsInKnownCategories.length === 0) {
+    issues.push({
+      path: "questions",
+      message: "Each category needs at least one question.",
+    });
+  }
+
+  for (const q of tree.questions) {
+    if (!seenCategoryIds.has(q.categoryStableId)) {
+      issues.push({
+        path: `question.${q.stableId}.categoryStableId`,
+        message: `Unknown category id: ${q.categoryStableId}`,
+      });
+    }
+  }
+
+  const seenQuestionIds = new Set<string>();
+  for (const q of tree.questions) {
+    if (!seenCategoryIds.has(q.categoryStableId)) {
+      continue;
+    }
+    if (q.stableId.trim().length === 0) {
+      issues.push({
+        path: `question.${q.categoryStableId}.stableId`,
+        message: "Each question requires a stable id.",
+      });
+    } else if (seenQuestionIds.has(q.stableId)) {
+      issues.push({
+        path: `question.${q.stableId}`,
+        message: `Duplicate question id: ${q.stableId}`,
+      });
+    } else {
+      seenQuestionIds.add(q.stableId);
+    }
+    if (q.question.trim().length === 0) {
+      issues.push({
+        path: `question.${q.stableId}.question`,
+        message: "Question text cannot be empty.",
+      });
+    }
+    if (q.answer.trim().length === 0) {
+      issues.push({
+        path: `question.${q.stableId}.answer`,
+        message: "Answer text cannot be empty.",
+      });
+    }
+  }
+
+  for (const cat of tree.categories) {
+    const count = tree.questions.filter(
+      (q) => q.categoryStableId === cat.stableId,
+    ).length;
+    if (count === 0) {
+      issues.push({
+        path: `categories.${cat.stableId}.questions`,
+        message: `Category "${cat.title}" needs at least one question.`,
+      });
+    }
+  }
+
+  return issues;
 }
 
 export type PublishSectionResult =
@@ -375,6 +488,8 @@ export async function publishSectionCore(
       await copyPricingScope(ctx, "draft", "published");
     } else if (section === "settings") {
       await copySettingsScope(ctx, "draft", "published");
+    } else if (section === "faq") {
+      await copyFaqScope(ctx, "draft", "published");
     } else if (section === "amenitiesNearby") {
       await copyAmenitiesNearbyScope(ctx, "draft", "published");
     }

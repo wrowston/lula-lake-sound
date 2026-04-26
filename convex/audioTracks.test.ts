@@ -95,6 +95,24 @@ describe("audioDraftMatchesPublished", () => {
     ).toBe(false);
   });
 
+  test("different public recording metadata → not a match", () => {
+    expect(
+      audioDraftMatchesPublished(
+        [row({ genre: "Americana" })],
+        [row({ genre: "Indie Folk" })],
+      ),
+    ).toBe(false);
+    expect(
+      audioDraftMatchesPublished([row({ year: 2026 })], [row({ year: 2025 })]),
+    ).toBe(false);
+    expect(
+      audioDraftMatchesPublished(
+        [row({ role: "Recorded" })],
+        [row({ role: "Mixed" })],
+      ),
+    ).toBe(false);
+  });
+
   test("order matters", () => {
     expect(
       audioDraftMatchesPublished(

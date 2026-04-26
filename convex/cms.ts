@@ -2,8 +2,8 @@ import { query, mutation } from "./_generated/server";
 import { v } from "convex/values";
 import {
   aboutContentValidator,
-  amenitiesNearbySnapshotValidator,
   cmsSectionValidator,
+  cmsSnapshotValidator,
   pricingContentValidator,
   settingsContentValidator,
 } from "./schema.shared";
@@ -11,6 +11,7 @@ import {
   defaultSnapshotForSection,
   type AboutSnapshot,
   type AmenitiesNearbySnapshot,
+  type FaqSnapshot,
   type PricingSnapshot,
   type SettingsSnapshot,
 } from "./cmsShared";
@@ -57,6 +58,12 @@ import {
   replaceAmenitiesNearbyDraft,
   snapshotFromAmenitiesTree,
 } from "./amenitiesTree";
+import {
+  copyFaqScope,
+  loadFaqTree,
+  materializeFaqCategories,
+  replaceFaqDraftFromCategories,
+} from "./faqTree";
 import { cmsValidationError } from "./errors";
 
 /**
@@ -111,12 +118,7 @@ export const getSection = query({
 export const saveDraft = mutation({
   args: {
     section: cmsSectionValidator,
-    content: v.union(
-      settingsContentValidator,
-      pricingContentValidator,
-      aboutContentValidator,
-      amenitiesNearbySnapshotValidator,
-    ),
+    content: cmsSnapshotValidator,
   },
   handler: async (ctx, args) => {
     const { updatedBy } = await requireCmsOwner(ctx);
@@ -132,6 +134,9 @@ export const saveDraft = mutation({
         ?.priceTabEnabled !== undefined;
     const isAboutPayload =
       "heroTitle" in args.content && "body" in args.content;
+    const isFaqPayload =
+      "categories" in args.content &&
+      Array.isArray((args.content as { categories?: unknown }).categories);
     const isAmenitiesPayload =
       "rows" in args.content && Array.isArray(args.content.rows);
 
@@ -162,6 +167,10 @@ export const saveDraft = mutation({
           "content",
         );
       }
+    } else if (args.section === "faq") {
+      if (!isFaqPayload) {
+        cmsValidationError("FAQ content must include a categories array.", "content");
+      }
     } else if (args.section === "amenitiesNearby") {
       if (!isAmenitiesPayload) {
         cmsValidationError(
@@ -186,6 +195,11 @@ export const saveDraft = mutation({
       const beforeUnion = await unionAboutTeamStorage(ctx);
       await replaceAboutDraftFromSnapshot(ctx, args.content as AboutSnapshot);
       await pruneAboutTeamBlobsAfterSaveDraftScoped(ctx, beforeUnion);
+    } else if (args.section === "faq") {
+      await replaceFaqDraftFromCategories(
+        ctx,
+        (args.content as FaqSnapshot).categories,
+      );
     } else if (args.section === "amenitiesNearby") {
       await replaceAmenitiesNearbyDraft(
         ctx,
@@ -229,6 +243,7 @@ export const listPendingDrafts = query({
           | "pricing"
           | "about"
           | "recordings"
+          | "faq"
           | "amenitiesNearby"
           | "gear"
           | "photos"
@@ -255,6 +270,7 @@ export const listPendingDrafts = query({
       | "pricing"
       | "about"
       | "recordings"
+      | "faq"
       | "amenitiesNearby"
       | "gear"
       | "photos"
@@ -602,6 +618,8 @@ export const discardDraft = mutation({
         await copyPricingScope(ctx, "published", "draft");
       } else if (args.section === "settings") {
         await copySettingsScope(ctx, "published", "draft");
+      } else if (args.section === "faq") {
+        await copyFaqScope(ctx, "published", "draft");
       } else if (args.section === "amenitiesNearby") {
         await copyAmenitiesNearbyScope(ctx, "published", "draft");
       }
@@ -701,6 +719,19 @@ async function readSnapshotForAdmin(
           }
         : {}),
     } satisfies AboutSnapshot;
+  }
+
+  if (section === "faq") {
+    const tree = await loadFaqTree(ctx, scope);
+    if (tree.categories.length === 0) {
+      if (scope === "draft") {
+        return { categories: [] } satisfies FaqSnapshot;
+      }
+      return defaultSnapshotForSection("faq");
+    }
+    return {
+      categories: materializeFaqCategories(tree),
+    } satisfies FaqSnapshot;
   }
 
   if (section === "amenitiesNearby") {

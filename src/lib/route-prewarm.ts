@@ -100,6 +100,11 @@ export function prewarmAdminNavigation(
       makeRouteQuerySpec(api.cms.listMarketingFlagsDraft, {}),
     ]);
   }
+  if (href === "/admin/faq") {
+    prewarmSpecs(convex, [
+      makeRouteQuerySpec(api.cms.getSection, { section: "faq" }),
+    ]);
+  }
   if (href === "/admin/audio") {
     prewarmSpecs(convex, [
       makeRouteQuerySpec(api.cms.listMarketingFlagsDraft, {}),

@@ -10,51 +10,30 @@ import {
 } from "@/components/ui/accordion";
 import { Button, buttonVariants } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
+import { DEFAULT_FAQ_CATEGORIES } from "../../convex/faqSeedData";
 
-const FAQ_CATEGORIES = [
-  {
-    category: "Studio Sessions & Recording",
-    questions: [
-      {
-        id: 1,
-        question: "What should I bring to my recording session?",
-        answer:
-          "Bring your instruments, any specific pedals or equipment you want to use, backup cables, and your music (charts, lyrics, demo recordings). We provide all basic cables, microphones, and recording equipment. If you have specific instruments you prefer (like your own snare drum or guitar), feel free to bring them!",
-      },
-      {
-        id: 2,
-        question: "Do you provide instruments and amplifiers?",
-        answer:
-          "Yes! Please see our gear list for a list of our available instruments and amplifiers.",
-      },
-      {
-        id: 3,
-        question: "Can I bring my own engineer or producer?",
-        answer:
-          "Absolutely! We welcome outside engineers and producers. Our studio engineer will assist with setup and technical support. If you prefer to work solo or with your team, that's perfectly fine too. We're here to support your creative process however works best for you.",
-      },
-      {
-        id: 4,
-        question: "How far in advance should I book?",
-        answer:
-          "We recommend booking 2-4 weeks in advance, especially during busy seasons (spring and fall). However, we often have last-minute availability. Contact us to check our current schedule - sometimes we can accommodate short-notice bookings.",
-      },
-    ],
-  },
-  {
-    category: "Studio Logistics",
-    questions: [
-      {
-        id: 9,
-        question: "Is there accommodation nearby?",
-        answer:
-          "Yes! We can help arrange lodging for out-of-town artists. Many artists love staying nearby to maintain the creative flow between sessions.",
-      },
-    ],
-  },
-] as const;
+export type FaqQuestionProps = {
+  stableId: string;
+  question: string;
+  answer: string;
+};
 
-export function FAQ() {
+export type FaqCategoryProps = {
+  stableId: string;
+  title: string;
+  questions: FaqQuestionProps[];
+};
+
+export type FaqProps = {
+  categories?: readonly FaqCategoryProps[];
+};
+
+export function FAQ({ categories }: FaqProps) {
+  const data =
+    categories && categories.length > 0
+      ? categories
+      : DEFAULT_FAQ_CATEGORIES;
+
   return (
     <section
       id="faq"
@@ -89,15 +68,15 @@ export function FAQ() {
         </div>
 
         <div className="reveal reveal-delay-2 space-y-16">
-          {FAQ_CATEGORIES.map((category) => (
-            <div key={category.category}>
+          {data.map((category) => (
+            <div key={category.stableId}>
               <h3 className="eyebrow mb-8 border-b border-sand/22 pb-4 text-sand">
-                {category.category}
+                {category.title}
               </h3>
 
               <Accordion multiple>
                 {category.questions.map((faq) => (
-                  <AccordionItem key={faq.id} value={String(faq.id)}>
+                  <AccordionItem key={faq.stableId} value={faq.stableId}>
                     <AccordionTrigger>
                       <span className="body-text text-base text-warm-white">
                         {faq.question}

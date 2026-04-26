@@ -15,7 +15,8 @@ import {
   materializePublicAmenitiesNearby,
   materializePublicAmenitiesNearbyFromSnapshot,
 } from "./amenitiesTree";
-import { AMENITIES_NEARBY_DEFAULT_ROWS } from "./cmsShared";
+import { AMENITIES_NEARBY_DEFAULT_ROWS, FAQ_DEFAULTS } from "./cmsShared";
+import { loadFaqTree, materializeFaqCategories } from "./faqTree";
 
 /**
  * **Public (anonymous) site reads** — published only.
@@ -116,11 +117,6 @@ export const getPublishedAudioTracks = query({
 });
 
 /**
- * Marketing-site visibility flags. Reads each section's `cmsSections.isEnabled`
- * and returns the historical shape `{ aboutPage, recordingsPage, pricingSection }`
- * so the existing frontend consumers keep working without changes.
- */
-/**
  * Published homepage "Local Favorites" block.
  * When `isEnabled` is false the section is hidden (empty payload).
  * When enabled and published rows are empty, falls back to
@@ -145,9 +141,6 @@ export const getPublishedAmenitiesNearby = query({
         }>,
       };
     }
-    const defaultsPayload = materializePublicAmenitiesNearbyFromSnapshot({
-      rows: AMENITIES_NEARBY_DEFAULT_ROWS,
-    });
     const tree = await loadAmenitiesNearbyTree(ctx, "published");
     const out = materializePublicAmenitiesNearby(tree);
     if (out.rows.length === 0) {
@@ -171,6 +164,26 @@ export const getPublishedAmenitiesNearby = query({
   },
 });
 
+/**
+ * Published homepage FAQ (plain text answers). Falls back to shipped defaults
+ * when the published scope has not been seeded yet.
+ */
+export const getPublishedFaq = query({
+  args: {},
+  handler: async (ctx) => {
+    const tree = await loadFaqTree(ctx, "published");
+    if (tree.categories.length === 0) {
+      return { categories: FAQ_DEFAULTS.categories };
+    }
+    return { categories: materializeFaqCategories(tree) };
+  },
+});
+
+/**
+ * Marketing-site visibility flags. Reads each section's `cmsSections.isEnabled`
+ * and returns the historical shape `{ aboutPage, recordingsPage, pricingSection }`
+ * so the existing frontend consumers keep working without changes.
+ */
 export const getPublishedMarketingFeatureFlags = query({
   args: {},
   handler: async (ctx) => {

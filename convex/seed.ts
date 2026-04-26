@@ -4,6 +4,7 @@ import {
   ABOUT_DEFAULTS,
   AMENITIES_NEARBY_DEFAULT_ROWS,
   DEFAULT_PRICING_PACKAGES,
+  FAQ_DEFAULTS,
   SETTINGS_DEFAULTS,
 } from "./cmsShared";
 import {
@@ -17,14 +18,16 @@ import {
   loadAmenitiesNearbyCopy,
   loadAmenitiesNearbyItems,
 } from "./amenitiesTree";
+import { loadFaqTree, replaceFaqScopeFromCategories } from "./faqTree";
 import { LEGACY_EQUIPMENT_SEED } from "./gearEquipmentSeed";
 import { insertLegacyEquipmentSeedDraft } from "./gearLegacySeed";
 import { deleteAllGearForScope, loadGearDocs } from "./gearTree";
 
 /**
- * Idempotent seed for local dev: creates the five `cmsSections` metadata rows
- * (settings, pricing, about, recordings, amenitiesNearby) and seeds per-section published-scope
- * content so the admin editors and public queries have a consistent baseline.
+ * Idempotent seed for local dev: creates the `cmsSections` metadata rows
+ * (settings, pricing, about, recordings, faq, amenitiesNearby) and seeds
+ * per-section published-scope content so the admin editors and public queries
+ * have a consistent baseline.
  *
  * Run once after deploying schema:
  * `bunx convex run internal.seed.seedSiteSettingsDefaults`.
@@ -38,6 +41,7 @@ export const seedSiteSettingsDefaults = internalMutation({
         | "pricing"
         | "about"
         | "recordings"
+        | "faq"
         | "amenitiesNearby";
       status: "already_seeded" | "inserted";
     };
@@ -49,6 +53,7 @@ export const seedSiteSettingsDefaults = internalMutation({
       "pricing",
       "about",
       "recordings",
+      "faq",
       "amenitiesNearby",
     ] as const) {
       const before = await ctx.db
@@ -122,6 +127,15 @@ export const seedSiteSettingsDefaults = internalMutation({
       }
     }
 
+    const faqPublished = await loadFaqTree(ctx, "published");
+    if (faqPublished.categories.length === 0) {
+      await replaceFaqScopeFromCategories(
+        ctx,
+        "published",
+        FAQ_DEFAULTS.categories,
+      );
+    }
+
     const amenitiesCopyPublished = await loadAmenitiesNearbyCopy(
       ctx,
       "published",
@@ -150,6 +164,28 @@ export const seedSiteSettingsDefaults = internalMutation({
       defaultIsEnabled: DEFAULT_IS_ENABLED,
       aboutDefaultsHeroTitle: ABOUT_DEFAULTS.heroTitle,
     };
+  },
+});
+
+/**
+ * One-time backfill: seeds `scope="published"` FAQ rows from shipped defaults
+ * when the published tree is empty. Safe to run on existing deployments
+ * (`bunx convex run internal.seed.migrateFaqPublishedIfEmpty`).
+ */
+export const migrateFaqPublishedIfEmpty = internalMutation({
+  args: {},
+  handler: async (ctx) => {
+    const published = await loadFaqTree(ctx, "published");
+    if (published.categories.length > 0) {
+      return { ok: true as const, kind: "already_has_content" as const };
+    }
+    await ensureSectionMetaRow(ctx, "faq", undefined);
+    await replaceFaqScopeFromCategories(
+      ctx,
+      "published",
+      FAQ_DEFAULTS.categories,
+    );
+    return { ok: true as const, kind: "inserted" as const };
   },
 });
 
