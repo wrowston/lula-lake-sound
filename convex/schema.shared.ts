@@ -10,6 +10,7 @@ import { v } from "convex/values";
  * - `about`      — About page hero copy, body block array, optional highlights, SEO meta, optional team headshots.
  * - `recordings` — public recordings page visibility flag; audio content lives in `audioTracks`.
  * - `faq`        — homepage FAQ (categories → questions → answers); scoped rows in `faqCategories` / `faqQuestions`.
+ * - `amenitiesNearby` — homepage "Local Favorites" cards (`amenitiesNearbyCopy` + `amenitiesNearbyItems`).
  *
  * Content for each section (when any) lives in dedicated scoped tables using the
  * gear/photos pattern (`scope: "draft" | "published"` column); `cmsSections`
@@ -173,6 +174,21 @@ export const aboutContentValidator = v.object({
   teamMembers: v.optional(v.array(aboutTeamMemberValidator)),
 });
 
+export const amenitiesNearbyEntryValidator = v.object({
+  stableId: v.string(),
+  name: v.string(),
+  type: v.string(),
+  description: v.string(),
+  website: v.string(),
+});
+
+export const amenitiesNearbySnapshotValidator = v.object({
+  eyebrow: v.optional(v.string()),
+  heading: v.optional(v.string()),
+  intro: v.optional(v.string()),
+  rows: v.array(amenitiesNearbyEntryValidator),
+});
+
 /**
  * Union of section snapshot payloads (admin `saveDraft` / `getSection` content).
  */
@@ -181,6 +197,7 @@ export const cmsSnapshotValidator = v.union(
   pricingContentValidator,
   aboutContentValidator,
   faqContentValidator,
+  amenitiesNearbySnapshotValidator,
 );
 
 /**
@@ -194,6 +211,7 @@ export const cmsSectionValidator = v.union(
   v.literal("about"),
   v.literal("recordings"),
   v.literal("faq"),
+  v.literal("amenitiesNearby"),
 );
 
 /**
@@ -276,6 +294,25 @@ export const faqQuestionRowValidator = {
   sort: v.number(),
   question: v.string(),
   answer: v.string(),
+} as const;
+
+/** Optional section chrome for homepage amenities block — one row per scope. */
+export const amenitiesNearbyCopyRowValidator = {
+  scope: cmsScopeValidator,
+  eyebrow: v.optional(v.string()),
+  heading: v.optional(v.string()),
+  intro: v.optional(v.string()),
+} as const;
+
+/** One amenity card per row; ordered by `sort`. */
+export const amenitiesNearbyItemRowValidator = {
+  scope: cmsScopeValidator,
+  stableId: v.string(),
+  name: v.string(),
+  type: v.string(),
+  description: v.string(),
+  website: v.string(),
+  sort: v.number(),
 } as const;
 
 /** Draft vs published rows in `gearCategories` / `gearItems` (INF-86). */

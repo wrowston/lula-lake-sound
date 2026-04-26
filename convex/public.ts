@@ -10,6 +10,12 @@ import type { Doc } from "./_generated/dataModel";
 import { loadGalleryPhotos, materializeGalleryPhotos } from "./galleryPhotos";
 import { loadAudioTracks, materializeAudioTracks } from "./audioTracks";
 import { getSectionMetaRow, publishedIsEnabled } from "./cmsMeta";
+import {
+  fallbackAmenitiesSnapshotFromTree,
+  loadAmenitiesNearbyTree,
+  materializePublicAmenitiesNearby,
+  materializePublicAmenitiesNearbyFromSnapshot,
+} from "./amenitiesTree";
 import { FAQ_DEFAULTS } from "./cmsShared";
 import { loadFaqTree, materializeFaqCategories } from "./faqTree";
 
@@ -112,10 +118,44 @@ export const getPublishedAudioTracks = query({
 });
 
 /**
- * Marketing-site visibility flags. Reads each section's `cmsSections.isEnabled`
- * and returns the historical shape `{ aboutPage, recordingsPage, pricingSection }`
- * so the existing frontend consumers keep working without changes.
+ * Published homepage "Local Favorites" block.
+ * When `isEnabled` is false the section is hidden (empty payload).
+ * When enabled and published rows are empty, falls back to
+ * {@link AMENITIES_NEARBY_DEFAULT_ROWS}.
  */
+export const getPublishedAmenitiesNearby = query({
+  args: {},
+  handler: async (ctx) => {
+    const row = await getSectionMetaRow(ctx, "amenitiesNearby");
+    if (!publishedIsEnabled(row, "amenitiesNearby")) {
+      return {
+        isEnabled: false as const,
+        eyebrow: null as string | null,
+        heading: null as string | null,
+        intro: null as string | null,
+        rows: [] as Array<{
+          stableId: string;
+          name: string;
+          type: string;
+          description: string;
+          website: string;
+        }>,
+      };
+    }
+    const tree = await loadAmenitiesNearbyTree(ctx, "published");
+    const out = materializePublicAmenitiesNearby(tree);
+    if (out.rows.length === 0) {
+      return {
+        isEnabled: true as const,
+        ...materializePublicAmenitiesNearbyFromSnapshot(
+          fallbackAmenitiesSnapshotFromTree(tree),
+        ),
+      };
+    }
+    return { isEnabled: true as const, ...out };
+  },
+});
+
 /**
  * Published homepage FAQ (plain text answers). Falls back to shipped defaults
  * when the published scope has not been seeded yet.
@@ -131,6 +171,11 @@ export const getPublishedFaq = query({
   },
 });
 
+/**
+ * Marketing-site visibility flags. Reads each section's `cmsSections.isEnabled`
+ * and returns the historical shape `{ aboutPage, recordingsPage, pricingSection }`
+ * so the existing frontend consumers keep working without changes.
+ */
 export const getPublishedMarketingFeatureFlags = query({
   args: {},
   handler: async (ctx) => {

@@ -1,6 +1,7 @@
 import { describe, expect, test } from "bun:test";
 import {
   ABOUT_DEFAULTS,
+  AMENITIES_NEARBY_DEFAULT_ROWS,
   DEFAULT_PRICING_PACKAGES,
   FAQ_DEFAULTS,
   MARKETING_FEATURE_FLAGS_DEFAULTS,
@@ -103,12 +104,25 @@ describe("ABOUT_DEFAULTS", () => {
   });
 });
 
+describe("AMENITIES_NEARBY_DEFAULT_ROWS", () => {
+  test("has four seeded cards with unique stableIds and valid-looking URLs", () => {
+    expect(AMENITIES_NEARBY_DEFAULT_ROWS.length).toBe(4);
+    const ids = AMENITIES_NEARBY_DEFAULT_ROWS.map((r) => r.stableId);
+    expect(new Set(ids).size).toBe(ids.length);
+    for (const r of AMENITIES_NEARBY_DEFAULT_ROWS) {
+      expect(r.name.trim().length).toBeGreaterThan(0);
+      expect(r.website.startsWith("http")).toBe(true);
+    }
+  });
+});
+
 describe("defaultSnapshotForSection", () => {
   test("returns the matching defaults for each section", () => {
     expect(defaultSnapshotForSection("settings")).toEqual(SETTINGS_DEFAULTS);
     expect(defaultSnapshotForSection("pricing")).toEqual(PRICING_DEFAULTS);
     expect(defaultSnapshotForSection("about")).toEqual(ABOUT_DEFAULTS);
     expect(defaultSnapshotForSection("faq")).toEqual(FAQ_DEFAULTS);
+    expect(defaultSnapshotForSection("amenitiesNearby")).toEqual({ rows: [] });
   });
 
   test("recordings returns an about-shaped placeholder (no content table)", () => {

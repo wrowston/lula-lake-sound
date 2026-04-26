@@ -36,6 +36,10 @@ describe("DEFAULT_IS_ENABLED", () => {
   test("faq defaults on (homepage block always available)", () => {
     expect(DEFAULT_IS_ENABLED.faq).toBe(true);
   });
+
+  test("amenities nearby ships on with the homepage", () => {
+    expect(DEFAULT_IS_ENABLED.amenitiesNearby).toBe(true);
+  });
 });
 
 describe("effectiveIsEnabled", () => {

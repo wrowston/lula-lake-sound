@@ -14,6 +14,10 @@ import {
   loadSettingsContent,
   settingsDraftMatchesPublished,
 } from "./settingsTree";
+import {
+  amenitiesNearbyDraftMatchesPublished,
+  loadAmenitiesNearbyTree,
+} from "./amenitiesTree";
 import { loadFaqTree, faqDraftMatchesPublished } from "./faqTree";
 
 /**
@@ -27,6 +31,7 @@ export const DEFAULT_IS_ENABLED: Record<CmsSection, boolean> = {
   about: false,
   recordings: false,
   faq: true,
+  amenitiesNearby: true,
 };
 
 export async function getSectionMetaRow(
@@ -124,6 +129,13 @@ export async function sectionHasContentDraftDiff(
     if (draft.categories.length === 0) return false;
     const published = await loadFaqTree(ctx, "published");
     return !faqDraftMatchesPublished(draft, published);
+  }
+
+  if (section === "amenitiesNearby") {
+    const draft = await loadAmenitiesNearbyTree(ctx, "draft");
+    if (draft.items.length === 0 && draft.copy === null) return false;
+    const published = await loadAmenitiesNearbyTree(ctx, "published");
+    return !amenitiesNearbyDraftMatchesPublished(draft, published);
   }
 
   if (section === "about") {

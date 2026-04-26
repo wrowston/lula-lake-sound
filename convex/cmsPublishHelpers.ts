@@ -20,6 +20,10 @@ import {
 import { copySettingsScope, loadSettingsContent } from "./settingsTree";
 import { copyFaqScope, loadFaqTree, type FaqTree } from "./faqTree";
 import {
+  collectAmenitiesNearbyPublishIssues,
+  copyAmenitiesNearbyScope,
+} from "./amenitiesTree";
+import {
   DEFAULT_IS_ENABLED,
   effectiveIsEnabled,
   ensureSectionMetaRow,
@@ -295,6 +299,9 @@ export async function collectPublishIssues(
   if (section === "faq") {
     return collectFaqIssues(ctx);
   }
+  if (section === "amenitiesNearby") {
+    return collectAmenitiesNearbyPublishIssues(ctx);
+  }
   return [];
 }
 
@@ -483,6 +490,8 @@ export async function publishSectionCore(
       await copySettingsScope(ctx, "draft", "published");
     } else if (section === "faq") {
       await copyFaqScope(ctx, "draft", "published");
+    } else if (section === "amenitiesNearby") {
+      await copyAmenitiesNearbyScope(ctx, "draft", "published");
     }
   }
 

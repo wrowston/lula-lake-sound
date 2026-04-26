@@ -7,6 +7,7 @@ import {
   Music,
   User,
   Settings,
+  MapPin,
   CircleHelp,
 } from "lucide-react";
 
@@ -60,6 +61,12 @@ export const ADMIN_MANAGE_NAV_ITEMS: {
     description: "Homepage questions & answers",
   },
   {
+    title: "Amenities nearby",
+    href: "/admin/amenities-nearby",
+    icon: MapPin,
+    description: "Local favorites on the homepage",
+  },
+  {
     title: "Settings",
     href: "/admin/settings",
     icon: Settings,
@@ -78,6 +85,7 @@ export type PendingDraftKey =
   | "about"
   | "recordings"
   | "faq"
+  | "amenitiesNearby"
   | "gear"
   | "photos";
 
@@ -94,6 +102,10 @@ export const PENDING_SECTION_NAV: Record<
   about: { href: "/admin/about", label: "About" },
   recordings: { href: "/admin/audio", label: "Audio" },
   faq: { href: "/admin/faq", label: "FAQ" },
+  amenitiesNearby: {
+    href: "/admin/amenities-nearby",
+    label: "Amenities nearby",
+  },
   gear: { href: "/admin/gear", label: "Gear" },
   photos: { href: "/admin/photos", label: "Photos" },
 };
@@ -104,6 +116,7 @@ export const PENDING_SECTION_ORDER: readonly PendingDraftKey[] = [
   "pricing",
   "about",
   "faq",
+  "amenitiesNearby",
   "gear",
   "photos",
   "recordings",

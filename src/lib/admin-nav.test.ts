@@ -12,6 +12,7 @@ describe("ADMIN_MANAGE_NAV_ITEMS", () => {
       "/admin/audio",
       "/admin/about",
       "/admin/faq",
+      "/admin/amenities-nearby",
       "/admin/settings",
     ]);
   });

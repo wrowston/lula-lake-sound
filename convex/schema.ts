@@ -4,6 +4,8 @@ import {
   aboutContentRowValidator,
   aboutHighlightRowValidator,
   aboutTeamMemberRowValidator,
+  amenitiesNearbyCopyRowValidator,
+  amenitiesNearbyItemRowValidator,
   cmsSectionValidator,
   faqCategoryRowValidator,
   faqQuestionRowValidator,
@@ -27,6 +29,8 @@ import {
  * - The `recordings` section row is flag-only; recording/audio content is
  *   authored separately in `audioTracks` and published through the audio CMS.
  * - The `faq` section uses `faqCategories` + `faqQuestions` scoped tables.
+ * - `amenitiesNearby` — homepage local favorites (`amenitiesNearbyCopy` +
+ *   `amenitiesNearbyItems` scoped tables).
  */
 export default defineSchema({
   inquiries: defineTable({
@@ -83,6 +87,15 @@ export default defineSchema({
       "categoryStableId",
       "sort",
     ])
+    .index("by_scope_and_stableId", ["scope", "stableId"]),
+
+  amenitiesNearbyCopy: defineTable(amenitiesNearbyCopyRowValidator).index(
+    "by_scope",
+    ["scope"],
+  ),
+
+  amenitiesNearbyItems: defineTable(amenitiesNearbyItemRowValidator)
+    .index("by_scope_and_sort", ["scope", "sort"])
     .index("by_scope_and_stableId", ["scope", "stableId"]),
 
   gearMeta: defineTable({

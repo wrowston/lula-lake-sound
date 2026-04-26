@@ -4,6 +4,7 @@ import { useQuery } from "convex/react";
 import { Authenticated, Unauthenticated, AuthLoading } from "convex/react";
 import { api } from "../../../convex/_generated/api";
 import { HomepageShell } from "@/components/homepage-shell";
+import type { PublishedAmenitiesNearby } from "@/components/amenities-nearby";
 import { PreviewBanner } from "@/components/preview-banner";
 import type { PublishedAudioTrack } from "@/components/audio-portfolio";
 
@@ -19,6 +20,9 @@ function PreviewContent() {
   const aboutPreview = useQuery(api.aboutPreviewDraft.getPreviewAbout);
   const faqPreview = useQuery(api.faqPreviewDraft.getPreviewFaq);
   const marketingPreview = useQuery(api.cms.getPreviewMarketingFeatureFlags);
+  const amenitiesPreview = useQuery(
+    api.amenitiesPreviewDraft.getPreviewAmenitiesNearby,
+  );
 
   if (
     pricingFlags === undefined ||
@@ -27,7 +31,8 @@ function PreviewContent() {
     audioPreview === undefined ||
     aboutPreview === undefined ||
     faqPreview === undefined ||
-    marketingPreview === undefined
+    marketingPreview === undefined ||
+    amenitiesPreview === undefined
   ) {
     return (
       <div className="flex min-h-screen items-center justify-center bg-washed-black">
@@ -43,7 +48,8 @@ function PreviewContent() {
     audioPreview === null ||
     aboutPreview === null ||
     faqPreview === null ||
-    marketingPreview === null
+    marketingPreview === null ||
+    amenitiesPreview === null
   ) {
     return (
       <div className="flex min-h-screen items-center justify-center bg-washed-black">
@@ -61,7 +67,16 @@ function PreviewContent() {
     audioPreview.hasDraftChanges ||
     aboutPreview.hasDraftChanges ||
     faqPreview.hasDraftChanges ||
-    marketingPreview.hasDraftChanges;
+    marketingPreview.hasDraftChanges ||
+    amenitiesPreview.hasDraftChanges;
+
+  const amenitiesPayload: PublishedAmenitiesNearby = {
+    isEnabled: amenitiesPreview.isEnabled,
+    eyebrow: amenitiesPreview.eyebrow,
+    heading: amenitiesPreview.heading,
+    intro: amenitiesPreview.intro,
+    rows: amenitiesPreview.rows,
+  };
 
   const audioTracks: PublishedAudioTrack[] = audioPreview.tracks
     .filter((t): t is typeof t & { url: string } => t.url !== null)
@@ -96,6 +111,7 @@ function PreviewContent() {
       photos={photoPreview.photos}
       audioTracks={audioTracks}
       faqCategories={faqPreview.categories}
+      amenities={amenitiesPayload}
       banner={<PreviewBanner hasDraftChanges={hasDraftChanges} />}
     />
   );

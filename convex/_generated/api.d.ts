@@ -11,6 +11,9 @@
 import type * as aboutPreviewDraft from "../aboutPreviewDraft.js";
 import type * as aboutTeamStorage from "../aboutTeamStorage.js";
 import type * as aboutTree from "../aboutTree.js";
+import type * as amenitiesNearbyCms from "../amenitiesNearbyCms.js";
+import type * as amenitiesPreviewDraft from "../amenitiesPreviewDraft.js";
+import type * as amenitiesTree from "../amenitiesTree.js";
 import type * as admin_about from "../admin/about.js";
 import type * as admin_aboutTeam from "../admin/aboutTeam.js";
 import type * as admin_audio from "../admin/audio.js";
@@ -36,6 +39,7 @@ import type * as gearLegacySeed from "../gearLegacySeed.js";
 import type * as gearPreviewDraft from "../gearPreviewDraft.js";
 import type * as gearTree from "../gearTree.js";
 import type * as inquiries from "../inquiries.js";
+import type * as lib_amenitiesUrl from "../lib/amenitiesUrl.js";
 import type * as lib_auth from "../lib/auth.js";
 import type * as lib_sentryConvex from "../lib/sentryConvex.js";
 import type * as marketingFeatureFlags from "../marketingFeatureFlags.js";
@@ -62,6 +66,9 @@ declare const fullApi: ApiFromModules<{
   aboutPreviewDraft: typeof aboutPreviewDraft;
   aboutTeamStorage: typeof aboutTeamStorage;
   aboutTree: typeof aboutTree;
+  amenitiesNearbyCms: typeof amenitiesNearbyCms;
+  amenitiesPreviewDraft: typeof amenitiesPreviewDraft;
+  amenitiesTree: typeof amenitiesTree;
   "admin/about": typeof admin_about;
   "admin/aboutTeam": typeof admin_aboutTeam;
   "admin/audio": typeof admin_audio;
@@ -87,6 +94,7 @@ declare const fullApi: ApiFromModules<{
   gearPreviewDraft: typeof gearPreviewDraft;
   gearTree: typeof gearTree;
   inquiries: typeof inquiries;
+  "lib/amenitiesUrl": typeof lib_amenitiesUrl;
   "lib/auth": typeof lib_auth;
   "lib/sentryConvex": typeof lib_sentryConvex;
   marketingFeatureFlags: typeof marketingFeatureFlags;

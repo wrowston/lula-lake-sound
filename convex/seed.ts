@@ -2,6 +2,7 @@ import { v } from "convex/values";
 import { internalMutation } from "./_generated/server";
 import {
   ABOUT_DEFAULTS,
+  AMENITIES_NEARBY_DEFAULT_ROWS,
   DEFAULT_PRICING_PACKAGES,
   FAQ_DEFAULTS,
   SETTINGS_DEFAULTS,
@@ -13,6 +14,11 @@ import {
 import { ABOUT_CONTENT_DEFAULTS, loadAboutContent } from "./aboutTree";
 import { loadPricingPackages } from "./pricingTree";
 import { loadSettingsContent } from "./settingsTree";
+import {
+  amenitiesWebsiteForDbStorage,
+  loadAmenitiesNearbyCopy,
+  loadAmenitiesNearbyItems,
+} from "./amenitiesTree";
 import { loadFaqTree, replaceFaqScopeFromCategories } from "./faqTree";
 import { LEGACY_EQUIPMENT_SEED } from "./gearEquipmentSeed";
 import { insertLegacyEquipmentSeedDraft } from "./gearLegacySeed";
@@ -20,8 +26,9 @@ import { deleteAllGearForScope, loadGearDocs } from "./gearTree";
 
 /**
  * Idempotent seed for local dev: creates the `cmsSections` metadata rows
- * (settings, pricing, about, recordings, faq) and seeds per-section published-scope
- * content so the admin editors and public queries have a consistent baseline.
+ * (settings, pricing, about, recordings, faq, amenitiesNearby) and seeds
+ * per-section published-scope content so the admin editors and public queries
+ * have a consistent baseline.
  *
  * Run once after deploying schema:
  * `bunx convex run internal.seed.seedSiteSettingsDefaults`.
@@ -30,7 +37,13 @@ export const seedSiteSettingsDefaults = internalMutation({
   args: {},
   handler: async (ctx) => {
     type SectionSeedResult = {
-      section: "settings" | "pricing" | "about" | "recordings" | "faq";
+      section:
+        | "settings"
+        | "pricing"
+        | "about"
+        | "recordings"
+        | "faq"
+        | "amenitiesNearby";
       status: "already_seeded" | "inserted";
     };
 
@@ -42,6 +55,7 @@ export const seedSiteSettingsDefaults = internalMutation({
       "about",
       "recordings",
       "faq",
+      "amenitiesNearby",
     ] as const) {
       const before = await ctx.db
         .query("cmsSections")
@@ -121,6 +135,29 @@ export const seedSiteSettingsDefaults = internalMutation({
         "published",
         FAQ_DEFAULTS.categories,
       );
+    }
+
+    const amenitiesCopyPublished = await loadAmenitiesNearbyCopy(
+      ctx,
+      "published",
+    );
+    const amenitiesItemsPublished = await loadAmenitiesNearbyItems(
+      ctx,
+      "published",
+    );
+    if (amenitiesCopyPublished === null && amenitiesItemsPublished.length === 0) {
+      for (let i = 0; i < AMENITIES_NEARBY_DEFAULT_ROWS.length; i++) {
+        const row = AMENITIES_NEARBY_DEFAULT_ROWS[i];
+        await ctx.db.insert("amenitiesNearbyItems", {
+          scope: "published",
+          stableId: row.stableId,
+          name: row.name,
+          type: row.type,
+          description: row.description,
+          website: amenitiesWebsiteForDbStorage(row.website),
+          sort: i,
+        });
+      }
     }
 
     return {

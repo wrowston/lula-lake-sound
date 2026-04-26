@@ -10,6 +10,7 @@ import {
 import {
   defaultSnapshotForSection,
   type AboutSnapshot,
+  type AmenitiesNearbySnapshot,
   type FaqSnapshot,
   type PricingSnapshot,
   type SettingsSnapshot,
@@ -51,6 +52,12 @@ import {
   loadSettingsContent,
   replaceSettingsDraft,
 } from "./settingsTree";
+import {
+  copyAmenitiesNearbyScope,
+  loadAmenitiesNearbyTree,
+  replaceAmenitiesNearbyDraft,
+  snapshotFromAmenitiesTree,
+} from "./amenitiesTree";
 import {
   copyFaqScope,
   loadFaqTree,
@@ -130,6 +137,8 @@ export const saveDraft = mutation({
     const isFaqPayload =
       "categories" in args.content &&
       Array.isArray((args.content as { categories?: unknown }).categories);
+    const isAmenitiesPayload =
+      "rows" in args.content && Array.isArray(args.content.rows);
 
     if (args.section === "settings") {
       if (!isSettingsPayload) {
@@ -162,6 +171,13 @@ export const saveDraft = mutation({
       if (!isFaqPayload) {
         cmsValidationError("FAQ content must include a categories array.", "content");
       }
+    } else if (args.section === "amenitiesNearby") {
+      if (!isAmenitiesPayload) {
+        cmsValidationError(
+          "Amenities content must include a rows array.",
+          "content",
+        );
+      }
     } else {
       cmsValidationError(
         "Recordings has no content; only the visibility flag is editable.",
@@ -183,6 +199,11 @@ export const saveDraft = mutation({
       await replaceFaqDraftFromCategories(
         ctx,
         (args.content as FaqSnapshot).categories,
+      );
+    } else if (args.section === "amenitiesNearby") {
+      await replaceAmenitiesNearbyDraft(
+        ctx,
+        args.content as AmenitiesNearbySnapshot,
       );
     }
 
@@ -223,6 +244,7 @@ export const listPendingDrafts = query({
           | "about"
           | "recordings"
           | "faq"
+          | "amenitiesNearby"
           | "gear"
           | "photos"
         >,
@@ -249,6 +271,7 @@ export const listPendingDrafts = query({
       | "about"
       | "recordings"
       | "faq"
+      | "amenitiesNearby"
       | "gear"
       | "photos"
     > = [];
@@ -597,6 +620,8 @@ export const discardDraft = mutation({
         await copySettingsScope(ctx, "published", "draft");
       } else if (args.section === "faq") {
         await copyFaqScope(ctx, "published", "draft");
+      } else if (args.section === "amenitiesNearby") {
+        await copyAmenitiesNearbyScope(ctx, "published", "draft");
       }
     }
 
@@ -707,6 +732,11 @@ async function readSnapshotForAdmin(
     return {
       categories: materializeFaqCategories(tree),
     } satisfies FaqSnapshot;
+  }
+
+  if (section === "amenitiesNearby") {
+    const tree = await loadAmenitiesNearbyTree(ctx, scope);
+    return snapshotFromAmenitiesTree(tree);
   }
 
   // recordings — flag-only, no content. Return an empty about-shaped default
