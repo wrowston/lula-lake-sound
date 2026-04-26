@@ -107,7 +107,11 @@ export function publishedIsEnabled(
  * means the owner removed every package in draft and must be able to publish
  * that deletion.
  *
- * **FAQ** follows the same rule as pricing for an empty draft scope.
+ * **FAQ** matches **about**: an empty draft scope means no in-progress FAQ
+ * edit. Publishing an empty FAQ tree is invalid (at least one category is
+ * required), so unlike pricing we must not treat "empty draft + published
+ * content" as a content diff — that would block flag-only visibility publishes
+ * and would incorrectly run validation against an empty draft.
  */
 export async function sectionHasContentDraftDiff(
   ctx: QueryCtx | MutationCtx,
@@ -117,10 +121,8 @@ export async function sectionHasContentDraftDiff(
 
   if (section === "faq") {
     const draft = await loadFaqTree(ctx, "draft");
+    if (draft.categories.length === 0) return false;
     const published = await loadFaqTree(ctx, "published");
-    if (draft.categories.length === 0) {
-      return published.categories.length > 0;
-    }
     return !faqDraftMatchesPublished(draft, published);
   }
 

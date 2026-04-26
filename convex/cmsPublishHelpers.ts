@@ -302,17 +302,10 @@ async function collectFaqIssues(
   ctx: QueryCtx | MutationCtx,
 ): Promise<PublishIssue[]> {
   const draft = await loadFaqTree(ctx, "draft");
-  let tree: FaqTree;
-  if (draft.categories.length > 0) {
-    tree = draft;
-  } else if (await sectionHasContentDraftDiff(ctx, "faq")) {
-    // Empty draft that will replace published (same idea as pricing's
-    // `sectionHasContentDraftDiff` branch) — validate what publish will copy.
-    tree = draft;
-  } else {
-    const published = await loadFaqTree(ctx, "published");
-    tree = published;
-  }
+  const tree: FaqTree =
+    draft.categories.length > 0
+      ? draft
+      : await loadFaqTree(ctx, "published");
   const issues: PublishIssue[] = [];
 
   if (tree.categories.length === 0) {
