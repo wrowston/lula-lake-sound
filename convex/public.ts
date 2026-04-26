@@ -11,11 +11,12 @@ import { loadGalleryPhotos, materializeGalleryPhotos } from "./galleryPhotos";
 import { loadAudioTracks, materializeAudioTracks } from "./audioTracks";
 import { getSectionMetaRow, publishedIsEnabled } from "./cmsMeta";
 import {
+  fallbackAmenitiesSnapshotFromTree,
   loadAmenitiesNearbyTree,
   materializePublicAmenitiesNearby,
   materializePublicAmenitiesNearbyFromSnapshot,
 } from "./amenitiesTree";
-import { AMENITIES_NEARBY_DEFAULT_ROWS, FAQ_DEFAULTS } from "./cmsShared";
+import { FAQ_DEFAULTS } from "./cmsShared";
 import { loadFaqTree, materializeFaqCategories } from "./faqTree";
 
 /**
@@ -146,18 +147,9 @@ export const getPublishedAmenitiesNearby = query({
     if (out.rows.length === 0) {
       return {
         isEnabled: true as const,
-        ...materializePublicAmenitiesNearbyFromSnapshot({
-          ...(tree.copy?.eyebrow !== undefined && tree.copy.eyebrow.trim().length > 0
-            ? { eyebrow: tree.copy.eyebrow }
-            : {}),
-          ...(tree.copy?.heading !== undefined && tree.copy.heading.trim().length > 0
-            ? { heading: tree.copy.heading }
-            : {}),
-          ...(tree.copy?.intro !== undefined && tree.copy.intro.trim().length > 0
-            ? { intro: tree.copy.intro }
-            : {}),
-          rows: AMENITIES_NEARBY_DEFAULT_ROWS,
-        }),
+        ...materializePublicAmenitiesNearbyFromSnapshot(
+          fallbackAmenitiesSnapshotFromTree(tree),
+        ),
       };
     }
     return { isEnabled: true as const, ...out };

@@ -133,8 +133,8 @@ export async function sectionHasContentDraftDiff(
 
   if (section === "amenitiesNearby") {
     const draft = await loadAmenitiesNearbyTree(ctx, "draft");
-    const published = await loadAmenitiesNearbyTree(ctx, "published");
     if (draft.items.length === 0 && draft.copy === null) return false;
+    const published = await loadAmenitiesNearbyTree(ctx, "published");
     return !amenitiesNearbyDraftMatchesPublished(draft, published);
   }
 

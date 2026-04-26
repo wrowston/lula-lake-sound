@@ -1,6 +1,9 @@
 import type { MutationCtx, QueryCtx } from "./_generated/server";
 import type { Doc } from "./_generated/dataModel";
-import type { AmenitiesNearbySnapshot } from "./cmsShared";
+import {
+  AMENITIES_NEARBY_DEFAULT_ROWS,
+  type AmenitiesNearbySnapshot,
+} from "./cmsShared";
 import {
   normalizeAmenitiesWebsiteInput,
   websiteForStorage,
@@ -54,6 +57,32 @@ export async function loadAmenitiesNearbyTree(
     loadAmenitiesNearbyItems(ctx, scope),
   ]);
   return { copy, items };
+}
+
+/** Same URL string written by {@link replaceAmenitiesNearbyDraft} / publish paths. */
+export function amenitiesWebsiteForDbStorage(raw: string): string {
+  const normalized = normalizeAmenitiesWebsiteInput(raw);
+  return normalized !== null ? websiteForStorage(normalized) : "";
+}
+
+/**
+ * Snapshot used when DB rows are empty: optional copy from the tree plus
+ * shipped default cards.
+ */
+export function fallbackAmenitiesSnapshotFromTree(
+  tree: AmenitiesNearbyTree,
+): AmenitiesNearbySnapshot {
+  const c = tree.copy;
+  return {
+    ...(c?.eyebrow !== undefined && c.eyebrow.trim().length > 0
+      ? { eyebrow: c.eyebrow }
+      : {}),
+    ...(c?.heading !== undefined && c.heading.trim().length > 0
+      ? { heading: c.heading }
+      : {}),
+    ...(c?.intro !== undefined && c.intro.trim().length > 0 ? { intro: c.intro } : {}),
+    rows: AMENITIES_NEARBY_DEFAULT_ROWS,
+  };
 }
 
 function normalizeTreeForCompare(tree: AmenitiesNearbyTree): unknown {
@@ -169,16 +198,13 @@ export async function replaceAmenitiesNearbyDraft(
 
   for (let i = 0; i < snapshot.rows.length; i++) {
     const row = snapshot.rows[i];
-    const normalized = normalizeAmenitiesWebsiteInput(row.website);
-    const websiteStored =
-      normalized !== null ? websiteForStorage(normalized) : "";
     await ctx.db.insert("amenitiesNearbyItems", {
       scope: "draft",
       stableId: row.stableId.trim(),
       name: row.name.trim(),
       type: row.type.trim(),
       description: row.description.trim(),
-      website: websiteStored,
+      website: amenitiesWebsiteForDbStorage(row.website),
       sort: i,
     });
   }

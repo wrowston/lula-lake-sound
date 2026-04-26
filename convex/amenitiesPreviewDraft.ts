@@ -1,11 +1,11 @@
 import { query } from "./_generated/server";
 import { requireCmsOwner } from "./lib/auth";
 import {
+  fallbackAmenitiesSnapshotFromTree,
   loadAmenitiesNearbyTree,
   materializePublicAmenitiesNearby,
   materializePublicAmenitiesNearbyFromSnapshot,
 } from "./amenitiesTree";
-import { AMENITIES_NEARBY_DEFAULT_ROWS } from "./cmsShared";
 import { effectiveIsEnabled, getSectionMetaRow } from "./cmsMeta";
 
 /**
@@ -53,21 +53,9 @@ export const getPreviewAmenitiesNearby = query({
     const withFallback =
       materialized.rows.length > 0
         ? materialized
-        : materializePublicAmenitiesNearbyFromSnapshot({
-            ...(sourceTree.copy?.eyebrow !== undefined &&
-            sourceTree.copy.eyebrow.trim().length > 0
-              ? { eyebrow: sourceTree.copy.eyebrow }
-              : {}),
-            ...(sourceTree.copy?.heading !== undefined &&
-            sourceTree.copy.heading.trim().length > 0
-              ? { heading: sourceTree.copy.heading }
-              : {}),
-            ...(sourceTree.copy?.intro !== undefined &&
-            sourceTree.copy.intro.trim().length > 0
-              ? { intro: sourceTree.copy.intro }
-              : {}),
-            rows: AMENITIES_NEARBY_DEFAULT_ROWS,
-          });
+        : materializePublicAmenitiesNearbyFromSnapshot(
+            fallbackAmenitiesSnapshotFromTree(sourceTree),
+          );
 
     return {
       isEnabled: true as const,

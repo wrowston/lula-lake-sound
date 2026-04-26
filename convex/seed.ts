@@ -15,6 +15,7 @@ import { ABOUT_CONTENT_DEFAULTS, loadAboutContent } from "./aboutTree";
 import { loadPricingPackages } from "./pricingTree";
 import { loadSettingsContent } from "./settingsTree";
 import {
+  amenitiesWebsiteForDbStorage,
   loadAmenitiesNearbyCopy,
   loadAmenitiesNearbyItems,
 } from "./amenitiesTree";
@@ -153,7 +154,7 @@ export const seedSiteSettingsDefaults = internalMutation({
           name: row.name,
           type: row.type,
           description: row.description,
-          website: row.website,
+          website: amenitiesWebsiteForDbStorage(row.website),
           sort: i,
         });
       }
