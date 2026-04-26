@@ -28,6 +28,8 @@ import type * as cmsShared from "../cmsShared.js";
 import type * as crons from "../crons.js";
 import type * as errors from "../errors.js";
 import type * as faqPreviewDraft from "../faqPreviewDraft.js";
+import type * as faqSeedData from "../faqSeedData.js";
+import type * as faqTree from "../faqTree.js";
 import type * as galleryPhotos from "../galleryPhotos.js";
 import type * as gearEquipmentSeed from "../gearEquipmentSeed.js";
 import type * as gearLegacySeed from "../gearLegacySeed.js";
@@ -77,6 +79,8 @@ declare const fullApi: ApiFromModules<{
   crons: typeof crons;
   errors: typeof errors;
   faqPreviewDraft: typeof faqPreviewDraft;
+  faqSeedData: typeof faqSeedData;
+  faqTree: typeof faqTree;
   galleryPhotos: typeof galleryPhotos;
   gearEquipmentSeed: typeof gearEquipmentSeed;
   gearLegacySeed: typeof gearLegacySeed;
