@@ -5,8 +5,9 @@ import { getSectionMetaRow } from "./cmsMeta";
 import { loadFaqTree, materializeFaqCategories } from "./faqTree";
 
 /**
- * Owner-only homepage FAQ preview: draft scope when it has content, else
- * published (same effective tree as the admin editor).
+ * Owner-only homepage FAQ preview: draft scope when it has categories, when
+ * `hasDraftChanges` marks a pending delete-all over published content (mirrors
+ * `pricingPreviewDraft`), else published.
  */
 export const getPreviewFaq = query({
   args: {},
@@ -20,16 +21,20 @@ export const getPreviewFaq = query({
       return null;
     }
 
-    const draft = await loadFaqTree(ctx, "draft");
-    const published = await loadFaqTree(ctx, "published");
+    const [row, draft, published] = await Promise.all([
+      getSectionMetaRow(ctx, "faq"),
+      loadFaqTree(ctx, "draft"),
+      loadFaqTree(ctx, "published"),
+    ]);
     const tree =
-      draft.categories.length > 0 ? draft : published;
+      draft.categories.length > 0 ||
+      ((row?.hasDraftChanges ?? false) && published.categories.length > 0)
+        ? draft
+        : published;
     const categories =
       tree.categories.length > 0
         ? materializeFaqCategories(tree)
         : FAQ_DEFAULTS.categories;
-
-    const row = await getSectionMetaRow(ctx, "faq");
 
     return {
       categories,
