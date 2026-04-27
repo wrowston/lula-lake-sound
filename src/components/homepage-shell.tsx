@@ -11,10 +11,6 @@ import { FAQ, type FaqCategoryProps } from "@/components/faq";
 import { Header } from "@/components/header";
 import { Hero } from "@/components/hero";
 import { SiteFooter } from "@/components/site-footer";
-import {
-  AudioPortfolio,
-  type PublishedAudioTrack,
-} from "@/components/audio-portfolio";
 import type { PublishedAmenitiesNearby } from "@/components/amenities-nearby";
 import { TheSpace, type GalleryPhoto } from "@/components/the-space";
 import { useScrollAndReveal } from "@/hooks/use-scroll-and-reveal";
@@ -44,8 +40,6 @@ interface HomepageShellProps {
   readonly gear: GearPayload | null | undefined;
   /** Published (or preview) gallery payload. */
   readonly photos: GalleryPhoto[] | null | undefined;
-  /** Published (or preview) audio portfolio; empty array shows an empty state. */
-  readonly audioTracks: PublishedAudioTrack[] | null | undefined;
   /** FAQ categories from Convex; omit to use client fallback defaults. */
   readonly faqCategories?: readonly FaqCategoryProps[] | null | undefined;
   /** When set (e.g. preview), skips live public subscription for amenities. */
@@ -58,7 +52,6 @@ export function HomepageShell({
   marketingFeatureFlags: marketingFromProps,
   gear,
   photos,
-  audioTracks,
   faqCategories,
   amenities,
   banner,
@@ -112,7 +105,6 @@ export function HomepageShell({
 
       <main className="relative z-10">
         <TheSpace photos={photos} />
-        <AudioPortfolio tracks={audioTracks} />
         <EquipmentSpecs gear={gear} />
         <MarketingPricingSection
           pricingFlags={pricingFlags}

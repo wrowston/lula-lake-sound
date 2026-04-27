@@ -5,12 +5,11 @@ import { HomepageShell } from "@/components/homepage-shell";
 
 export default async function Home() {
   try {
-    const [pricingSettled, gearSettled, photosSettled, audioSettled, faqSettled] =
+    const [pricingSettled, gearSettled, photosSettled, faqSettled] =
       await Promise.allSettled([
         preloadQuery(api.public.getPublishedPricingFlags),
         preloadQuery(api.public.getPublishedGear),
         preloadQuery(api.public.getPublishedGalleryPhotos),
-        preloadQuery(api.public.getPublishedAudioTracks),
         preloadQuery(api.public.getPublishedFaq),
       ]);
     const preloadedPricing =
@@ -19,15 +18,12 @@ export default async function Home() {
       gearSettled.status === "fulfilled" ? gearSettled.value : null;
     const preloadedPhotos =
       photosSettled.status === "fulfilled" ? photosSettled.value : null;
-    const preloadedAudio =
-      audioSettled.status === "fulfilled" ? audioSettled.value : null;
     const preloadedFaq =
       faqSettled.status === "fulfilled" ? faqSettled.value : null;
     if (
       preloadedPricing === null &&
       preloadedGear === null &&
       preloadedPhotos === null &&
-      preloadedAudio === null &&
       preloadedFaq === null
     ) {
       return (
@@ -36,7 +32,6 @@ export default async function Home() {
           marketingFeatureFlags={undefined}
           gear={null}
           photos={null}
-          audioTracks={null}
           faqCategories={null}
         />
       );
@@ -46,7 +41,6 @@ export default async function Home() {
         preloadedPricing={preloadedPricing}
         preloadedGear={preloadedGear}
         preloadedPhotos={preloadedPhotos}
-        preloadedAudio={preloadedAudio}
         preloadedFaq={preloadedFaq}
       />
     );
@@ -57,7 +51,6 @@ export default async function Home() {
         marketingFeatureFlags={undefined}
         gear={null}
         photos={null}
-        audioTracks={null}
         faqCategories={null}
       />
     );
