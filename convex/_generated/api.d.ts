@@ -44,6 +44,7 @@ import type * as lib_auth from "../lib/auth.js";
 import type * as lib_sentryConvex from "../lib/sentryConvex.js";
 import type * as marketingFeatureFlags from "../marketingFeatureFlags.js";
 import type * as mediaStorage from "../mediaStorage.js";
+import type * as migrations_amenitiesNearbyPublishedIfEmpty from "../migrations/amenitiesNearbyPublishedIfEmpty.js";
 import type * as migrations_gearFromEquipmentSpecs from "../migrations/gearFromEquipmentSpecs.js";
 import type * as observability from "../observability.js";
 import type * as photosPreviewDraft from "../photosPreviewDraft.js";
@@ -99,6 +100,7 @@ declare const fullApi: ApiFromModules<{
   "lib/sentryConvex": typeof lib_sentryConvex;
   marketingFeatureFlags: typeof marketingFeatureFlags;
   mediaStorage: typeof mediaStorage;
+  "migrations/amenitiesNearbyPublishedIfEmpty": typeof migrations_amenitiesNearbyPublishedIfEmpty;
   "migrations/gearFromEquipmentSpecs": typeof migrations_gearFromEquipmentSpecs;
   observability: typeof observability;
   photosPreviewDraft: typeof photosPreviewDraft;

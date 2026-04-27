@@ -59,6 +59,37 @@ export async function loadAmenitiesNearbyTree(
   return { copy, items };
 }
 
+/**
+ * Inserts `AMENITIES_NEARBY_DEFAULT_ROWS` from `cmsShared` into
+ * `amenitiesNearbyItems` for `scope="published"` when the published copy row
+ * is absent and there are no published item rows. Used by the dev seed and the
+ * one-time migration.
+ *
+ * @returns whether rows were inserted (false when published already has copy or items).
+ */
+export async function insertDefaultAmenitiesNearbyPublishedIfEmpty(
+  ctx: MutationCtx,
+): Promise<boolean> {
+  const copyPublished = await loadAmenitiesNearbyCopy(ctx, "published");
+  const itemsPublished = await loadAmenitiesNearbyItems(ctx, "published");
+  if (copyPublished !== null || itemsPublished.length > 0) {
+    return false;
+  }
+  for (let i = 0; i < AMENITIES_NEARBY_DEFAULT_ROWS.length; i++) {
+    const row = AMENITIES_NEARBY_DEFAULT_ROWS[i];
+    await ctx.db.insert("amenitiesNearbyItems", {
+      scope: "published",
+      stableId: row.stableId,
+      name: row.name,
+      type: row.type,
+      description: row.description,
+      website: amenitiesWebsiteForDbStorage(row.website),
+      sort: i,
+    });
+  }
+  return true;
+}
+
 /** Same URL string written by {@link replaceAmenitiesNearbyDraft} / publish paths. */
 export function amenitiesWebsiteForDbStorage(raw: string): string {
   const normalized = normalizeAmenitiesWebsiteInput(raw);
