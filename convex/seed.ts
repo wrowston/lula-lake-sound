@@ -2,23 +2,15 @@ import { v } from "convex/values";
 import { internalMutation } from "./_generated/server";
 import {
   ABOUT_DEFAULTS,
-  AMENITIES_NEARBY_DEFAULT_ROWS,
   DEFAULT_PRICING_PACKAGES,
   FAQ_DEFAULTS,
   SETTINGS_DEFAULTS,
 } from "./cmsShared";
-import {
-  DEFAULT_IS_ENABLED,
-  ensureSectionMetaRow,
-} from "./cmsMeta";
+import { DEFAULT_IS_ENABLED, ensureSectionMetaRow } from "./cmsMeta";
 import { ABOUT_CONTENT_DEFAULTS, loadAboutContent } from "./aboutTree";
 import { loadPricingPackages } from "./pricingTree";
 import { loadSettingsContent } from "./settingsTree";
-import {
-  amenitiesWebsiteForDbStorage,
-  loadAmenitiesNearbyCopy,
-  loadAmenitiesNearbyItems,
-} from "./amenitiesTree";
+import { insertDefaultAmenitiesNearbyPublishedIfEmpty } from "./amenitiesTree";
 import { loadFaqTree, replaceFaqScopeFromCategories } from "./faqTree";
 import { LEGACY_EQUIPMENT_SEED } from "./gearEquipmentSeed";
 import { insertLegacyEquipmentSeedDraft } from "./gearLegacySeed";
@@ -137,28 +129,7 @@ export const seedSiteSettingsDefaults = internalMutation({
       );
     }
 
-    const amenitiesCopyPublished = await loadAmenitiesNearbyCopy(
-      ctx,
-      "published",
-    );
-    const amenitiesItemsPublished = await loadAmenitiesNearbyItems(
-      ctx,
-      "published",
-    );
-    if (amenitiesCopyPublished === null && amenitiesItemsPublished.length === 0) {
-      for (let i = 0; i < AMENITIES_NEARBY_DEFAULT_ROWS.length; i++) {
-        const row = AMENITIES_NEARBY_DEFAULT_ROWS[i];
-        await ctx.db.insert("amenitiesNearbyItems", {
-          scope: "published",
-          stableId: row.stableId,
-          name: row.name,
-          type: row.type,
-          description: row.description,
-          website: amenitiesWebsiteForDbStorage(row.website),
-          sort: i,
-        });
-      }
-    }
+    await insertDefaultAmenitiesNearbyPublishedIfEmpty(ctx);
 
     return {
       results,
