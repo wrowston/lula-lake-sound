@@ -19,16 +19,10 @@ export const ADMIN_MANAGE_NAV_ITEMS: {
   description: string;
 }[] = [
   {
-    title: "Pricing",
-    href: "/admin/pricing",
-    icon: DollarSign,
-    description: "Manage packages & rates",
-  },
-  {
-    title: "Gear",
-    href: "/admin/gear",
-    icon: Wrench,
-    description: "Equipment inventory",
+    title: "About",
+    href: "/admin/about",
+    icon: User,
+    description: "Studio bio & story",
   },
   {
     title: "Photos",
@@ -37,10 +31,10 @@ export const ADMIN_MANAGE_NAV_ITEMS: {
     description: "Gallery management",
   },
   {
-    title: "Videos",
-    href: "/admin/videos",
-    icon: Video,
-    description: "Video portfolio",
+    title: "Gear",
+    href: "/admin/gear",
+    icon: Wrench,
+    description: "Equipment inventory",
   },
   {
     title: "Audio",
@@ -49,10 +43,16 @@ export const ADMIN_MANAGE_NAV_ITEMS: {
     description: "Audio samples",
   },
   {
-    title: "About",
-    href: "/admin/about",
-    icon: User,
-    description: "Studio bio & story",
+    title: "Pricing",
+    href: "/admin/pricing",
+    icon: DollarSign,
+    description: "Manage packages & rates",
+  },
+  {
+    title: "Amenities nearby",
+    href: "/admin/amenities-nearby",
+    icon: MapPin,
+    description: "Local favorites on the homepage",
   },
   {
     title: "FAQ",
@@ -61,10 +61,10 @@ export const ADMIN_MANAGE_NAV_ITEMS: {
     description: "Homepage questions & answers",
   },
   {
-    title: "Amenities nearby",
-    href: "/admin/amenities-nearby",
-    icon: MapPin,
-    description: "Local favorites on the homepage",
+    title: "Videos",
+    href: "/admin/videos",
+    icon: Video,
+    description: "Video portfolio",
   },
   {
     title: "Settings",

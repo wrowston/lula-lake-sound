@@ -10,7 +10,6 @@ import {
 } from "@/components/ui/accordion";
 import { Button, buttonVariants } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
-import { DEFAULT_FAQ_CATEGORIES } from "../../convex/faqSeedData";
 
 export type FaqQuestionProps = {
   stableId: string;
@@ -25,14 +24,13 @@ export type FaqCategoryProps = {
 };
 
 export type FaqProps = {
-  categories?: readonly FaqCategoryProps[];
+  categories?: readonly FaqCategoryProps[] | null;
 };
 
 export function FAQ({ categories }: FaqProps) {
-  const data =
-    categories && categories.length > 0
-      ? categories
-      : DEFAULT_FAQ_CATEGORIES;
+  if (categories === null || categories?.length === 0) {
+    return null;
+  }
 
   return (
     <section
@@ -67,30 +65,38 @@ export function FAQ({ categories }: FaqProps) {
           </p>
         </div>
 
-        <div className="reveal reveal-delay-2 space-y-16">
-          {data.map((category) => (
-            <div key={category.stableId}>
-              <h3 className="eyebrow mb-8 border-b border-sand/22 pb-4 text-sand">
-                {category.title}
-              </h3>
+        {categories === undefined ? (
+          <div className="reveal reveal-delay-2 space-y-10">
+            <div className="h-12 animate-pulse rounded-md bg-warm-white/5" />
+            <div className="h-12 animate-pulse rounded-md bg-warm-white/5" />
+            <div className="h-12 animate-pulse rounded-md bg-warm-white/5" />
+          </div>
+        ) : (
+          <div className="reveal reveal-delay-2 space-y-16">
+            {categories.map((category) => (
+              <div key={category.stableId}>
+                <h3 className="eyebrow mb-8 border-b border-sand/22 pb-4 text-sand">
+                  {category.title}
+                </h3>
 
-              <Accordion multiple>
-                {category.questions.map((faq) => (
-                  <AccordionItem key={faq.stableId} value={faq.stableId}>
-                    <AccordionTrigger>
-                      <span className="body-text text-base text-warm-white">
-                        {faq.question}
-                      </span>
-                    </AccordionTrigger>
-                    <AccordionPanel>
-                      <p className="body-text text-ivory/84">{faq.answer}</p>
-                    </AccordionPanel>
-                  </AccordionItem>
-                ))}
-              </Accordion>
-            </div>
-          ))}
-        </div>
+                <Accordion multiple>
+                  {category.questions.map((faq) => (
+                    <AccordionItem key={faq.stableId} value={faq.stableId}>
+                      <AccordionTrigger>
+                        <span className="body-text text-base text-warm-white">
+                          {faq.question}
+                        </span>
+                      </AccordionTrigger>
+                      <AccordionPanel>
+                        <p className="body-text text-ivory/84">{faq.answer}</p>
+                      </AccordionPanel>
+                    </AccordionItem>
+                  ))}
+                </Accordion>
+              </div>
+            ))}
+          </div>
+        )}
 
         <div className="reveal reveal-delay-3 mt-24 border-t border-sand/15 pt-16 text-center">
           <p className="eyebrow mb-5 text-sand/78">Contact</p>

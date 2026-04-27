@@ -11,12 +11,14 @@ export default async function Home() {
       photosSettled,
       faqSettled,
       marketingSettled,
+      amenitiesSettled,
     ] = await Promise.allSettled([
       preloadQuery(api.public.getPublishedPricingFlags),
       preloadQuery(api.public.getPublishedGear),
       preloadQuery(api.public.getPublishedGalleryPhotos),
       preloadQuery(api.public.getPublishedFaq),
       preloadQuery(api.public.getPublishedMarketingFeatureFlags),
+      preloadQuery(api.public.getPublishedAmenitiesNearby),
     ]);
     const preloadedPricing =
       pricingSettled.status === "fulfilled" ? pricingSettled.value : null;
@@ -28,12 +30,15 @@ export default async function Home() {
       faqSettled.status === "fulfilled" ? faqSettled.value : null;
     const preloadedMarketing =
       marketingSettled.status === "fulfilled" ? marketingSettled.value : null;
+    const preloadedAmenities =
+      amenitiesSettled.status === "fulfilled" ? amenitiesSettled.value : null;
     if (
       preloadedPricing === null &&
       preloadedGear === null &&
       preloadedPhotos === null &&
       preloadedFaq === null &&
-      preloadedMarketing === null
+      preloadedMarketing === null &&
+      preloadedAmenities === null
     ) {
       return (
         <HomepageShell
@@ -42,6 +47,7 @@ export default async function Home() {
           gear={null}
           photos={null}
           faqCategories={null}
+          amenities={null}
         />
       );
     }
@@ -52,6 +58,7 @@ export default async function Home() {
         preloadedPhotos={preloadedPhotos}
         preloadedFaq={preloadedFaq}
         preloadedMarketing={preloadedMarketing}
+        preloadedAmenities={preloadedAmenities}
       />
     );
   } catch {
@@ -62,6 +69,7 @@ export default async function Home() {
         gear={null}
         photos={null}
         faqCategories={null}
+        amenities={null}
       />
     );
   }

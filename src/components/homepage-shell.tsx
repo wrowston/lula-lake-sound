@@ -40,9 +40,9 @@ interface HomepageShellProps {
   readonly gear: GearPayload | null | undefined;
   /** Published (or preview) gallery payload. */
   readonly photos: GalleryPhoto[] | null | undefined;
-  /** FAQ categories from Convex; omit to use client fallback defaults. */
+  /** FAQ categories from Convex; `undefined` renders the loading state. */
   readonly faqCategories?: readonly FaqCategoryProps[] | null | undefined;
-  /** When set (e.g. preview), skips live public subscription for amenities. */
+  /** Amenities payload from Convex; `undefined` renders the loading state. */
   readonly amenities?: PublishedAmenitiesNearby | null | undefined;
   readonly banner?: React.ReactNode;
 }
@@ -111,13 +111,7 @@ export function HomepageShell({
           isPreviewRoute={isPreview}
         />
         <AmenitiesNearby amenities={amenities} />
-        <FAQ
-          categories={
-            faqCategories === undefined || faqCategories === null
-              ? undefined
-              : faqCategories
-          }
-        />
+        <FAQ categories={faqCategories} />
         <ArtistInquiries />
       </main>
 
