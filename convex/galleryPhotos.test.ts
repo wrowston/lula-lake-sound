@@ -2,9 +2,12 @@ import { describe, expect, test } from "bun:test";
 import type { Doc, Id } from "./_generated/dataModel";
 import {
   ALLOWED_GALLERY_IMAGE_TYPES,
+  GALLERY_CATEGORY_SLUGS,
   MAX_GALLERY_IMAGE_BYTES,
   MAX_GALLERY_PHOTOS,
   galleryDraftMatchesPublished,
+  isGalleryCategorySlug,
+  normalizeGalleryCategories,
 } from "./galleryPhotos";
 
 type Row = Doc<"galleryPhotos">;
@@ -95,5 +98,70 @@ describe("galleryDraftMatchesPublished", () => {
         [row({ storageId: "y" as unknown as Id<"_storage"> })],
       ),
     ).toBe(false);
+  });
+
+  test("different categories are not a match", () => {
+    expect(
+      galleryDraftMatchesPublished(
+        [row({ categories: ["rooms"] })],
+        [row({ categories: ["gear"] })],
+      ),
+    ).toBe(false);
+  });
+
+  test("undefined vs empty-array categories normalize to the same value", () => {
+    // Empty arrays serialize the same as `null` per `comparablePhoto`
+    // (both → `[]` ≠ `null`), so we explicitly check the undefined case
+    // to lock in the normalisation contract.
+    expect(
+      galleryDraftMatchesPublished(
+        [row({ categories: undefined })],
+        [row({ categories: undefined })],
+      ),
+    ).toBe(true);
+  });
+});
+
+describe("isGalleryCategorySlug", () => {
+  test("accepts every catalogued slug", () => {
+    for (const slug of GALLERY_CATEGORY_SLUGS) {
+      expect(isGalleryCategorySlug(slug)).toBe(true);
+    }
+  });
+
+  test("rejects unknown values", () => {
+    expect(isGalleryCategorySlug("unknown")).toBe(false);
+    expect(isGalleryCategorySlug("Rooms")).toBe(false); // case-sensitive
+    expect(isGalleryCategorySlug("")).toBe(false);
+  });
+});
+
+describe("normalizeGalleryCategories", () => {
+  test("returns undefined for empty / nullish input", () => {
+    expect(normalizeGalleryCategories(undefined)).toBeUndefined();
+    expect(normalizeGalleryCategories(null)).toBeUndefined();
+    expect(normalizeGalleryCategories([])).toBeUndefined();
+  });
+
+  test("lower-cases and trims values, dropping invalid entries", () => {
+    expect(normalizeGalleryCategories(["  Rooms  ", "GEAR", "bogus"])).toEqual(
+      ["rooms", "gear"],
+    );
+  });
+
+  test("dedupes case-insensitively", () => {
+    expect(normalizeGalleryCategories(["rooms", "Rooms", "ROOMS"])).toEqual([
+      "rooms",
+    ]);
+  });
+
+  test("returns canonical catalogue order (rooms, gear, grounds)", () => {
+    expect(
+      normalizeGalleryCategories(["grounds", "rooms", "gear"]),
+    ).toEqual(["rooms", "gear", "grounds"]);
+  });
+
+  test("returns undefined when nothing in the input is valid", () => {
+    expect(normalizeGalleryCategories(["bogus", "  "])).toBeUndefined();
   });
 });

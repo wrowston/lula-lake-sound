@@ -59,6 +59,28 @@ const MAX_CAPTION_LENGTH = 600;
  */
 const REORDER_MIME = "application/x-lls-photo-reorder";
 
+/**
+ * Controlled vocabulary for the public `/gallery` filter pills (INF-47).
+ * Mirrors `GALLERY_CATEGORY_SLUGS` / `GALLERY_CATEGORY_LABELS` in
+ * `convex/galleryPhotos.ts` — kept in lock-step so admin checkboxes can't
+ * write a slug that the Convex normaliser will silently drop.
+ */
+export const GALLERY_CATEGORY_OPTIONS: ReadonlyArray<{
+  readonly slug: "rooms" | "gear" | "grounds";
+  readonly label: string;
+  readonly description: string;
+}> = [
+  { slug: "rooms", label: "Rooms", description: "Live rooms, control room, iso booths." },
+  { slug: "gear", label: "Gear", description: "Console, racks, mics, instruments." },
+  {
+    slug: "grounds",
+    label: "Grounds",
+    description: "Exteriors, hallway, residential wing.",
+  },
+];
+
+type GalleryCategorySlug = (typeof GALLERY_CATEGORY_OPTIONS)[number]["slug"];
+
 type PhotoItem = {
   stableId: string;
   storageId: Id<"_storage">;
@@ -71,6 +93,7 @@ type PhotoItem = {
   contentType: string;
   sizeBytes: number;
   originalFileName: string | null;
+  categories: readonly string[];
 };
 
 type PhotoEdits = Record<
@@ -78,6 +101,7 @@ type PhotoEdits = Record<
   {
     alt: string;
     caption: string;
+    categories: readonly GalleryCategorySlug[];
   }
 >;
 
@@ -125,6 +149,33 @@ export function validatePhotoFields(alt: string, caption: string): string | null
     return `Caption must be at most ${MAX_CAPTION_LENGTH} characters.`;
   }
   return null;
+}
+
+/**
+ * Equality on category arrays. Order matters for storage (we always write
+ * canonical order from the convex helper) so the published rows and draft
+ * rows compare cleanly with `JSON.stringify`. The admin UI also writes
+ * canonical order via `selectedSlugs`, so a string-equal compare is enough
+ * to detect "no change".
+ */
+export function sameCategories(
+  a: readonly string[],
+  b: readonly string[],
+): boolean {
+  if (a.length !== b.length) return false;
+  for (let i = 0; i < a.length; i++) {
+    if (a[i] !== b[i]) return false;
+  }
+  return true;
+}
+
+/** Canonical order matching `GALLERY_CATEGORY_OPTIONS` for predictable diffs. */
+function canonicaliseCategories(
+  selected: ReadonlySet<GalleryCategorySlug>,
+): GalleryCategorySlug[] {
+  return GALLERY_CATEGORY_OPTIONS.filter((option) => selected.has(option.slug)).map(
+    (option) => option.slug,
+  );
 }
 
 function sequentialEffects(
@@ -300,37 +351,76 @@ function PhotosEditorForm() {
     data?.publishedBy && user?.id === data.publishedBy ? "You" : undefined;
 
   const getEditableFields = useCallback(
-    (photo: PhotoItem) => ({
-      alt: edits[photo.stableId]?.alt ?? photo.alt,
-      caption: edits[photo.stableId]?.caption ?? (photo.caption ?? ""),
-    }),
+    (photo: PhotoItem) => {
+      const photoCategories = (photo.categories ?? []).filter((slug) =>
+        GALLERY_CATEGORY_OPTIONS.some((option) => option.slug === slug),
+      ) as readonly GalleryCategorySlug[];
+      return {
+        alt: edits[photo.stableId]?.alt ?? photo.alt,
+        caption: edits[photo.stableId]?.caption ?? (photo.caption ?? ""),
+        categories:
+          edits[photo.stableId]?.categories ?? photoCategories,
+      };
+    },
     [edits],
   );
 
-  const updatePhotoEdit = useCallback((photo: PhotoItem, patch: Partial<{ alt: string; caption: string }>) => {
-    setEdits((current) => {
-      const base = {
-        alt: current[photo.stableId]?.alt ?? photo.alt,
-        caption: current[photo.stableId]?.caption ?? (photo.caption ?? ""),
-      };
-      const next = {
-        alt: patch.alt ?? base.alt,
-        caption: patch.caption ?? base.caption,
-      };
-      if (
-        next.alt === photo.alt &&
-        next.caption === (photo.caption ?? "")
-      ) {
-        const rest = { ...current };
-        delete rest[photo.stableId];
-        return rest;
+  const updatePhotoEdit = useCallback(
+    (
+      photo: PhotoItem,
+      patch: Partial<{
+        alt: string;
+        caption: string;
+        categories: readonly GalleryCategorySlug[];
+      }>,
+    ) => {
+      setEdits((current) => {
+        const photoCategories = (photo.categories ?? []).filter((slug) =>
+          GALLERY_CATEGORY_OPTIONS.some((option) => option.slug === slug),
+        ) as readonly GalleryCategorySlug[];
+        const base = {
+          alt: current[photo.stableId]?.alt ?? photo.alt,
+          caption:
+            current[photo.stableId]?.caption ?? (photo.caption ?? ""),
+          categories:
+            current[photo.stableId]?.categories ?? photoCategories,
+        };
+        const next = {
+          alt: patch.alt ?? base.alt,
+          caption: patch.caption ?? base.caption,
+          categories: patch.categories ?? base.categories,
+        };
+        if (
+          next.alt === photo.alt &&
+          next.caption === (photo.caption ?? "") &&
+          sameCategories(next.categories, photoCategories)
+        ) {
+          const rest = { ...current };
+          delete rest[photo.stableId];
+          return rest;
+        }
+        return {
+          ...current,
+          [photo.stableId]: next,
+        };
+      });
+    },
+    [],
+  );
+
+  const togglePhotoCategory = useCallback(
+    (photo: PhotoItem, slug: GalleryCategorySlug) => {
+      const fields = getEditableFields(photo);
+      const selected = new Set<GalleryCategorySlug>(fields.categories);
+      if (selected.has(slug)) {
+        selected.delete(slug);
+      } else {
+        selected.add(slug);
       }
-      return {
-        ...current,
-        [photo.stableId]: next,
-      };
-    });
-  }, []);
+      updatePhotoEdit(photo, { categories: canonicaliseCategories(selected) });
+    },
+    [getEditableFields, updatePhotoEdit],
+  );
 
   const clearPhotoEdit = useCallback((stableId: string) => {
     setEdits((current) => {
@@ -359,6 +449,8 @@ function PhotosEditorForm() {
             alt: fields.alt.trim(),
             caption:
               fields.caption.trim().length > 0 ? fields.caption.trim() : null,
+            categories:
+              fields.categories.length > 0 ? [...fields.categories] : [],
           }),
         ),
         { onErrorMessage: setInlineError },
@@ -406,6 +498,8 @@ function PhotosEditorForm() {
           stableId: photo.stableId,
           alt: fields.alt.trim(),
           caption: fields.caption.trim().length > 0 ? fields.caption.trim() : null,
+          categories:
+            fields.categories.length > 0 ? [...fields.categories] : [],
         }),
       );
     });
@@ -850,7 +944,7 @@ function PhotosEditorForm() {
     busy,
     autosaveStatus: "idle",
     inlineError,
-    previewHref: "/preview#the-space",
+    previewHref: "/preview/gallery",
     onPublish: handleToolbarPublish,
     onDiscardConfirm: handleDiscardConfirm,
     // No `flush` — dirty local edits trigger the nav-guard confirm dialog
@@ -903,10 +997,14 @@ function PhotosEditorForm() {
               Studio gallery
             </h2>
             <p className="body-text-small max-w-2xl text-foreground/85">
-              Upload and arrange the photos shown in the “The Space” section.
-              Drag and drop images onto this page to upload, or drag a card by
-              its handle to reorder. Uploads land in draft first; publish makes
-              the new order and metadata live.
+              Upload and arrange the photos shown in the “The Space” homepage
+              carousel and the public <span className="font-medium">Gallery</span>{" "}
+              page (<code className="font-mono text-xs">/gallery</code>). Drag
+              and drop images here to upload, or drag a card by its handle to
+              reorder. Tag each photo with the categories it belongs to —
+              Rooms, Gear, or Grounds — so the Gallery filter pills work.
+              Uploads land in draft first; publish makes the new order,
+              metadata, and category tags live.
             </p>
           </div>
 
@@ -1192,6 +1290,46 @@ function PhotosEditorForm() {
                         className="min-h-[2.5rem] max-h-24 resize-y py-1.5 text-sm [field-sizing:fixed]"
                       />
                     </label>
+
+                    <fieldset className="min-w-0 space-y-1">
+                      <legend className="text-[11px] font-medium leading-none text-foreground/90">
+                        Gallery categories
+                      </legend>
+                      <p className="text-[11px] leading-tight text-muted-foreground">
+                        Drives the public Gallery filter pills. Photos with no
+                        categories still appear under <span className="font-medium">All</span>.
+                      </p>
+                      <div className="flex flex-wrap gap-1.5 pt-0.5">
+                        {GALLERY_CATEGORY_OPTIONS.map((option) => {
+                          const isChecked = fields.categories.includes(
+                            option.slug,
+                          );
+                          return (
+                            <button
+                              key={option.slug}
+                              type="button"
+                              role="checkbox"
+                              aria-checked={isChecked}
+                              title={option.description}
+                              disabled={busy !== null || isRowBusy}
+                              onClick={() =>
+                                togglePhotoCategory(photo, option.slug)
+                              }
+                              className={cn(
+                                "rounded-sm border px-2 py-0.5 text-[11px] transition-colors",
+                                "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-1",
+                                isChecked
+                                  ? "border-primary bg-primary/15 text-foreground"
+                                  : "border-border bg-background text-muted-foreground hover:border-primary/60 hover:text-foreground",
+                                "disabled:cursor-not-allowed disabled:opacity-60",
+                              )}
+                            >
+                              {option.label}
+                            </button>
+                          );
+                        })}
+                      </div>
+                    </fieldset>
                   </div>
 
                   <div className="flex items-center justify-between gap-2 border-t border-border/60 pt-1.5">

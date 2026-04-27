@@ -10,6 +10,7 @@ import type {
   PublicAboutTeamMember,
 } from "../../../convex/cmsShared";
 import { Header } from "@/components/header";
+import { PageHeader } from "@/components/page-header";
 import { SiteFooter } from "@/components/site-footer";
 import { AboutBodyContent } from "./about-body-content";
 import { cn } from "@/lib/utils";
@@ -143,6 +144,7 @@ export function AboutLayout({ data, showPricing, marketing, banner }: AboutLayou
   const aboutHref = isPreview ? "/preview/about" : "/about";
   const homeSectionBase = isPreview ? "/preview" : "/";
   const recordingsNavHref = isPreview ? "/preview/recordings" : "/recordings";
+  const backToHomeHref = isPreview ? "/preview" : "/";
 
   const team = data.teamMembers ?? [];
   // Variant A composition features exactly two circular headshots — owner +
@@ -174,8 +176,37 @@ export function AboutLayout({ data, showPricing, marketing, banner }: AboutLayou
       />
 
       <main>
-        <section className="relative" aria-labelledby="about-hero-title">
-          <div className="relative h-[70vh] md:h-[85vh] overflow-hidden">
+        <PageHeader
+          eyebrow="About the studio"
+          title={data.heroTitle}
+          meta="Lookout Mountain, TN — Est. 2019"
+          backHref={backToHomeHref}
+          titleId="about-hero-title"
+        />
+
+        {data.heroSubtitle ? (
+          <section
+            className="bg-washed-black px-6 pb-16 md:px-16 md:pb-24"
+            aria-label="Studio introduction"
+          >
+            <div className="mx-auto max-w-3xl">
+              <p
+                className={cn(
+                  revealDelay(0),
+                  "editorial-lede text-balance text-ivory/75",
+                )}
+              >
+                {data.heroSubtitle}
+              </p>
+            </div>
+          </section>
+        ) : null}
+
+        <section
+          className="relative bg-deep-forest"
+          aria-label="Studio image"
+        >
+          <div className="relative h-[55vh] overflow-hidden md:h-[70vh]">
             <Image
               src={heroImageSrc}
               alt=""
@@ -188,40 +219,8 @@ export function AboutLayout({ data, showPricing, marketing, banner }: AboutLayou
             />
             <div
               aria-hidden
-              className="absolute inset-0 bg-gradient-to-b from-deep-forest/60 via-deep-forest/30 to-deep-forest"
+              className="absolute inset-x-0 bottom-0 h-32 bg-gradient-to-b from-transparent to-deep-forest"
             />
-            <div className="absolute inset-0 flex items-end">
-              <div className="mx-auto w-full max-w-7xl px-6 pb-16 md:px-16 md:pb-24">
-                <nav aria-label="Breadcrumb" className={revealDelay(0)}>
-                  <Link
-                    href="/"
-                    className="label-text text-sand/60 hover:text-sand transition-colors text-[11px] tracking-[0.2em]"
-                  >
-                    ← Lula Lake Sound
-                  </Link>
-                </nav>
-                <h1
-                  id="about-hero-title"
-                  className={cn(
-                    revealDelay(2),
-                    "headline-primary text-warm-white leading-[1.05] mt-6 text-balance",
-                  )}
-                  style={{ fontSize: "clamp(2.5rem, 6vw, 5.5rem)" }}
-                >
-                  {data.heroTitle}
-                </h1>
-                {data.heroSubtitle ? (
-                  <p
-                    className={cn(
-                      revealDelay(3),
-                      "body-text text-ivory/75 mt-6 max-w-2xl text-lg md:text-xl leading-[1.6]",
-                    )}
-                  >
-                    {data.heroSubtitle}
-                  </p>
-                ) : null}
-              </div>
-            </div>
           </div>
         </section>
 

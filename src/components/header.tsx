@@ -87,6 +87,15 @@ export function Header({
         ]
       : []),
     { kind: "hash", id: "the-space", label: "The Studio" },
+    {
+      kind: "route",
+      key: "gallery",
+      // `homeSectionBase` is `"/preview"` when the header is mounted under
+      // owner preview, otherwise `"/"`. Mirror that for the Gallery route.
+      href:
+        homeSectionBase === "/preview" ? "/preview/gallery" : "/gallery",
+      label: "Gallery",
+    },
     { kind: "hash", id: "equipment-specs", label: "Gear" },
     ...(showRecordings
       ? [

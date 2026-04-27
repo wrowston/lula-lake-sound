@@ -3,6 +3,7 @@ import { mutation, query, type MutationCtx } from "../_generated/server";
 import type { Id } from "../_generated/dataModel";
 import {
   ALLOWED_GALLERY_IMAGE_TYPES,
+  GALLERY_CATEGORY_SLUGS,
   MAX_GALLERY_IMAGE_BYTES,
   MAX_GALLERY_PHOTOS,
   type GalleryPhotoDoc,
@@ -10,8 +11,10 @@ import {
   deleteStorageIfUnreferenced,
   ensureGalleryMeta,
   getStorageMetadata,
+  isGalleryCategorySlug,
   loadGalleryPhotos,
   materializeGalleryPhotos,
+  normalizeGalleryCategories,
   patchGalleryMetaAfterDraftChange,
   replaceGalleryScope,
 } from "../galleryPhotos";
@@ -79,6 +82,28 @@ function normalizeFileName(raw?: string | null): string | undefined {
     );
   }
   return value;
+}
+
+function normalizeCategoriesInput(
+  raw: readonly string[] | null | undefined,
+): string[] | undefined {
+  if (raw === undefined || raw === null) return undefined;
+  if (raw.length === 0) return undefined;
+  for (const value of raw) {
+    if (typeof value !== "string") {
+      cmsValidationError("Category values must be strings.", "categories");
+    }
+    const slug = value.trim().toLowerCase();
+    if (slug.length === 0) continue;
+    if (!isGalleryCategorySlug(slug)) {
+      cmsValidationError(
+        `Unknown gallery category: ${value}. Allowed: ${GALLERY_CATEGORY_SLUGS.join(", ")}.`,
+        "categories",
+      );
+    }
+  }
+  // Re-use the public normaliser to dedupe + canonicalise the order.
+  return normalizeGalleryCategories(raw);
 }
 
 function normalizeDimension(
@@ -182,6 +207,17 @@ function collectPhotoIssues(
       });
     } else {
       stableIds.add(row.stableId);
+    }
+
+    if (row.categories !== undefined) {
+      for (const category of row.categories) {
+        if (!isGalleryCategorySlug(category)) {
+          issues.push({
+            path: `${base}.categories`,
+            message: `Unknown category: ${category}. Allowed: ${GALLERY_CATEGORY_SLUGS.join(", ")}.`,
+          });
+        }
+      }
     }
 
     const storage = storageById.get(row.storageId) ?? null;
@@ -292,6 +328,7 @@ export const saveUploadedPhoto = mutation({
     width: v.optional(v.union(v.number(), v.null())),
     height: v.optional(v.union(v.number(), v.null())),
     originalFileName: v.optional(v.union(v.string(), v.null())),
+    categories: v.optional(v.union(v.array(v.string()), v.null())),
   },
   handler: async (ctx, args) => {
     const { updatedBy } = await requireCmsOwner(ctx);
@@ -315,6 +352,7 @@ export const saveUploadedPhoto = mutation({
       const width = normalizeDimension(args.width, "width");
       const height = normalizeDimension(args.height, "height");
       const originalFileName = normalizeFileName(args.originalFileName);
+      const categories = normalizeCategoriesInput(args.categories);
 
       const sortOrder =
         draft.length === 0
@@ -333,6 +371,7 @@ export const saveUploadedPhoto = mutation({
         contentType,
         sizeBytes: storage.size,
         ...(originalFileName !== undefined ? { originalFileName } : {}),
+        ...(categories !== undefined ? { categories } : {}),
       });
     } catch (error) {
       await deleteStorageIfUnreferenced(ctx, args.storageId);
@@ -349,6 +388,13 @@ export const updateDraftPhotoMetadata = mutation({
     stableId: v.string(),
     alt: v.string(),
     caption: v.optional(v.union(v.string(), v.null())),
+    /**
+     * INF-47 — full replacement of the photo's category tags. Pass `[]`
+     * (or `null`) to clear all categories. Field omitted = leave the
+     * existing categories untouched, so old admin clients that haven't
+     * been redeployed still work unchanged.
+     */
+    categories: v.optional(v.union(v.array(v.string()), v.null())),
   },
   handler: async (ctx, args) => {
     const { updatedBy } = await requireCmsOwner(ctx);
@@ -357,10 +403,20 @@ export const updateDraftPhotoMetadata = mutation({
       cmsNotFound("galleryPhoto", args.stableId);
     }
 
-    await ctx.db.patch(row._id, {
+    const patch: {
+      alt: string;
+      caption: string | undefined;
+      categories?: string[] | undefined;
+    } = {
       alt: normalizeAlt(args.alt),
       caption: normalizeCaption(args.caption),
-    });
+    };
+
+    if (args.categories !== undefined) {
+      patch.categories = normalizeCategoriesInput(args.categories);
+    }
+
+    await ctx.db.patch(row._id, patch);
 
     await patchGalleryMetaAfterDraftChange(ctx, updatedBy);
     return { ok: true as const };

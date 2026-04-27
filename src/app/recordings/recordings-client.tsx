@@ -7,6 +7,7 @@ import { usePathname } from "next/navigation";
 import { useRef, useState, type ReactNode } from "react";
 
 import { Header } from "@/components/header";
+import { PageHeader } from "@/components/page-header";
 import { SiteFooter } from "@/components/site-footer";
 import { useScrollAndReveal } from "@/hooks/use-scroll-and-reveal";
 import { MAX_REVEAL_DELAY, revealDelay } from "@/lib/reveal-delay";
@@ -639,41 +640,23 @@ export function RecordingsClient({
       />
 
       <main>
+        <PageHeader
+          eyebrow="Recordings"
+          title="Selected Recordings"
+          meta="Tracked · Mixed · Mastered"
+          backHref={backToHomeHref}
+          titleId="recordings-title"
+        />
+
         <section
-          className="relative bg-washed-black px-6 pb-24 pt-36 md:px-16 md:pb-36 md:pt-44"
-          aria-labelledby="recordings-title"
+          className="relative bg-washed-black px-6 pb-24 md:px-16 md:pb-36"
+          aria-label="Recordings list"
         >
           <div className="mx-auto max-w-6xl">
-            <nav aria-label="Breadcrumb" className={revealDelay(0)}>
-              <Link
-                href={backToHomeHref}
-                className="label-text text-[11px] tracking-[0.2em] text-sand/60 transition-colors hover:text-sand"
-              >
-                ← Lula Lake Sound
-              </Link>
-            </nav>
             <p
               className={cn(
-                revealDelay(1),
-                "label-text mt-8 text-[11px] tracking-[0.2em] text-sand/50",
-              )}
-            >
-              Listen
-            </p>
-            <h1
-              id="recordings-title"
-              className={cn(
-                revealDelay(2),
-                "headline-primary mt-4 text-balance leading-[1.05] text-warm-white",
-              )}
-              style={{ fontSize: "clamp(2rem, 4.5vw, 4rem)" }}
-            >
-              Selected Recordings
-            </h1>
-            <p
-              className={cn(
-                revealDelay(3),
-                "editorial-lede mt-6 max-w-2xl text-ivory/70",
+                revealDelay(0),
+                "editorial-lede max-w-2xl text-ivory/70",
               )}
             >
               A curated selection of projects tracked, mixed, or mastered at
@@ -684,7 +667,7 @@ export function RecordingsClient({
             {recordings.length === 0 ? (
               <div
                 className={cn(
-                  revealDelay(4),
+                  revealDelay(1),
                   "mt-16 border border-dashed border-sand/15 px-8 py-20 text-center",
                 )}
               >
@@ -698,7 +681,7 @@ export function RecordingsClient({
                 </p>
               </div>
             ) : (
-              <div className={cn(revealDelay(4), "mt-14")}>
+              <div className={cn(revealDelay(1), "mt-14")}>
                 {/* Column headers — desktop only */}
                 <div
                   aria-hidden
@@ -742,7 +725,7 @@ export function RecordingsClient({
 
             <div
               className={cn(
-                revealDelay(5),
+                revealDelay(2),
                 "mt-20 border-t border-sand/10 pt-16 flex flex-col gap-8 md:flex-row md:items-center md:justify-between",
               )}
             >

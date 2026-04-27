@@ -16,6 +16,13 @@ export type GalleryPhoto = {
   contentType: string;
   sizeBytes: number;
   originalFileName: string | null;
+  /**
+   * INF-47 — controlled-vocabulary tags from `GALLERY_CATEGORY_SLUGS`
+   * (`rooms` / `gear` / `grounds`). Drives the public `/gallery` page
+   * filter pills. Empty when the photo is uncategorized; the homepage
+   * carousel ignores this field.
+   */
+  categories: readonly string[];
 };
 
 function galleryImageAlt(alt: string): string {
