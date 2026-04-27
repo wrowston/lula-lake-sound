@@ -6,7 +6,6 @@ import { api } from "../../../convex/_generated/api";
 import { HomepageShell } from "@/components/homepage-shell";
 import type { PublishedAmenitiesNearby } from "@/components/amenities-nearby";
 import { PreviewBanner } from "@/components/preview-banner";
-import type { PublishedAudioTrack } from "@/components/audio-portfolio";
 
 function PreviewContent() {
   const pricingFlags = useQuery(
@@ -78,24 +77,6 @@ function PreviewContent() {
     rows: amenitiesPreview.rows,
   };
 
-  const audioTracks: PublishedAudioTrack[] = audioPreview.tracks
-    .filter((t): t is typeof t & { url: string } => t.url !== null)
-    .map((t) => ({
-      stableId: t.stableId,
-      url: t.url,
-      title: t.title,
-      artist: t.artist,
-      description: t.description,
-      mimeType: t.mimeType,
-      durationSec: t.durationSec,
-      sortOrder: t.sortOrder,
-      albumThumbnailUrl: t.albumThumbnailUrl,
-      albumThumbnailStorageUrl: t.albumThumbnailStorageUrl,
-      albumThumbnailDisplayUrl: t.albumThumbnailDisplayUrl,
-      spotifyUrl: t.spotifyUrl,
-      appleMusicUrl: t.appleMusicUrl,
-    }));
-
   return (
     <HomepageShell
       pricingFlags={{
@@ -109,7 +90,6 @@ function PreviewContent() {
       }}
       gear={{ categories: gearPreview.categories }}
       photos={photoPreview.photos}
-      audioTracks={audioTracks}
       faqCategories={faqPreview.categories}
       amenities={amenitiesPayload}
       banner={<PreviewBanner hasDraftChanges={hasDraftChanges} />}
