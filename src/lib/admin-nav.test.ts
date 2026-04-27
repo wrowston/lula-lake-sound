@@ -5,14 +5,14 @@ describe("ADMIN_MANAGE_NAV_ITEMS", () => {
   test("includes every CMS admin destination expected by the sidebar", () => {
     const hrefs = ADMIN_MANAGE_NAV_ITEMS.map((i) => i.href);
     expect(hrefs).toEqual([
-      "/admin/pricing",
-      "/admin/gear",
-      "/admin/photos",
-      "/admin/videos",
-      "/admin/audio",
       "/admin/about",
-      "/admin/faq",
+      "/admin/photos",
+      "/admin/gear",
+      "/admin/audio",
+      "/admin/pricing",
       "/admin/amenities-nearby",
+      "/admin/faq",
+      "/admin/videos",
       "/admin/settings",
     ]);
   });
