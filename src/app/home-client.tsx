@@ -10,7 +10,7 @@ import type { MarketingFeatureFlags } from "@/lib/site-settings";
 
 type PreloadedPricing = Preloaded<typeof api.public.getPublishedPricingFlags> | null;
 type PreloadedGear = Preloaded<typeof api.public.getPublishedGear> | null;
-type PreloadedPhotos = Preloaded<typeof api.public.getPublishedGalleryPhotos> | null;
+type PreloadedPhotos = Preloaded<typeof api.public.getPublishedCarouselPhotos> | null;
 type PreloadedFaq = Preloaded<typeof api.public.getPublishedFaq> | null;
 type PreloadedMarketing =
   | Preloaded<typeof api.public.getPublishedMarketingFeatureFlags>
@@ -50,7 +50,7 @@ function PhotosLive({
 }: {
   children: (photos: GalleryPhoto[] | undefined) => React.ReactNode;
 }) {
-  const photos = useQuery(api.public.getPublishedGalleryPhotos);
+  const photos = useQuery(api.public.getPublishedCarouselPhotos);
   return <>{children(photos)}</>;
 }
 

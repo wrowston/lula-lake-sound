@@ -33,6 +33,7 @@ import {
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Switch } from "@/components/ui/switch";
 import { Textarea } from "@/components/ui/textarea";
 import { Card } from "@/components/ui/card";
 import {
@@ -94,6 +95,8 @@ type PhotoItem = {
   sizeBytes: number;
   originalFileName: string | null;
   categories: readonly string[];
+  showInCarousel: boolean;
+  showInGallery: boolean;
 };
 
 type PhotoEdits = Record<
@@ -102,6 +105,8 @@ type PhotoEdits = Record<
     alt: string;
     caption: string;
     categories: readonly GalleryCategorySlug[];
+    showInCarousel: boolean;
+    showInGallery: boolean;
   }
 >;
 
@@ -290,6 +295,10 @@ function PhotosEditorForm() {
   const removeDraftPhoto = useMutation(api.admin.photos.removeDraftPhoto);
   const publishPhotos = useMutation(api.admin.photos.publishPhotos);
   const discardDraftPhotos = useMutation(api.admin.photos.discardDraftPhotos);
+  const saveSectionIsEnabledDraft = useMutation(
+    api.cms.saveSectionIsEnabledDraft,
+  );
+  const discardCmsSection = useMutation(api.cms.discardDraft);
 
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const dragDepthRef = useRef(0);
@@ -311,10 +320,26 @@ function PhotosEditorForm() {
     position: "before" | "after";
   } | null>(null);
 
+  const [surfaceTab, setSurfaceTab] = useState<"carousel" | "gallery">(
+    "carousel",
+  );
+
   const photos = useMemo(
     () => (data?.photos ?? []) as PhotoItem[],
-    [data],
+    [data?.photos],
   );
+
+  const visiblePhotos = useMemo(
+    () =>
+      photos.filter((photo) =>
+        surfaceTab === "carousel"
+          ? photo.showInCarousel !== false
+          : photo.showInGallery !== false,
+      ),
+    [photos, surfaceTab],
+  );
+
+  const canReorder = visiblePhotos.length === photos.length && photos.length > 0;
 
   const setRowAction = useCallback(
     (stableId: string, action: RowAction | undefined) => {
@@ -344,7 +369,15 @@ function PhotosEditorForm() {
     [],
   );
 
-  const hasDraftOnServer = data?.hasDraftChanges ?? false;
+  const hasGalleryPageFlagPending = useMemo(() => {
+    if (!data?.galleryPage) return false;
+    const published = data.galleryPage.isEnabledPublished !== false;
+    const d = data.galleryPage.isEnabledDraft;
+    return typeof d === "boolean" && d !== published;
+  }, [data?.galleryPage]);
+
+  const hasDraftOnServer =
+    (data?.hasDraftChanges ?? false) || hasGalleryPageFlagPending;
   const hasLocalEdits = Object.keys(edits).length > 0;
 
   const publishedByLabel =
@@ -360,6 +393,10 @@ function PhotosEditorForm() {
         caption: edits[photo.stableId]?.caption ?? (photo.caption ?? ""),
         categories:
           edits[photo.stableId]?.categories ?? photoCategories,
+        showInCarousel:
+          edits[photo.stableId]?.showInCarousel ?? photo.showInCarousel,
+        showInGallery:
+          edits[photo.stableId]?.showInGallery ?? photo.showInGallery,
       };
     },
     [edits],
@@ -372,6 +409,8 @@ function PhotosEditorForm() {
         alt: string;
         caption: string;
         categories: readonly GalleryCategorySlug[];
+        showInCarousel: boolean;
+        showInGallery: boolean;
       }>,
     ) => {
       setEdits((current) => {
@@ -384,16 +423,24 @@ function PhotosEditorForm() {
             current[photo.stableId]?.caption ?? (photo.caption ?? ""),
           categories:
             current[photo.stableId]?.categories ?? photoCategories,
+          showInCarousel:
+            current[photo.stableId]?.showInCarousel ?? photo.showInCarousel,
+          showInGallery:
+            current[photo.stableId]?.showInGallery ?? photo.showInGallery,
         };
         const next = {
           alt: patch.alt ?? base.alt,
           caption: patch.caption ?? base.caption,
           categories: patch.categories ?? base.categories,
+          showInCarousel: patch.showInCarousel ?? base.showInCarousel,
+          showInGallery: patch.showInGallery ?? base.showInGallery,
         };
         if (
           next.alt === photo.alt &&
           next.caption === (photo.caption ?? "") &&
-          sameCategories(next.categories, photoCategories)
+          sameCategories(next.categories, photoCategories) &&
+          next.showInCarousel === photo.showInCarousel &&
+          next.showInGallery === photo.showInGallery
         ) {
           const rest = { ...current };
           delete rest[photo.stableId];
@@ -451,6 +498,8 @@ function PhotosEditorForm() {
               fields.caption.trim().length > 0 ? fields.caption.trim() : null,
             categories:
               fields.categories.length > 0 ? [...fields.categories] : [],
+            showInCarousel: fields.showInCarousel,
+            showInGallery: fields.showInGallery,
           }),
         ),
         { onErrorMessage: setInlineError },
@@ -500,6 +549,8 @@ function PhotosEditorForm() {
           caption: fields.caption.trim().length > 0 ? fields.caption.trim() : null,
           categories:
             fields.categories.length > 0 ? [...fields.categories] : [],
+          showInCarousel: fields.showInCarousel,
+          showInGallery: fields.showInGallery,
         }),
       );
     });
@@ -529,6 +580,9 @@ function PhotosEditorForm() {
 
   const movePhoto = useCallback(
     async (stableId: string, direction: -1 | 1) => {
+      if (!canReorder) {
+        return;
+      }
       const index = photos.findIndex((photo) => photo.stableId === stableId);
       if (index === -1) return;
       const target = index + direction;
@@ -543,7 +597,7 @@ function PhotosEditorForm() {
         toast.success("Photo order updated.");
       }
     },
-    [persistOrder, photos],
+    [canReorder, persistOrder, photos],
   );
 
   // --- Drag-reorder handlers (native HTML5) -------------------------------
@@ -551,7 +605,7 @@ function PhotosEditorForm() {
   const handleRowDragStart = useCallback(
     (event: ReactDragEvent<HTMLDivElement>, stableId: string) => {
       // Don't allow reorder while another action is in flight.
-      if (busy !== null) {
+      if (busy !== null || !canReorder) {
         event.preventDefault();
         return;
       }
@@ -561,7 +615,7 @@ function PhotosEditorForm() {
       event.dataTransfer.setData("text/plain", stableId);
       setDraggingStableId(stableId);
     },
-    [busy],
+    [busy, canReorder],
   );
 
   const handleRowDragOver = useCallback(
@@ -600,6 +654,10 @@ function PhotosEditorForm() {
       setDraggingStableId(null);
       setReorderTarget(null);
 
+      if (!canReorder) {
+        return;
+      }
+
       if (!sourceId || sourceId === overStableId) return;
 
       const sourceIndex = photos.findIndex((p) => p.stableId === sourceId);
@@ -630,7 +688,7 @@ function PhotosEditorForm() {
         toast.success("Photo order updated.");
       }
     },
-    [persistOrder, photos, reorderTarget],
+    [canReorder, persistOrder, photos, reorderTarget],
   );
 
   const handleRowDragEnd = useCallback(() => {
@@ -765,6 +823,8 @@ function PhotosEditorForm() {
               width: dimensions?.width ?? null,
               height: dimensions?.height ?? null,
               originalFileName: file.name,
+              showInCarousel: surfaceTab === "carousel",
+              showInGallery: surfaceTab === "gallery",
             }),
           ),
           { onErrorMessage: setInlineError },
@@ -801,7 +861,14 @@ function PhotosEditorForm() {
         );
       }, 2500);
     },
-    [data, generateUploadUrl, photos.length, saveUploadedPhoto, updateUploadEntry],
+    [
+      data,
+      generateUploadUrl,
+      photos.length,
+      saveUploadedPhoto,
+      surfaceTab,
+      updateUploadEntry,
+    ],
   );
 
   const handleFileSelection = useCallback(
@@ -896,7 +963,7 @@ function PhotosEditorForm() {
 
   const handleDiscardConfirm = useCallback(async (): Promise<boolean> => {
     setInlineError(null);
-    if (hasDraftOnServer) {
+    if (data?.hasDraftChanges) {
       const outcome = await runAdminEffect(
         convexMutationEffect(() => discardDraftPhotos({})),
         { onErrorMessage: setInlineError },
@@ -905,15 +972,29 @@ function PhotosEditorForm() {
         return false;
       }
     }
+    if (hasGalleryPageFlagPending) {
+      const flagOutcome = await runAdminEffect(
+        convexMutationEffect(() => discardCmsSection({ section: "photos" })),
+        { onErrorMessage: setInlineError },
+      );
+      if (flagOutcome === undefined) {
+        return false;
+      }
+    }
 
     setEdits({});
     toast.success(
-      hasDraftOnServer
+      data?.hasDraftChanges || hasGalleryPageFlagPending
         ? "Draft discarded. The editor now matches the published site."
         : "Unsaved changes discarded.",
     );
     return true;
-  }, [discardDraftPhotos, hasDraftOnServer]);
+  }, [
+    data?.hasDraftChanges,
+    discardCmsSection,
+    discardDraftPhotos,
+    hasGalleryPageFlagPending,
+  ]);
 
   const handlePublish = useCallback(async () => {
     const saved = await savePendingEdits();
@@ -934,6 +1015,18 @@ function PhotosEditorForm() {
     void handlePublish();
   }, [handlePublish]);
 
+  const setGalleryPageVisible = useCallback(
+    (enabled: boolean) => {
+      void runAdminEffect(
+        convexMutationEffect(() =>
+          saveSectionIsEnabledDraft({ section: "photos", isEnabled: enabled }),
+        ),
+        { onErrorMessage: setInlineError },
+      );
+    },
+    [saveSectionIsEnabledDraft],
+  );
+
   const { toolbarPortal, editorRef } = useRegisterCmsEditor({
     section: "photos",
     sectionLabel: "Studio gallery",
@@ -944,7 +1037,7 @@ function PhotosEditorForm() {
     busy,
     autosaveStatus: "idle",
     inlineError,
-    previewHref: "/preview/gallery",
+    previewHref: surfaceTab === "carousel" ? "/preview" : "/preview/gallery",
     onPublish: handleToolbarPublish,
     onDiscardConfirm: handleDiscardConfirm,
     // No `flush` — dirty local edits trigger the nav-guard confirm dialog
@@ -954,6 +1047,11 @@ function PhotosEditorForm() {
   if (data === undefined) {
     return <p className="body-text text-foreground/80">Loading photos…</p>;
   }
+
+  const galleryPageEffective =
+    data.galleryPage?.isEnabledDraft !== undefined
+      ? data.galleryPage.isEnabledDraft
+      : data.galleryPage?.isEnabledPublished !== false;
 
   const anyUploading = uploadQueue.some(
     (entry) => entry.status === "uploading" || entry.status === "saving",
@@ -997,15 +1095,68 @@ function PhotosEditorForm() {
               Studio gallery
             </h2>
             <p className="body-text-small max-w-2xl text-foreground/85">
-              Upload and arrange the photos shown in the “The Space” homepage
-              carousel and the public <span className="font-medium">Gallery</span>{" "}
-              page (<code className="font-mono text-xs">/gallery</code>). Drag
-              and drop images here to upload, or drag a card by its handle to
-              reorder. Tag each photo with the categories it belongs to —
-              Rooms, Gear, or Grounds — so the Gallery filter pills work.
-              Uploads land in draft first; publish makes the new order,
-              metadata, and category tags live.
+              Use the <span className="font-medium">Carousel</span> and{" "}
+              <span className="font-medium">Gallery</span> tabs to choose where
+              new uploads go and to set whether each image appears in the
+              homepage “The Space” carousel, the public Gallery page, or both.
+              Gallery categories (Rooms, Gear, Grounds) only apply to the
+              Gallery surface. Uploads are saved as draft; Publish pushes order,
+              per-surface flags, and the public Gallery page visibility to the
+              live site.
             </p>
+            <div className="flex flex-wrap items-center gap-2 pt-1">
+              <div className="inline-flex rounded-lg border border-border bg-muted/30 p-0.5">
+                {(
+                  [
+                    ["carousel", "Homepage carousel"] as const,
+                    ["gallery", "Gallery page"] as const,
+                  ] as const
+                ).map(([id, label]) => (
+                  <Button
+                    key={id}
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    className={cn(
+                      "rounded-md px-3",
+                      surfaceTab === id
+                        ? "bg-background text-foreground shadow-sm"
+                        : "text-muted-foreground",
+                    )}
+                    onClick={() => setSurfaceTab(id)}
+                  >
+                    {label}
+                  </Button>
+                ))}
+              </div>
+            </div>
+            {surfaceTab === "gallery" ? (
+              <div className="flex flex-col gap-2 rounded-lg border border-border bg-muted/20 px-3 py-2 sm:flex-row sm:items-center sm:justify-between">
+                <div>
+                  <p className="text-sm font-medium text-foreground">
+                    Gallery page visibility
+                  </p>
+                  <p className="text-xs text-muted-foreground">
+                    When off, <code className="font-mono">/gallery</code> 404s
+                    and the Gallery nav link is hidden. Publish to apply.
+                  </p>
+                </div>
+                <div className="flex items-center gap-2">
+                  <Switch
+                    id="gallery-page-visible"
+                    checked={galleryPageEffective}
+                    onCheckedChange={setGalleryPageVisible}
+                    disabled={busy !== null}
+                  />
+                  <label
+                    htmlFor="gallery-page-visible"
+                    className="text-sm text-foreground/90"
+                  >
+                    {galleryPageEffective ? "Visible" : "Hidden"}
+                  </label>
+                </div>
+              </div>
+            ) : null}
           </div>
 
           <div className="flex flex-col gap-2 sm:items-end">
@@ -1108,12 +1259,19 @@ function PhotosEditorForm() {
         <div className="rounded-xl border border-dashed border-border bg-muted/20 px-6 py-10 text-center">
           <p className="body-text text-foreground/80">
             No gallery photos yet. Drop images here or use the Upload button to
-            start the carousel.
+            add images.
+          </p>
+        </div>
+      ) : visiblePhotos.length === 0 ? (
+        <div className="rounded-xl border border-dashed border-border bg-muted/20 px-6 py-10 text-center">
+          <p className="body-text text-foreground/80">
+            No photos in this surface yet. Upload or use &quot;Also show
+            on…&quot; on a photo in the other tab.
           </p>
         </div>
       ) : (
         <div className="grid grid-cols-1 gap-3 md:grid-cols-2 lg:grid-cols-3">
-          {photos.map((photo, index) => {
+          {visiblePhotos.map((photo, index) => {
             const fields = getEditableFields(photo);
             const isDirty = edits[photo.stableId] !== undefined;
             const rowAction = rowBusy[photo.stableId];
@@ -1139,7 +1297,7 @@ function PhotosEditorForm() {
                     "shadow-[0_2px_0_0_var(--color-primary)]",
                   isRowBusy && "pointer-events-none",
                 )}
-                draggable={busy === null}
+                draggable={busy === null && canReorder}
                 onDragStart={(event) =>
                   handleRowDragStart(event, photo.stableId)
                 }
@@ -1148,12 +1306,14 @@ function PhotosEditorForm() {
                 onDragEnd={handleRowDragEnd}
               >
                 <div className="relative overflow-hidden rounded-lg border border-border bg-muted/30">
-                  <div
-                    className="pointer-events-none absolute left-1.5 top-1.5 z-10 text-muted-foreground/70"
-                    aria-hidden
-                  >
-                    <GripVertical className="size-4" />
-                  </div>
+                  {canReorder ? (
+                    <div
+                      className="pointer-events-none absolute left-1.5 top-1.5 z-10 text-muted-foreground/70"
+                      aria-hidden
+                    >
+                      <GripVertical className="size-4" />
+                    </div>
+                  ) : null}
                   <div className="absolute right-1 top-1 z-10 flex gap-0.5 rounded-md border border-border/60 bg-background/85 p-0.5 shadow-sm backdrop-blur-sm dark:bg-background/80">
                     <Button
                       type="button"
@@ -1161,7 +1321,9 @@ function PhotosEditorForm() {
                       size="icon-sm"
                       className="bg-transparent text-foreground hover:bg-muted/70 hover:text-foreground hover:no-underline disabled:text-foreground/35"
                       aria-label="Move photo up"
-                      disabled={index === 0 || busy !== null || isRowBusy}
+                      disabled={
+                        index === 0 || !canReorder || busy !== null || isRowBusy
+                      }
                       onClick={() => void movePhoto(photo.stableId, -1)}
                     >
                       <ArrowUp className="size-4 stroke-[2.25]" aria-hidden />
@@ -1173,7 +1335,8 @@ function PhotosEditorForm() {
                       className="bg-transparent text-foreground hover:bg-muted/70 hover:text-foreground hover:no-underline disabled:text-foreground/35"
                       aria-label="Move photo down"
                       disabled={
-                        index === photos.length - 1 ||
+                        index === visiblePhotos.length - 1 ||
+                        !canReorder ||
                         busy !== null ||
                         isRowBusy
                       }
@@ -1291,6 +1454,34 @@ function PhotosEditorForm() {
                       />
                     </label>
 
+                    <div className="flex items-center justify-between gap-2 rounded-md border border-border/60 bg-muted/20 px-2 py-1.5">
+                      <label
+                        htmlFor={`also-${photo.stableId}`}
+                        className="text-[11px] text-foreground/90"
+                      >
+                        {surfaceTab === "carousel"
+                          ? "Also show on Gallery page"
+                          : "Also show in homepage carousel"}
+                      </label>
+                      <Switch
+                        id={`also-${photo.stableId}`}
+                        checked={
+                          surfaceTab === "carousel"
+                            ? fields.showInGallery
+                            : fields.showInCarousel
+                        }
+                        onCheckedChange={(v) => {
+                          if (surfaceTab === "carousel") {
+                            updatePhotoEdit(photo, { showInGallery: v });
+                          } else {
+                            updatePhotoEdit(photo, { showInCarousel: v });
+                          }
+                        }}
+                        disabled={busy !== null || isRowBusy}
+                      />
+                    </div>
+
+                    {surfaceTab === "gallery" ? (
                     <fieldset className="min-w-0 space-y-1">
                       <legend className="text-[11px] font-medium leading-none text-foreground/90">
                         Gallery categories
@@ -1330,6 +1521,7 @@ function PhotosEditorForm() {
                         })}
                       </div>
                     </fieldset>
+                    ) : null}
                   </div>
 
                   <div className="flex items-center justify-between gap-2 border-t border-border/60 pt-1.5">

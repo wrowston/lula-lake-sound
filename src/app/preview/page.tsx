@@ -87,6 +87,7 @@ function PreviewContent() {
         aboutPage: marketingPreview.aboutPage,
         recordingsPage: marketingPreview.recordingsPage,
         pricingSection: marketingPreview.pricingSection,
+        galleryPage: marketingPreview.galleryPage,
       }}
       gear={{ categories: gearPreview.categories }}
       photos={photoPreview.photos}

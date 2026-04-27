@@ -41,6 +41,8 @@ function GalleryPreviewContent() {
     );
   }
 
+  const publicGalleryDisabled = !marketing.galleryPagePublished;
+
   return (
     <GalleryClient
       photos={photoPreview.photos}
@@ -48,8 +50,25 @@ function GalleryPreviewContent() {
         aboutPage: marketing.aboutPage,
         recordingsPage: marketing.recordingsPage,
         pricingSection: marketing.pricingSection,
+        galleryPage: marketing.galleryPage,
       }}
-      banner={<PreviewBanner hasDraftChanges={photoPreview.hasDraftChanges} />}
+      banner={
+        <>
+          <PreviewBanner hasDraftChanges={photoPreview.hasDraftChanges} />
+          {publicGalleryDisabled ? (
+            <div
+              className="border-b border-amber-500/30 bg-amber-500/10 px-4 py-3 text-center text-sm text-amber-100"
+              role="status"
+            >
+              The public Gallery page and nav link are currently{" "}
+              <span className="font-medium">hidden</span> for visitors. Turn
+              on &quot;Gallery page visibility&quot; in{" "}
+              <span className="font-mono">/admin/photos</span> (Gallery tab) and
+              publish to go live.
+            </div>
+          ) : null}
+        </>
+      }
     />
   );
 }

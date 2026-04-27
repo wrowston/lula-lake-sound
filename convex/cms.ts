@@ -294,22 +294,25 @@ export const listMarketingFlagsDraft = query({
   args: {},
   handler: async (ctx) => {
     await requireCmsOwner(ctx);
-    const [aboutRow, recordingsRow, pricingRow] = await Promise.all([
+    const [aboutRow, recordingsRow, pricingRow, photosRow] = await Promise.all([
       getSectionMetaRow(ctx, "about"),
       getSectionMetaRow(ctx, "recordings"),
       getSectionMetaRow(ctx, "pricing"),
+      getSectionMetaRow(ctx, "photos"),
     ]);
 
     const flags = {
       aboutPage: effectiveIsEnabled(aboutRow, "about"),
       recordingsPage: effectiveIsEnabled(recordingsRow, "recordings"),
       pricingSection: effectiveIsEnabled(pricingRow, "pricing"),
+      galleryPage: effectiveIsEnabled(photosRow, "photos"),
     };
 
     const hasDraftChanges = anyMarketingFlagDraftPending(
       aboutRow,
       recordingsRow,
       pricingRow,
+      photosRow,
     );
 
     // Expose per-section meta so the publish toolbar can disambiguate which
@@ -318,11 +321,13 @@ export const listMarketingFlagsDraft = query({
       aboutRow?.publishedAt ?? null,
       recordingsRow?.publishedAt ?? null,
       pricingRow?.publishedAt ?? null,
+      photosRow?.publishedAt ?? null,
     ]);
     const updatedAt = latestNumber([
       aboutRow?.updatedAt ?? null,
       recordingsRow?.updatedAt ?? null,
       pricingRow?.updatedAt ?? null,
+      photosRow?.updatedAt ?? null,
     ]);
 
     return {
@@ -330,10 +335,16 @@ export const listMarketingFlagsDraft = query({
       hasDraftChanges,
       publishedAt,
       publishedBy:
-        mostRecentPublishedBy([aboutRow, recordingsRow, pricingRow]) ?? null,
+        mostRecentPublishedBy([
+          aboutRow,
+          recordingsRow,
+          pricingRow,
+          photosRow,
+        ]) ?? null,
       updatedAt,
       updatedBy:
-        mostRecentUpdatedBy([aboutRow, recordingsRow, pricingRow]) ?? null,
+        mostRecentUpdatedBy([aboutRow, recordingsRow, pricingRow, photosRow]) ??
+        null,
       perSection: {
         about: {
           isEnabled: publishedIsEnabled(aboutRow, "about"),
@@ -358,6 +369,14 @@ export const listMarketingFlagsDraft = query({
             pricingRow.isEnabledDraft !==
               publishedIsEnabled(pricingRow, "pricing"),
         },
+        photos: {
+          isEnabled: publishedIsEnabled(photosRow, "photos"),
+          isEnabledDraft: photosRow?.isEnabledDraft ?? null,
+          hasPendingFlagChange:
+            photosRow?.isEnabledDraft !== undefined &&
+            photosRow.isEnabledDraft !==
+              publishedIsEnabled(photosRow, "photos"),
+        },
       },
     };
   },
@@ -378,22 +397,27 @@ export const getPreviewMarketingFeatureFlags = query({
       return null;
     }
 
-    const [aboutRow, recordingsRow, pricingRow] = await Promise.all([
+    const [aboutRow, recordingsRow, pricingRow, photosRow] = await Promise.all([
       getSectionMetaRow(ctx, "about"),
       getSectionMetaRow(ctx, "recordings"),
       getSectionMetaRow(ctx, "pricing"),
+      getSectionMetaRow(ctx, "photos"),
     ]);
 
     const hasDraftChanges = anyMarketingFlagDraftPending(
       aboutRow,
       recordingsRow,
       pricingRow,
+      photosRow,
     );
 
     return {
       aboutPage: effectiveIsEnabled(aboutRow, "about"),
       recordingsPage: effectiveIsEnabled(recordingsRow, "recordings"),
       pricingSection: effectiveIsEnabled(pricingRow, "pricing"),
+      galleryPage: effectiveIsEnabled(photosRow, "photos"),
+      /** Published-only; when `false`, public `/gallery` 404s unless draft changes this. */
+      galleryPagePublished: publishedIsEnabled(photosRow, "photos"),
       hasDraftChanges,
     };
   },
@@ -453,7 +477,12 @@ export const publishMarketingFlags = mutation({
     const published: Array<
       Awaited<ReturnType<typeof publishSectionCore>>
     > = [];
-    for (const section of ["about", "recordings", "pricing"] as const) {
+    for (const section of [
+      "about",
+      "recordings",
+      "pricing",
+      "photos",
+    ] as const) {
       const row = await getSectionMetaRow(ctx, section);
       if (!row || !sectionHasPendingFlagDraft(row, section)) continue;
       const result = await publishSectionCore(ctx, {
@@ -491,7 +520,12 @@ export const discardMarketingFlagsDraft = mutation({
   handler: async (ctx) => {
     const { updatedBy } = await requireCmsOwner(ctx);
     let discarded = false;
-    for (const section of ["about", "recordings", "pricing"] as const) {
+    for (const section of [
+      "about",
+      "recordings",
+      "pricing",
+      "photos",
+    ] as const) {
       const row = await getSectionMetaRow(ctx, section);
       if (!row || row.isEnabledDraft === undefined) continue;
       await ctx.db.patch(row._id, {
@@ -737,6 +771,10 @@ async function readSnapshotForAdmin(
   if (section === "amenitiesNearby") {
     const tree = await loadAmenitiesNearbyTree(ctx, scope);
     return snapshotFromAmenitiesTree(tree);
+  }
+
+  if (section === "photos") {
+    return defaultSnapshotForSection("photos");
   }
 
   // recordings — flag-only, no content. Return an empty about-shaped default

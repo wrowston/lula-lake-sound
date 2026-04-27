@@ -89,13 +89,30 @@ export const getPublishedAbout = query({
 
 /**
  * Published studio gallery photos only. Anonymous; reads `scope === "published"`.
+ * Excludes images with `showInGallery === false`.
  */
 export const getPublishedGalleryPhotos = query({
   args: {},
   handler: async (ctx) => {
     const rows = await loadGalleryPhotos(ctx, "published");
     const photos = await materializeGalleryPhotos(ctx, rows);
-    return photos.filter((photo) => photo.url !== null);
+    return photos.filter(
+      (photo) => photo.url !== null && photo.showInGallery !== false,
+    );
+  },
+});
+
+/**
+ * Images for the homepage "The Space" carousel — same table, filtered by `showInCarousel !== false`.
+ */
+export const getPublishedCarouselPhotos = query({
+  args: {},
+  handler: async (ctx) => {
+    const rows = await loadGalleryPhotos(ctx, "published");
+    const photos = await materializeGalleryPhotos(ctx, rows);
+    return photos.filter(
+      (photo) => photo.url !== null && photo.showInCarousel !== false,
+    );
   },
 });
 
@@ -173,21 +190,22 @@ export const getPublishedFaq = query({
 
 /**
  * Marketing-site visibility flags. Reads each section's `cmsSections.isEnabled`
- * and returns the historical shape `{ aboutPage, recordingsPage, pricingSection }`
- * so the existing frontend consumers keep working without changes.
+ * and returns `{ aboutPage, recordingsPage, pricingSection, galleryPage }`.
  */
 export const getPublishedMarketingFeatureFlags = query({
   args: {},
   handler: async (ctx) => {
-    const [aboutRow, recordingsRow, pricingRow] = await Promise.all([
+    const [aboutRow, recordingsRow, pricingRow, photosRow] = await Promise.all([
       getSectionMetaRow(ctx, "about"),
       getSectionMetaRow(ctx, "recordings"),
       getSectionMetaRow(ctx, "pricing"),
+      getSectionMetaRow(ctx, "photos"),
     ]);
     return {
       aboutPage: publishedIsEnabled(aboutRow, "about"),
       recordingsPage: publishedIsEnabled(recordingsRow, "recordings"),
       pricingSection: publishedIsEnabled(pricingRow, "pricing"),
+      galleryPage: publishedIsEnabled(photosRow, "photos"),
     };
   },
 });

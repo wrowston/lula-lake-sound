@@ -23,6 +23,9 @@ export type GalleryPhoto = {
    * carousel ignores this field.
    */
   categories: readonly string[];
+  /** Omitted in older payloads; treat as `true` when undefined. */
+  showInCarousel?: boolean;
+  showInGallery?: boolean;
 };
 
 function galleryImageAlt(alt: string): string {

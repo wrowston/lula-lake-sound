@@ -87,6 +87,8 @@ function comparablePhoto(row: GalleryPhotoDoc) {
     sizeBytes: row.sizeBytes,
     originalFileName: row.originalFileName ?? null,
     categories: row.categories ?? null,
+    showInCarousel: row.showInCarousel ?? null,
+    showInGallery: row.showInGallery ?? null,
   };
 }
 
@@ -187,6 +189,12 @@ export async function replaceGalleryScope(
       ...(row.categories !== undefined && row.categories.length > 0
         ? { categories: [...row.categories] }
         : {}),
+      ...(row.showInCarousel !== undefined
+        ? { showInCarousel: row.showInCarousel }
+        : {}),
+      ...(row.showInGallery !== undefined
+        ? { showInGallery: row.showInGallery }
+        : {}),
     });
   }
 
@@ -229,6 +237,8 @@ export async function materializeGalleryPhotos(
     sizeBytes: number;
     originalFileName: string | null;
     categories: GalleryCategorySlug[];
+    showInCarousel: boolean;
+    showInGallery: boolean;
   }>
 > {
   return await Promise.all(
@@ -245,6 +255,8 @@ export async function materializeGalleryPhotos(
       sizeBytes: row.sizeBytes,
       originalFileName: row.originalFileName ?? null,
       categories: normalizeGalleryCategories(row.categories) ?? [],
+      showInCarousel: row.showInCarousel !== false,
+      showInGallery: row.showInGallery !== false,
     })),
   );
 }

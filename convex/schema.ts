@@ -164,6 +164,12 @@ export default defineSchema({
      * gallery page.
      */
     categories: v.optional(v.array(v.string())),
+    /**
+     * Which surfaces show this image. Missing defaults to `true` for back-compat.
+     * Both can be `true` so one upload can power the homepage carousel and /gallery.
+     */
+    showInCarousel: v.optional(v.boolean()),
+    showInGallery: v.optional(v.boolean()),
   })
     .index("by_scope_and_sort", ["scope", "sortOrder"])
     .index("by_scope_and_stableId", ["scope", "stableId"])

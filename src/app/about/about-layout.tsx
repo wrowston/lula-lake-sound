@@ -14,7 +14,10 @@ import { PageHeader } from "@/components/page-header";
 import { SiteFooter } from "@/components/site-footer";
 import { AboutBodyContent } from "./about-body-content";
 import { cn } from "@/lib/utils";
-import type { MarketingFeatureFlags } from "@/lib/site-settings";
+import {
+  isGalleryPageEnabled,
+  type MarketingFeatureFlags,
+} from "@/lib/site-settings";
 
 /**
  * Shared presentational layer for the public About page and the owner-only
@@ -145,6 +148,7 @@ export function AboutLayout({ data, showPricing, marketing, banner }: AboutLayou
   const homeSectionBase = isPreview ? "/preview" : "/";
   const recordingsNavHref = isPreview ? "/preview/recordings" : "/recordings";
   const backToHomeHref = isPreview ? "/preview" : "/";
+  const showGallery = isGalleryPageEnabled(marketing);
 
   const team = data.teamMembers ?? [];
   // Variant A composition features exactly two circular headshots — owner +
@@ -171,6 +175,7 @@ export function AboutLayout({ data, showPricing, marketing, banner }: AboutLayou
         showAbout={showAboutNav}
         aboutHref={aboutHref}
         showRecordings={showRecordings}
+        showGallery={showGallery}
         homeSectionBase={homeSectionBase}
         recordingsHref={recordingsNavHref}
       />

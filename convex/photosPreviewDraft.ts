@@ -32,9 +32,48 @@ export const getPreviewGalleryPhotos = query({
       hasDraftChanges ? "draft" : "published",
     );
     const photos = await materializeGalleryPhotos(ctx, rows);
+    return {
+      photos: photos.filter(
+        (photo) => photo.url !== null && photo.showInGallery !== false,
+      ),
+      hasDraftChanges,
+    };
+  },
+});
+
+/**
+ * Owner-only: draft/published images for the homepage carousel (`showInCarousel`).
+ */
+export const getPreviewCarouselPhotos = query({
+  args: {},
+  handler: async (ctx) => {
+    const identity = await ctx.auth.getUserIdentity();
+    if (identity === null) {
+      return null;
+    }
+
+    try {
+      await requireCmsOwner(ctx);
+    } catch {
+      return null;
+    }
+
+    const meta = await ctx.db
+      .query("galleryPhotoMeta")
+      .withIndex("by_singleton", (q) => q.eq("singletonKey", "default"))
+      .unique();
+
+    const hasDraftChanges = meta?.hasDraftChanges ?? false;
+    const rows = await loadGalleryPhotos(
+      ctx,
+      hasDraftChanges ? "draft" : "published",
+    );
+    const photos = await materializeGalleryPhotos(ctx, rows);
 
     return {
-      photos: photos.filter((photo) => photo.url !== null),
+      photos: photos.filter(
+        (photo) => photo.url !== null && photo.showInCarousel !== false,
+      ),
       hasDraftChanges,
     };
   },

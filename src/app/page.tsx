@@ -15,7 +15,7 @@ export default async function Home() {
     ] = await Promise.allSettled([
       preloadQuery(api.public.getPublishedPricingFlags),
       preloadQuery(api.public.getPublishedGear),
-      preloadQuery(api.public.getPublishedGalleryPhotos),
+      preloadQuery(api.public.getPublishedCarouselPhotos),
       preloadQuery(api.public.getPublishedFaq),
       preloadQuery(api.public.getPublishedMarketingFeatureFlags),
       preloadQuery(api.public.getPublishedAmenitiesNearby),

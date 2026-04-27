@@ -39,6 +39,11 @@ interface HeaderProps {
    * `"/recordings"`.
    */
   readonly recordingsHref?: string;
+  /**
+   * Shows the "Gallery" route link when the CMS gallery page flag is on.
+   * Defaults to `false` (hidden while marketing flags are loading).
+   */
+  readonly showGallery?: boolean;
 }
 
 /**
@@ -57,6 +62,7 @@ export function Header({
   showRecordings = false,
   homeSectionBase = "/",
   recordingsHref = "/recordings",
+  showGallery = false,
 }: HeaderProps) {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
@@ -87,15 +93,17 @@ export function Header({
         ]
       : []),
     { kind: "hash", id: "the-space", label: "The Studio" },
-    {
-      kind: "route",
-      key: "gallery",
-      // `homeSectionBase` is `"/preview"` when the header is mounted under
-      // owner preview, otherwise `"/"`. Mirror that for the Gallery route.
-      href:
-        homeSectionBase === "/preview" ? "/preview/gallery" : "/gallery",
-      label: "Gallery",
-    },
+    ...(showGallery
+      ? [
+          {
+            kind: "route" as const,
+            key: "gallery",
+            href:
+              homeSectionBase === "/preview" ? "/preview/gallery" : "/gallery",
+            label: "Gallery",
+          },
+        ]
+      : []),
     { kind: "hash", id: "equipment-specs", label: "Gear" },
     ...(showRecordings
       ? [

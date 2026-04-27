@@ -14,6 +14,7 @@ import { MAX_REVEAL_DELAY, revealDelay } from "@/lib/reveal-delay";
 import { cn } from "@/lib/utils";
 import {
   type MarketingFeatureFlags,
+  isGalleryPageEnabled,
   isHomepagePricingSectionEnabled,
 } from "@/lib/site-settings";
 
@@ -551,6 +552,7 @@ export function RecordingsClient({
   const showPricing = isHomepagePricingSectionEnabled(marketing);
   const showAbout = marketing.aboutPage === true;
   const showRecordings = marketing.recordingsPage === true;
+  const showGallery = isGalleryPageEnabled(marketing);
 
   const { scrollY, containerRef } = useScrollAndReveal();
   const [active, setActive] = useState<ActiveTrackState | null>(null);
@@ -635,6 +637,7 @@ export function RecordingsClient({
         showAbout={showAbout}
         aboutHref={aboutHref}
         showRecordings={showRecordings}
+        showGallery={showGallery}
         homeSectionBase={homeSectionBase}
         recordingsHref={recordingsNavHref}
       />

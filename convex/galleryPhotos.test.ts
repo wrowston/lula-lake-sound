@@ -109,6 +109,15 @@ describe("galleryDraftMatchesPublished", () => {
     ).toBe(false);
   });
 
+  test("different showInCarousel / showInGallery are not a match", () => {
+    expect(
+      galleryDraftMatchesPublished(
+        [row({ showInCarousel: true, showInGallery: false })],
+        [row({ showInCarousel: false, showInGallery: true })],
+      ),
+    ).toBe(false);
+  });
+
   test("undefined vs empty-array categories normalize to the same value", () => {
     // Empty arrays serialize the same as `null` per `comparablePhoto`
     // (both → `[]` ≠ `null`), so we explicitly check the undefined case

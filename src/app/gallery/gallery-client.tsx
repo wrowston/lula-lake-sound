@@ -12,6 +12,7 @@ import type { GalleryPhoto } from "@/components/the-space";
 import { useScrollAndReveal } from "@/hooks/use-scroll-and-reveal";
 import { revealDelay } from "@/lib/reveal-delay";
 import {
+  isGalleryPageEnabled,
   isHomepagePricingSectionEnabled,
   type MarketingFeatureFlags,
 } from "@/lib/site-settings";
@@ -127,6 +128,7 @@ export function GalleryClient({
   const showPricing = isHomepagePricingSectionEnabled(marketing);
   const showAbout = marketing.aboutPage === true;
   const showRecordings = marketing.recordingsPage === true;
+  const showGallery = isGalleryPageEnabled(marketing);
 
   const items = useMemo(() => toGalleryItems(photos), [photos]);
   const [filter, setFilter] = useState<FilterId>("all");
@@ -241,6 +243,7 @@ export function GalleryClient({
         showAbout={showAbout}
         aboutHref={aboutHref}
         showRecordings={showRecordings}
+        showGallery={showGallery}
         homeSectionBase={homeSectionBase}
         recordingsHref={recordingsNavHref}
       />
