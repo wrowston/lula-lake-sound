@@ -66,14 +66,11 @@ jobs:
         needs.test-and-build.result == 'failure' &&
         !startsWith(github.head_ref || github.ref_name, 'cursor/') &&
         (
+          github.event_name == 'push' ||
+          github.event_name == 'workflow_dispatch' ||
           (
             github.event_name == 'pull_request' &&
-            github.event.pull_request.head.repo.full_name == github.repository &&
-            contains(github.event.pull_request.labels.*.name, 'cursor-autofix')
-          ) ||
-          (
-            github.event_name == 'workflow_dispatch' &&
-            inputs.cursor_autofix
+            github.event.pull_request.head.repo.full_name == github.repository
           )
         )
       }}
