@@ -6,12 +6,16 @@ import { HomepageShell } from "@/components/homepage-shell";
 import type { PublishedAudioTrack } from "@/components/audio-portfolio";
 import type { GalleryPhoto } from "@/components/the-space";
 import type { FaqCategoryProps } from "@/components/faq";
+import type { MarketingFeatureFlags } from "@/lib/site-settings";
 
 type PreloadedPricing = Preloaded<typeof api.public.getPublishedPricingFlags> | null;
 type PreloadedGear = Preloaded<typeof api.public.getPublishedGear> | null;
 type PreloadedPhotos = Preloaded<typeof api.public.getPublishedGalleryPhotos> | null;
 type PreloadedAudio = Preloaded<typeof api.public.getPublishedAudioTracks> | null;
 type PreloadedFaq = Preloaded<typeof api.public.getPublishedFaq> | null;
+type PreloadedMarketing =
+  | Preloaded<typeof api.public.getPublishedMarketingFeatureFlags>
+  | null;
 
 type PublishedFaqPayload = { categories: readonly FaqCategoryProps[] };
 
@@ -153,25 +157,70 @@ function FaqLive({
   return <>{children(faq)}</>;
 }
 
+function MarketingData({
+  preloaded,
+  children,
+}: {
+  preloaded: PreloadedMarketing;
+  children: (
+    marketing: MarketingFeatureFlags | null | undefined,
+  ) => React.ReactNode;
+}) {
+  if (preloaded) {
+    return (
+      <MarketingFromPreload preloaded={preloaded}>
+        {children}
+      </MarketingFromPreload>
+    );
+  }
+  return <MarketingLive>{children}</MarketingLive>;
+}
+
+function MarketingFromPreload({
+  preloaded,
+  children,
+}: {
+  preloaded: NonNullable<PreloadedMarketing>;
+  children: (
+    marketing: MarketingFeatureFlags | null | undefined,
+  ) => React.ReactNode;
+}) {
+  const marketing = usePreloadedQuery(preloaded);
+  return <>{children(marketing)}</>;
+}
+
+function MarketingLive({
+  children,
+}: {
+  children: (
+    marketing: MarketingFeatureFlags | null | undefined,
+  ) => React.ReactNode;
+}) {
+  const marketing = useQuery(api.public.getPublishedMarketingFeatureFlags);
+  return <>{children(marketing)}</>;
+}
+
 function BothPreloaded({
   preloadedPricing,
   preloadedGear,
   photos,
   audioTracks,
   faq,
+  marketing,
 }: {
   preloadedPricing: NonNullable<PreloadedPricing>;
   preloadedGear: NonNullable<PreloadedGear>;
   photos: GalleryPhoto[] | undefined;
   audioTracks: PublishedAudioTrack[] | undefined;
   faq: PublishedFaqPayload | undefined;
+  marketing: MarketingFeatureFlags | null | undefined;
 }) {
   const pricingFlags = usePreloadedQuery(preloadedPricing);
   const gear = usePreloadedQuery(preloadedGear);
   return (
     <HomepageShell
       pricingFlags={pricingFlags}
-      marketingFeatureFlags={undefined}
+      marketingFeatureFlags={marketing}
       gear={gear}
       photos={photos}
       audioTracks={audioTracks}
@@ -185,18 +234,20 @@ function PricingPreloadedGearLive({
   photos,
   audioTracks,
   faq,
+  marketing,
 }: {
   preloadedPricing: NonNullable<PreloadedPricing>;
   photos: GalleryPhoto[] | undefined;
   audioTracks: PublishedAudioTrack[] | undefined;
   faq: PublishedFaqPayload | undefined;
+  marketing: MarketingFeatureFlags | null | undefined;
 }) {
   const pricingFlags = usePreloadedQuery(preloadedPricing);
   const gear = useQuery(api.public.getPublishedGear);
   return (
     <HomepageShell
       pricingFlags={pricingFlags}
-      marketingFeatureFlags={undefined}
+      marketingFeatureFlags={marketing}
       gear={gear}
       photos={photos}
       audioTracks={audioTracks}
@@ -210,18 +261,20 @@ function PricingLiveGearPreloaded({
   photos,
   audioTracks,
   faq,
+  marketing,
 }: {
   preloadedGear: NonNullable<PreloadedGear>;
   photos: GalleryPhoto[] | undefined;
   audioTracks: PublishedAudioTrack[] | undefined;
   faq: PublishedFaqPayload | undefined;
+  marketing: MarketingFeatureFlags | null | undefined;
 }) {
   const pricingFlags = useQuery(api.public.getPublishedPricingFlags);
   const gear = usePreloadedQuery(preloadedGear);
   return (
     <HomepageShell
       pricingFlags={pricingFlags}
-      marketingFeatureFlags={undefined}
+      marketingFeatureFlags={marketing}
       gear={gear}
       photos={photos}
       audioTracks={audioTracks}
@@ -234,17 +287,19 @@ function BothLive({
   photos,
   audioTracks,
   faq,
+  marketing,
 }: {
   photos: GalleryPhoto[] | undefined;
   audioTracks: PublishedAudioTrack[] | undefined;
   faq: PublishedFaqPayload | undefined;
+  marketing: MarketingFeatureFlags | null | undefined;
 }) {
   const pricingFlags = useQuery(api.public.getPublishedPricingFlags);
   const gear = useQuery(api.public.getPublishedGear);
   return (
     <HomepageShell
       pricingFlags={pricingFlags}
-      marketingFeatureFlags={undefined}
+      marketingFeatureFlags={marketing}
       gear={gear}
       photos={photos}
       audioTracks={audioTracks}
@@ -259,63 +314,73 @@ export function HomeClient({
   preloadedPhotos,
   preloadedAudio,
   preloadedFaq,
+  preloadedMarketing,
 }: {
   preloadedPricing: PreloadedPricing;
   preloadedGear: PreloadedGear;
   preloadedPhotos: PreloadedPhotos;
   preloadedAudio: PreloadedAudio;
   preloadedFaq: PreloadedFaq;
+  preloadedMarketing: PreloadedMarketing;
 }) {
   return (
-    <PhotosData preloaded={preloadedPhotos}>
-      {(photos) => (
-        <AudioData preloaded={preloadedAudio}>
-          {(audioTracks) => (
-            <FaqData preloaded={preloadedFaq}>
-              {(faq) => {
-                if (preloadedPricing && preloadedGear) {
-                  return (
-                    <BothPreloaded
-                      preloadedPricing={preloadedPricing}
-                      preloadedGear={preloadedGear}
-                      photos={photos}
-                      audioTracks={audioTracks}
-                      faq={faq}
-                    />
-                  );
-                }
-                if (preloadedPricing) {
-                  return (
-                    <PricingPreloadedGearLive
-                      preloadedPricing={preloadedPricing}
-                      photos={photos}
-                      audioTracks={audioTracks}
-                      faq={faq}
-                    />
-                  );
-                }
-                if (preloadedGear) {
-                  return (
-                    <PricingLiveGearPreloaded
-                      preloadedGear={preloadedGear}
-                      photos={photos}
-                      audioTracks={audioTracks}
-                      faq={faq}
-                    />
-                  );
-                }
-                return (
-                  <BothLive
-                    photos={photos}
-                    audioTracks={audioTracks}
-                    faq={faq}
-                  />
-                );
-              }}
-            </FaqData>
+    <MarketingData preloaded={preloadedMarketing}>
+      {(marketing) => (
+        <PhotosData preloaded={preloadedPhotos}>
+          {(photos) => (
+            <AudioData preloaded={preloadedAudio}>
+              {(audioTracks) => (
+                <FaqData preloaded={preloadedFaq}>
+                  {(faq) => {
+                    if (preloadedPricing && preloadedGear) {
+                      return (
+                        <BothPreloaded
+                          preloadedPricing={preloadedPricing}
+                          preloadedGear={preloadedGear}
+                          photos={photos}
+                          audioTracks={audioTracks}
+                          faq={faq}
+                          marketing={marketing}
+                        />
+                      );
+                    }
+                    if (preloadedPricing) {
+                      return (
+                        <PricingPreloadedGearLive
+                          preloadedPricing={preloadedPricing}
+                          photos={photos}
+                          audioTracks={audioTracks}
+                          faq={faq}
+                          marketing={marketing}
+                        />
+                      );
+                    }
+                    if (preloadedGear) {
+                      return (
+                        <PricingLiveGearPreloaded
+                          preloadedGear={preloadedGear}
+                          photos={photos}
+                          audioTracks={audioTracks}
+                          faq={faq}
+                          marketing={marketing}
+                        />
+                      );
+                    }
+                    return (
+                      <BothLive
+                        photos={photos}
+                        audioTracks={audioTracks}
+                        faq={faq}
+                        marketing={marketing}
+                      />
+                    );
+                  }}
+                </FaqData>
+              )}
+            </AudioData>
           )}
-        </AudioData>
+        </PhotosData>
       )}
-    </PhotosData>
+    </MarketingData>
   );
 }
