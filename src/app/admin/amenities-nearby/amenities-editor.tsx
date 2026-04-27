@@ -417,111 +417,150 @@ function AmenitiesForm() {
           </p>
         ) : (
           <ul className="space-y-6">
-            {source.rows.map((row, index) => (
-              <li
-                key={row.stableId}
-                className="rounded-lg border border-border bg-background p-4 shadow-sm space-y-3"
-              >
-                <div className="flex flex-wrap items-center justify-between gap-2">
-                  <span className="font-mono text-xs text-muted-foreground">
-                    #{index + 1}
-                  </span>
-                  <div className="flex flex-wrap gap-1">
-                    <Button
-                      type="button"
-                      size="icon"
-                      variant="ghost"
-                      aria-label="Move up"
-                      disabled={index === 0}
-                      onClick={() => moveRow(index, -1)}
-                    >
-                      <ArrowUp className="size-4" />
-                    </Button>
-                    <Button
-                      type="button"
-                      size="icon"
-                      variant="ghost"
-                      aria-label="Move down"
-                      disabled={index === source.rows.length - 1}
-                      onClick={() => moveRow(index, 1)}
-                    >
-                      <ArrowDown className="size-4" />
-                    </Button>
-                    <Button
-                      type="button"
-                      size="icon"
-                      variant="ghost"
-                      className="text-destructive"
-                      aria-label="Remove"
-                      onClick={() => removeRow(row.stableId)}
-                    >
-                      <Trash2 className="size-4" />
-                    </Button>
+            {source.rows.map((row, index) => {
+              const trimmedWebsite = row.website.trim();
+              const websiteHasValue = trimmedWebsite.length > 0;
+              const websiteIsInvalid =
+                websiteHasValue &&
+                normalizeAmenitiesWebsiteInput(row.website) === null;
+              const websiteFieldId = `amenity-${row.stableId}-website`;
+              const websiteMessageId = `${websiteFieldId}-message`;
+
+              return (
+                <li
+                  key={row.stableId}
+                  className="rounded-lg border border-border bg-background p-4 shadow-sm space-y-3"
+                >
+                  <div className="flex flex-wrap items-center justify-between gap-2">
+                    <span className="font-mono text-xs text-muted-foreground">
+                      #{index + 1}
+                    </span>
+                    <div className="flex flex-wrap gap-1">
+                      <Button
+                        type="button"
+                        size="icon"
+                        variant="ghost"
+                        aria-label="Move up"
+                        disabled={index === 0}
+                        onClick={() => moveRow(index, -1)}
+                      >
+                        <ArrowUp className="size-4" />
+                      </Button>
+                      <Button
+                        type="button"
+                        size="icon"
+                        variant="ghost"
+                        aria-label="Move down"
+                        disabled={index === source.rows.length - 1}
+                        onClick={() => moveRow(index, 1)}
+                      >
+                        <ArrowDown className="size-4" />
+                      </Button>
+                      <Button
+                        type="button"
+                        size="icon"
+                        variant="ghost"
+                        className="text-destructive"
+                        aria-label="Remove"
+                        onClick={() => removeRow(row.stableId)}
+                      >
+                        <Trash2 className="size-4" />
+                      </Button>
+                    </div>
                   </div>
-                </div>
-                <div className="grid gap-3 sm:grid-cols-2">
-                  <label className="space-y-1 sm:col-span-2">
-                    <span className="text-xs font-medium text-muted-foreground">
-                      Name
-                    </span>
-                    <Input
-                      className={FIELD_CLASS}
-                      value={row.name}
-                      onChange={(e) =>
-                        updateRow(row.stableId, { name: e.target.value })
-                      }
-                    />
-                  </label>
-                  <label className="space-y-1 sm:col-span-2">
-                    <span className="text-xs font-medium text-muted-foreground">
-                      Type / category line
-                    </span>
-                    <Input
-                      className={FIELD_CLASS}
-                      value={row.type}
-                      onChange={(e) =>
-                        updateRow(row.stableId, { type: e.target.value })
-                      }
-                    />
-                  </label>
-                  <label className="space-y-1 sm:col-span-2">
-                    <span className="text-xs font-medium text-muted-foreground">
-                      Description
-                    </span>
-                    <Textarea
-                      className={cn(FIELD_CLASS, "min-h-[100px]")}
-                      value={row.description}
-                      onChange={(e) =>
-                        updateRow(row.stableId, {
-                          description: e.target.value,
-                        })
-                      }
-                    />
-                  </label>
-                  <label className="space-y-1 sm:col-span-2">
-                    <span className="text-xs font-medium text-muted-foreground">
-                      Website URL
-                    </span>
-                    <Input
-                      className={FIELD_CLASS}
-                      value={row.website}
-                      onChange={(e) =>
-                        updateRow(row.stableId, { website: e.target.value })
-                      }
-                      onBlur={() => {
-                        const n = normalizeAmenitiesWebsiteInput(row.website);
-                        if (n !== null) {
-                          updateRow(row.stableId, {
-                            website: websiteForStorage(n),
-                          });
+                  <div className="grid gap-3 sm:grid-cols-2">
+                    <label className="space-y-1 sm:col-span-2">
+                      <span className="text-xs font-medium text-muted-foreground">
+                        Name
+                      </span>
+                      <Input
+                        className={FIELD_CLASS}
+                        value={row.name}
+                        onChange={(e) =>
+                          updateRow(row.stableId, { name: e.target.value })
                         }
-                      }}
-                      placeholder="https://…"
-                    />
-                  </label>
-                </div>
-              </li>
-            ))}
+                      />
+                    </label>
+                    <label className="space-y-1 sm:col-span-2">
+                      <span className="text-xs font-medium text-muted-foreground">
+                        Type / category line
+                      </span>
+                      <Input
+                        className={FIELD_CLASS}
+                        value={row.type}
+                        onChange={(e) =>
+                          updateRow(row.stableId, { type: e.target.value })
+                        }
+                      />
+                    </label>
+                    <label className="space-y-1 sm:col-span-2">
+                      <span className="text-xs font-medium text-muted-foreground">
+                        Description
+                      </span>
+                      <Textarea
+                        className={cn(FIELD_CLASS, "min-h-[100px]")}
+                        value={row.description}
+                        onChange={(e) =>
+                          updateRow(row.stableId, {
+                            description: e.target.value,
+                          })
+                        }
+                      />
+                    </label>
+                    <div className="space-y-1 sm:col-span-2">
+                      <label
+                        htmlFor={websiteFieldId}
+                        className="block text-xs font-medium text-muted-foreground"
+                      >
+                        Website URL
+                      </label>
+                      <Input
+                        id={websiteFieldId}
+                        className={cn(
+                          FIELD_CLASS,
+                          websiteIsInvalid && "border-destructive",
+                        )}
+                        value={row.website}
+                        type="url"
+                        inputMode="url"
+                        autoComplete="url"
+                        spellCheck={false}
+                        aria-invalid={websiteIsInvalid || undefined}
+                        aria-describedby={websiteMessageId}
+                        onChange={(e) =>
+                          updateRow(row.stableId, { website: e.target.value })
+                        }
+                        onBlur={() => {
+                          const n = normalizeAmenitiesWebsiteInput(row.website);
+                          if (n !== null) {
+                            updateRow(row.stableId, {
+                              website: websiteForStorage(n),
+                            });
+                          }
+                        }}
+                        placeholder="https://…"
+                      />
+                      <p
+                        id={websiteMessageId}
+                        className={cn(
+                          "text-xs",
+                          websiteIsInvalid
+                            ? "text-destructive"
+                            : "text-muted-foreground",
+                        )}
+                        role={websiteIsInvalid ? "alert" : undefined}
+                      >
+                        {websiteIsInvalid
+                          ? "Enter a valid http(s) URL (e.g. https://example.com)."
+                          : websiteHasValue
+                            ? "Opens in a new tab on the public site."
+                            : "Required before publish. Leave blank to save as draft."}
+                      </p>
+                    </div>
+                  </div>
+                </li>
+              );
+            })}
           </ul>
         )}
       </section>

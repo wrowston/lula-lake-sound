@@ -1335,7 +1335,7 @@ function AudioEditorForm() {
     busy,
     autosaveStatus: combinedAutosaveStatus,
     inlineError,
-    previewHref: "/preview#audio-portfolio",
+    previewHref: "/preview/recordings",
     onPublish: () => void handlePublish(),
     onDiscardConfirm: handleDiscardConfirm,
     flush: flushAllAutosaves,
