@@ -72,19 +72,18 @@ export function HomepageShell({
     marketingFromProps === undefined ? liveMarketing : marketingFromProps;
 
   const logoScale = calculateLogoScale(scrollY);
+  // Nav-link visibility intentionally defaults to OFF while the marketing
+  // flags are still loading. Otherwise a fresh page load briefly renders the
+  // "Pricing" / "Recordings" / "About" tabs before Convex resolves and any
+  // disabled tabs disappear — the visible flicker reported on the homepage.
   const showPricing =
-    marketing === undefined ||
-    (marketing !== null && isHomepagePricingSectionEnabled(marketing)) ||
+    (marketing != null && isHomepagePricingSectionEnabled(marketing)) ||
     (isPreview &&
       marketing == null &&
       previewHasActivePricingPackages(pricingFlags));
-  const showAbout = marketing === undefined
-    ? false
-    : marketing !== null && marketing.aboutPage === true;
+  const showAbout = marketing != null && marketing.aboutPage === true;
   const showRecordings =
-    marketing === undefined
-      ? false
-      : marketing !== null && marketing.recordingsPage === true;
+    marketing != null && marketing.recordingsPage === true;
 
   return (
     <div

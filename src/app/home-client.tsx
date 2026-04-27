@@ -5,11 +5,15 @@ import { api } from "../../convex/_generated/api";
 import { HomepageShell } from "@/components/homepage-shell";
 import type { GalleryPhoto } from "@/components/the-space";
 import type { FaqCategoryProps } from "@/components/faq";
+import type { MarketingFeatureFlags } from "@/lib/site-settings";
 
 type PreloadedPricing = Preloaded<typeof api.public.getPublishedPricingFlags> | null;
 type PreloadedGear = Preloaded<typeof api.public.getPublishedGear> | null;
 type PreloadedPhotos = Preloaded<typeof api.public.getPublishedGalleryPhotos> | null;
 type PreloadedFaq = Preloaded<typeof api.public.getPublishedFaq> | null;
+type PreloadedMarketing =
+  | Preloaded<typeof api.public.getPublishedMarketingFeatureFlags>
+  | null;
 
 type PublishedFaqPayload = { categories: readonly FaqCategoryProps[] };
 
@@ -79,23 +83,68 @@ function FaqLive({
   return <>{children(faq)}</>;
 }
 
+function MarketingData({
+  preloaded,
+  children,
+}: {
+  preloaded: PreloadedMarketing;
+  children: (
+    marketing: MarketingFeatureFlags | null | undefined,
+  ) => React.ReactNode;
+}) {
+  if (preloaded) {
+    return (
+      <MarketingFromPreload preloaded={preloaded}>
+        {children}
+      </MarketingFromPreload>
+    );
+  }
+  return <MarketingLive>{children}</MarketingLive>;
+}
+
+function MarketingFromPreload({
+  preloaded,
+  children,
+}: {
+  preloaded: NonNullable<PreloadedMarketing>;
+  children: (
+    marketing: MarketingFeatureFlags | null | undefined,
+  ) => React.ReactNode;
+}) {
+  const marketing = usePreloadedQuery(preloaded);
+  return <>{children(marketing)}</>;
+}
+
+function MarketingLive({
+  children,
+}: {
+  children: (
+    marketing: MarketingFeatureFlags | null | undefined,
+  ) => React.ReactNode;
+}) {
+  const marketing = useQuery(api.public.getPublishedMarketingFeatureFlags);
+  return <>{children(marketing)}</>;
+}
+
 function BothPreloaded({
   preloadedPricing,
   preloadedGear,
   photos,
   faq,
+  marketing,
 }: {
   preloadedPricing: NonNullable<PreloadedPricing>;
   preloadedGear: NonNullable<PreloadedGear>;
   photos: GalleryPhoto[] | undefined;
   faq: PublishedFaqPayload | undefined;
+  marketing: MarketingFeatureFlags | null | undefined;
 }) {
   const pricingFlags = usePreloadedQuery(preloadedPricing);
   const gear = usePreloadedQuery(preloadedGear);
   return (
     <HomepageShell
       pricingFlags={pricingFlags}
-      marketingFeatureFlags={undefined}
+      marketingFeatureFlags={marketing}
       gear={gear}
       photos={photos}
       faqCategories={faq?.categories}
@@ -107,17 +156,19 @@ function PricingPreloadedGearLive({
   preloadedPricing,
   photos,
   faq,
+  marketing,
 }: {
   preloadedPricing: NonNullable<PreloadedPricing>;
   photos: GalleryPhoto[] | undefined;
   faq: PublishedFaqPayload | undefined;
+  marketing: MarketingFeatureFlags | null | undefined;
 }) {
   const pricingFlags = usePreloadedQuery(preloadedPricing);
   const gear = useQuery(api.public.getPublishedGear);
   return (
     <HomepageShell
       pricingFlags={pricingFlags}
-      marketingFeatureFlags={undefined}
+      marketingFeatureFlags={marketing}
       gear={gear}
       photos={photos}
       faqCategories={faq?.categories}
@@ -129,17 +180,19 @@ function PricingLiveGearPreloaded({
   preloadedGear,
   photos,
   faq,
+  marketing,
 }: {
   preloadedGear: NonNullable<PreloadedGear>;
   photos: GalleryPhoto[] | undefined;
   faq: PublishedFaqPayload | undefined;
+  marketing: MarketingFeatureFlags | null | undefined;
 }) {
   const pricingFlags = useQuery(api.public.getPublishedPricingFlags);
   const gear = usePreloadedQuery(preloadedGear);
   return (
     <HomepageShell
       pricingFlags={pricingFlags}
-      marketingFeatureFlags={undefined}
+      marketingFeatureFlags={marketing}
       gear={gear}
       photos={photos}
       faqCategories={faq?.categories}
@@ -150,16 +203,18 @@ function PricingLiveGearPreloaded({
 function BothLive({
   photos,
   faq,
+  marketing,
 }: {
   photos: GalleryPhoto[] | undefined;
   faq: PublishedFaqPayload | undefined;
+  marketing: MarketingFeatureFlags | null | undefined;
 }) {
   const pricingFlags = useQuery(api.public.getPublishedPricingFlags);
   const gear = useQuery(api.public.getPublishedGear);
   return (
     <HomepageShell
       pricingFlags={pricingFlags}
-      marketingFeatureFlags={undefined}
+      marketingFeatureFlags={marketing}
       gear={gear}
       photos={photos}
       faqCategories={faq?.categories}
@@ -172,49 +227,64 @@ export function HomeClient({
   preloadedGear,
   preloadedPhotos,
   preloadedFaq,
+  preloadedMarketing,
 }: {
   preloadedPricing: PreloadedPricing;
   preloadedGear: PreloadedGear;
   preloadedPhotos: PreloadedPhotos;
   preloadedFaq: PreloadedFaq;
+  preloadedMarketing: PreloadedMarketing;
 }) {
   return (
-    <PhotosData preloaded={preloadedPhotos}>
-      {(photos) => (
-        <FaqData preloaded={preloadedFaq}>
-          {(faq) => {
-            if (preloadedPricing && preloadedGear) {
-              return (
-                <BothPreloaded
-                  preloadedPricing={preloadedPricing}
-                  preloadedGear={preloadedGear}
-                  photos={photos}
-                  faq={faq}
-                />
-              );
-            }
-            if (preloadedPricing) {
-              return (
-                <PricingPreloadedGearLive
-                  preloadedPricing={preloadedPricing}
-                  photos={photos}
-                  faq={faq}
-                />
-              );
-            }
-            if (preloadedGear) {
-              return (
-                <PricingLiveGearPreloaded
-                  preloadedGear={preloadedGear}
-                  photos={photos}
-                  faq={faq}
-                />
-              );
-            }
-            return <BothLive photos={photos} faq={faq} />;
-          }}
-        </FaqData>
+    <MarketingData preloaded={preloadedMarketing}>
+      {(marketing) => (
+        <PhotosData preloaded={preloadedPhotos}>
+          {(photos) => (
+            <FaqData preloaded={preloadedFaq}>
+              {(faq) => {
+                if (preloadedPricing && preloadedGear) {
+                  return (
+                    <BothPreloaded
+                      preloadedPricing={preloadedPricing}
+                      preloadedGear={preloadedGear}
+                      photos={photos}
+                      faq={faq}
+                      marketing={marketing}
+                    />
+                  );
+                }
+                if (preloadedPricing) {
+                  return (
+                    <PricingPreloadedGearLive
+                      preloadedPricing={preloadedPricing}
+                      photos={photos}
+                      faq={faq}
+                      marketing={marketing}
+                    />
+                  );
+                }
+                if (preloadedGear) {
+                  return (
+                    <PricingLiveGearPreloaded
+                      preloadedGear={preloadedGear}
+                      photos={photos}
+                      faq={faq}
+                      marketing={marketing}
+                    />
+                  );
+                }
+                return (
+                  <BothLive
+                    photos={photos}
+                    faq={faq}
+                    marketing={marketing}
+                  />
+                );
+              }}
+            </FaqData>
+          )}
+        </PhotosData>
       )}
-    </PhotosData>
+    </MarketingData>
   );
 }

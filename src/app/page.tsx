@@ -5,13 +5,19 @@ import { HomepageShell } from "@/components/homepage-shell";
 
 export default async function Home() {
   try {
-    const [pricingSettled, gearSettled, photosSettled, faqSettled] =
-      await Promise.allSettled([
-        preloadQuery(api.public.getPublishedPricingFlags),
-        preloadQuery(api.public.getPublishedGear),
-        preloadQuery(api.public.getPublishedGalleryPhotos),
-        preloadQuery(api.public.getPublishedFaq),
-      ]);
+    const [
+      pricingSettled,
+      gearSettled,
+      photosSettled,
+      faqSettled,
+      marketingSettled,
+    ] = await Promise.allSettled([
+      preloadQuery(api.public.getPublishedPricingFlags),
+      preloadQuery(api.public.getPublishedGear),
+      preloadQuery(api.public.getPublishedGalleryPhotos),
+      preloadQuery(api.public.getPublishedFaq),
+      preloadQuery(api.public.getPublishedMarketingFeatureFlags),
+    ]);
     const preloadedPricing =
       pricingSettled.status === "fulfilled" ? pricingSettled.value : null;
     const preloadedGear =
@@ -20,16 +26,19 @@ export default async function Home() {
       photosSettled.status === "fulfilled" ? photosSettled.value : null;
     const preloadedFaq =
       faqSettled.status === "fulfilled" ? faqSettled.value : null;
+    const preloadedMarketing =
+      marketingSettled.status === "fulfilled" ? marketingSettled.value : null;
     if (
       preloadedPricing === null &&
       preloadedGear === null &&
       preloadedPhotos === null &&
-      preloadedFaq === null
+      preloadedFaq === null &&
+      preloadedMarketing === null
     ) {
       return (
         <HomepageShell
           pricingFlags={null}
-          marketingFeatureFlags={undefined}
+          marketingFeatureFlags={null}
           gear={null}
           photos={null}
           faqCategories={null}
@@ -42,13 +51,14 @@ export default async function Home() {
         preloadedGear={preloadedGear}
         preloadedPhotos={preloadedPhotos}
         preloadedFaq={preloadedFaq}
+        preloadedMarketing={preloadedMarketing}
       />
     );
   } catch {
     return (
       <HomepageShell
         pricingFlags={null}
-        marketingFeatureFlags={undefined}
+        marketingFeatureFlags={null}
         gear={null}
         photos={null}
         faqCategories={null}
