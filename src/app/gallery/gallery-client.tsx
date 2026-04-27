@@ -135,7 +135,8 @@ export function GalleryClient({
   // Lightbox state — `activeIndex` indexes into `visibleItems` so prev/next
   // honors the current filter.
   const [activeIndex, setActiveIndex] = useState<number | null>(null);
-  const [scrollYAtOpen, setScrollYAtOpen] = useState<number>(0);
+  /** Scroll Y captured when the lightbox opens; ref avoids ref-callback ↔ state loops. */
+  const lockedScrollYRef = useRef(0);
   const overlayRef = useRef<HTMLDivElement | null>(null);
   const previousFocusRef = useRef<HTMLElement | null>(null);
 
@@ -175,7 +176,7 @@ export function GalleryClient({
         previousFocusRef.current =
           (document.activeElement as HTMLElement | null) ?? null;
         const offsetY = window.scrollY;
-        setScrollYAtOpen(offsetY);
+        lockedScrollYRef.current = offsetY;
         document.body.style.position = "fixed";
         document.body.style.top = `-${offsetY}px`;
         document.body.style.left = "0";
@@ -188,13 +189,13 @@ export function GalleryClient({
         document.body.style.left = "";
         document.body.style.right = "";
         document.body.style.width = "";
-        window.scrollTo(0, scrollYAtOpen);
+        window.scrollTo(0, lockedScrollYRef.current);
         if (previousFocusRef.current) {
           previousFocusRef.current.focus({ preventScroll: true });
         }
       }
     },
-    [scrollYAtOpen],
+    [],
   );
 
   const handleOverlayKeyDown = useCallback(
