@@ -320,8 +320,8 @@ function PhotosEditorForm() {
     position: "before" | "after";
   } | null>(null);
 
-  const [surfaceTab, setSurfaceTab] = useState<"carousel" | "gallery">(
-    "carousel",
+  const [surfaceTab, setSurfaceTab] = useState<"all" | "carousel" | "gallery">(
+    "all",
   );
 
   const photos = useMemo(
@@ -329,14 +329,23 @@ function PhotosEditorForm() {
     [data?.photos],
   );
 
+  /**
+   * Filter uses *edited* values so toggling a surface off immediately removes
+   * the card from that surface's tab — matching the mental model that the
+   * tab is a live filter on per-photo flags. The "All photos" tab is the
+   * recovery surface: it always shows everything, including orphans (both
+   * flags off) and pending changes.
+   */
   const visiblePhotos = useMemo(
     () =>
-      photos.filter((photo) =>
-        surfaceTab === "carousel"
-          ? photo.showInCarousel !== false
-          : photo.showInGallery !== false,
-      ),
-    [photos, surfaceTab],
+      photos.filter((photo) => {
+        if (surfaceTab === "all") return true;
+        const e = edits[photo.stableId];
+        const carousel = e?.showInCarousel ?? photo.showInCarousel;
+        const gallery = e?.showInGallery ?? photo.showInGallery;
+        return surfaceTab === "carousel" ? carousel !== false : gallery !== false;
+      }),
+    [edits, photos, surfaceTab],
   );
 
   const canReorder = visiblePhotos.length === photos.length && photos.length > 0;
@@ -375,6 +384,23 @@ function PhotosEditorForm() {
     const d = data.galleryPage.isEnabledDraft;
     return typeof d === "boolean" && d !== published;
   }, [data?.galleryPage]);
+
+  /**
+   * Per-surface counts use *edited* values so the tab labels reflect the
+   * pending shape of each surface as the user toggles. This is the most
+   * informative number to put on the filter chips — it answers "how many
+   * photos will be on Carousel after I publish?".
+   */
+  const surfaceCounts = useMemo(() => {
+    let carousel = 0;
+    let gallery = 0;
+    for (const photo of photos) {
+      const e = edits[photo.stableId];
+      if ((e?.showInCarousel ?? photo.showInCarousel) !== false) carousel += 1;
+      if ((e?.showInGallery ?? photo.showInGallery) !== false) gallery += 1;
+    }
+    return { all: photos.length, carousel, gallery };
+  }, [edits, photos]);
 
   const hasDraftOnServer =
     (data?.hasDraftChanges ?? false) || hasGalleryPageFlagPending;
@@ -823,8 +849,8 @@ function PhotosEditorForm() {
               width: dimensions?.width ?? null,
               height: dimensions?.height ?? null,
               originalFileName: file.name,
-              showInCarousel: surfaceTab === "carousel",
-              showInGallery: surfaceTab === "gallery",
+              showInCarousel: surfaceTab === "all" || surfaceTab === "carousel",
+              showInGallery: surfaceTab === "all" || surfaceTab === "gallery",
             }),
           ),
           { onErrorMessage: setInlineError },
@@ -1037,7 +1063,7 @@ function PhotosEditorForm() {
     busy,
     autosaveStatus: "idle",
     inlineError,
-    previewHref: surfaceTab === "carousel" ? "/preview" : "/preview/gallery",
+    previewHref: surfaceTab === "gallery" ? "/preview/gallery" : "/preview",
     onPublish: handleToolbarPublish,
     onDiscardConfirm: handleDiscardConfirm,
     // No `flush` — dirty local edits trigger the nav-guard confirm dialog
@@ -1095,42 +1121,63 @@ function PhotosEditorForm() {
               Studio gallery
             </h2>
             <p className="body-text-small max-w-2xl text-foreground/85">
-              Use the <span className="font-medium">Carousel</span> and{" "}
-              <span className="font-medium">Gallery</span> tabs to choose where
-              new uploads go and to set whether each image appears in the
-              homepage “The Space” carousel, the public Gallery page, or both.
-              Gallery categories (Rooms, Gear, Grounds) only apply to the
-              Gallery surface. Uploads are saved as draft; Publish pushes order,
-              per-surface flags, and the public Gallery page visibility to the
-              live site.
+              Each photo can appear on the homepage{" "}
+              <span className="font-medium">“The Space”</span> carousel, the
+              public <span className="font-medium">Gallery</span> page, or
+              both — choose per photo inside its card. The tabs below filter
+              the list by surface; uploads default to the active surface.
+              Gallery categories (Rooms, Gear, Grounds) apply to the Gallery
+              surface only. Publish pushes order, per-surface flags, and
+              Gallery page visibility live.
             </p>
-            <div className="flex flex-wrap items-center gap-2 pt-1">
+            <div
+              className="flex flex-wrap items-center gap-2 pt-1"
+              role="tablist"
+              aria-label="Filter photos by surface"
+            >
               <div className="inline-flex rounded-lg border border-border bg-muted/30 p-0.5">
                 {(
                   [
-                    ["carousel", "Homepage carousel"] as const,
-                    ["gallery", "Gallery page"] as const,
+                    ["all", "All photos", surfaceCounts.all] as const,
+                    ["carousel", "Homepage carousel", surfaceCounts.carousel] as const,
+                    ["gallery", "Gallery page", surfaceCounts.gallery] as const,
                   ] as const
-                ).map(([id, label]) => (
-                  <Button
-                    key={id}
-                    type="button"
-                    variant="ghost"
-                    size="sm"
-                    className={cn(
-                      "rounded-md px-3",
-                      surfaceTab === id
-                        ? "bg-background text-foreground shadow-sm"
-                        : "text-muted-foreground",
-                    )}
-                    onClick={() => setSurfaceTab(id)}
-                  >
-                    {label}
-                  </Button>
-                ))}
+                ).map(([id, label, count]) => {
+                  const isActive = surfaceTab === id;
+                  return (
+                    <Button
+                      key={id}
+                      type="button"
+                      variant="ghost"
+                      size="sm"
+                      role="tab"
+                      aria-selected={isActive}
+                      className={cn(
+                        "rounded-md px-3 transition-colors",
+                        isActive
+                          ? "bg-background text-foreground shadow-sm"
+                          : "text-muted-foreground hover:text-foreground",
+                      )}
+                      onClick={() => setSurfaceTab(id)}
+                    >
+                      <span>{label}</span>
+                      <span
+                        className={cn(
+                          "ml-2 inline-flex h-4 min-w-[1.25rem] items-center justify-center rounded-sm px-1 text-[10px] font-medium tabular-nums",
+                          isActive
+                            ? "bg-muted text-foreground/85"
+                            : "bg-muted/60 text-muted-foreground",
+                        )}
+                        aria-hidden
+                      >
+                        {count}
+                      </span>
+                    </Button>
+                  );
+                })}
               </div>
             </div>
-            {surfaceTab === "gallery" ? (
+            {surfaceTab !== "carousel" ? (
               <div className="flex flex-col gap-2 rounded-lg border border-border bg-muted/20 px-3 py-2 sm:flex-row sm:items-center sm:justify-between">
                 <div>
                   <p className="text-sm font-medium text-foreground">
@@ -1263,10 +1310,20 @@ function PhotosEditorForm() {
           </p>
         </div>
       ) : visiblePhotos.length === 0 ? (
-        <div className="rounded-xl border border-dashed border-border bg-muted/20 px-6 py-10 text-center">
+        <div className="space-y-2 rounded-xl border border-dashed border-border bg-muted/20 px-6 py-10 text-center">
           <p className="body-text text-foreground/80">
-            No photos in this surface yet. Upload or use &quot;Also show
-            on…&quot; on a photo in the other tab.
+            No photos on this surface yet.
+          </p>
+          <p className="body-text-small text-foreground/70">
+            Switch to{" "}
+            <button
+              type="button"
+              onClick={() => setSurfaceTab("all")}
+              className="underline-offset-2 hover:underline"
+            >
+              All photos
+            </button>{" "}
+            to add an existing photo to this surface, or upload a new one.
           </p>
         </div>
       ) : (
@@ -1454,34 +1511,99 @@ function PhotosEditorForm() {
                       />
                     </label>
 
-                    <div className="flex items-center justify-between gap-2 rounded-md border border-border/60 bg-muted/20 px-2 py-1.5">
-                      <label
-                        htmlFor={`also-${photo.stableId}`}
-                        className="text-[11px] text-foreground/90"
-                      >
-                        {surfaceTab === "carousel"
-                          ? "Also show on Gallery page"
-                          : "Also show in homepage carousel"}
-                      </label>
-                      <Switch
-                        id={`also-${photo.stableId}`}
-                        checked={
-                          surfaceTab === "carousel"
-                            ? fields.showInGallery
-                            : fields.showInCarousel
-                        }
-                        onCheckedChange={(v) => {
-                          if (surfaceTab === "carousel") {
-                            updatePhotoEdit(photo, { showInGallery: v });
-                          } else {
-                            updatePhotoEdit(photo, { showInCarousel: v });
-                          }
-                        }}
-                        disabled={busy !== null || isRowBusy}
-                      />
-                    </div>
+                    <fieldset className="space-y-1.5 rounded-md border border-border/60 bg-muted/20 px-2.5 py-2">
+                      <div className="flex items-baseline justify-between gap-2">
+                        <legend className="px-0.5 text-[10px] font-semibold uppercase tracking-wider text-foreground/70">
+                          Where it shows
+                        </legend>
+                        {!fields.showInCarousel && !fields.showInGallery ? (
+                          <span className="rounded-sm bg-amber-100/90 px-1.5 py-0.5 text-[9px] font-semibold uppercase tracking-wider text-amber-900 dark:bg-amber-500/20 dark:text-amber-200">
+                            Hidden everywhere
+                          </span>
+                        ) : null}
+                      </div>
+                      <ul className="space-y-1">
+                        {(
+                          [
+                            {
+                              key: "carousel",
+                              label: "Homepage carousel",
+                              edited: fields.showInCarousel,
+                              saved: photo.showInCarousel,
+                            },
+                            {
+                              key: "gallery",
+                              label: "Gallery page",
+                              edited: fields.showInGallery,
+                              saved: photo.showInGallery,
+                            },
+                          ] as const
+                        ).map(({ key, label, edited, saved }) => {
+                          const willChange = edited !== saved;
+                          const inputId = `surface-${key}-${photo.stableId}`;
+                          return (
+                            <li
+                              key={key}
+                              className="flex items-center justify-between gap-2 rounded-sm bg-background/60 px-1.5 py-1"
+                            >
+                              <label
+                                htmlFor={inputId}
+                                className="flex min-w-0 items-center gap-2 text-[11px] text-foreground/95"
+                              >
+                                <span
+                                  aria-hidden
+                                  className={cn(
+                                    "size-1.5 shrink-0 rounded-full transition-colors",
+                                    edited
+                                      ? "bg-emerald-500"
+                                      : "bg-muted-foreground/40",
+                                  )}
+                                />
+                                <span className="truncate">{label}</span>
+                                {willChange ? (
+                                  <span
+                                    className={cn(
+                                      "shrink-0 rounded-sm px-1 py-0.5 text-[9px] font-semibold uppercase tracking-wider",
+                                      edited
+                                        ? "bg-emerald-100 text-emerald-900 dark:bg-emerald-500/20 dark:text-emerald-200"
+                                        : "bg-amber-100 text-amber-900 dark:bg-amber-500/20 dark:text-amber-200",
+                                    )}
+                                  >
+                                    {edited ? "Will appear" : "Will hide"}
+                                  </span>
+                                ) : null}
+                              </label>
+                              <Switch
+                                id={inputId}
+                                size="sm"
+                                checked={edited}
+                                onCheckedChange={(v) => {
+                                  if (key === "carousel") {
+                                    updatePhotoEdit(photo, {
+                                      showInCarousel: v,
+                                    });
+                                  } else {
+                                    updatePhotoEdit(photo, {
+                                      showInGallery: v,
+                                    });
+                                  }
+                                }}
+                                disabled={busy !== null || isRowBusy}
+                              />
+                            </li>
+                          );
+                        })}
+                      </ul>
+                      {!fields.showInCarousel && !fields.showInGallery ? (
+                        <p className="text-[11px] leading-snug text-amber-900/90 dark:text-amber-200/90">
+                          With both surfaces off this photo won&apos;t appear
+                          anywhere on the public site after publish. Consider
+                          deleting it instead.
+                        </p>
+                      ) : null}
+                    </fieldset>
 
-                    {surfaceTab === "gallery" ? (
+                    {fields.showInGallery ? (
                     <fieldset className="min-w-0 space-y-1">
                       <legend className="text-[11px] font-medium leading-none text-foreground/90">
                         Gallery categories
