@@ -1,7 +1,5 @@
 "use client";
 
-import { useQuery } from "convex/react";
-import { api } from "../../convex/_generated/api";
 import { AmenityCard } from "./ui/amenity-card";
 
 const STATIC_EYEBROW = "Local Favorites";
@@ -22,19 +20,12 @@ export type PublishedAmenitiesNearby = {
 };
 
 type AmenitiesNearbyProps = {
-  /** When provided (e.g. preview), skips the public Convex subscription. */
+  /** Published (or owner preview) amenities payload from Convex. */
   readonly amenities?: PublishedAmenitiesNearby | null | undefined;
 };
 
-export function AmenitiesNearby({ amenities: amenitiesFromProps }: AmenitiesNearbyProps) {
-  const live = useQuery(
-    api.public.getPublishedAmenitiesNearby,
-    amenitiesFromProps !== undefined ? "skip" : {},
-  );
-  const data =
-    amenitiesFromProps !== undefined ? amenitiesFromProps : live;
-
-  if (data === undefined) {
+export function AmenitiesNearby({ amenities }: AmenitiesNearbyProps) {
+  if (amenities === undefined) {
     return (
       <section
         id="local-favorites"
@@ -48,17 +39,17 @@ export function AmenitiesNearby({ amenities: amenitiesFromProps }: AmenitiesNear
     );
   }
 
-  if (data === null) {
+  if (amenities === null) {
     return null;
   }
 
-  if (!data.isEnabled || data.rows.length === 0) {
+  if (!amenities.isEnabled || amenities.rows.length === 0) {
     return null;
   }
 
-  const eyebrow = data.eyebrow?.trim() || STATIC_EYEBROW;
-  const heading = data.heading?.trim() || STATIC_HEADING;
-  const intro = data.intro?.trim();
+  const eyebrow = amenities.eyebrow?.trim() || STATIC_EYEBROW;
+  const heading = amenities.heading?.trim() || STATIC_HEADING;
+  const intro = amenities.intro?.trim();
 
   return (
     <section
@@ -82,7 +73,7 @@ export function AmenitiesNearby({ amenities: amenitiesFromProps }: AmenitiesNear
         </div>
 
         <div className="reveal reveal-delay-2 grid grid-cols-1 divide-y divide-sand/14 border-y border-sand/14 md:grid-cols-2 md:divide-x md:divide-y-0 lg:grid-cols-4 [&>*:nth-child(n+3)]:border-t [&>*:nth-child(n+3)]:border-sand/14 lg:[&>*:nth-child(n+3)]:border-t-0">
-          {data.rows.map((amenity) => (
+          {amenities.rows.map((amenity) => (
             <AmenityCard
               key={amenity.stableId}
               name={amenity.name}
