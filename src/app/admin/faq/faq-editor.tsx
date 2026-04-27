@@ -72,7 +72,6 @@ interface ValidationView {
   readonly categoryTitleErrors: ReadonlySet<string>;
   readonly categoryEmptyErrors: ReadonlySet<string>;
   readonly questionTextErrors: ReadonlyMap<string, ReadonlySet<"question" | "answer">>;
-  readonly globalIssues: readonly ValidationIssue[];
 }
 
 const EMPTY_VALIDATION: ValidationView = {
@@ -81,7 +80,6 @@ const EMPTY_VALIDATION: ValidationView = {
   categoryTitleErrors: new Set(),
   categoryEmptyErrors: new Set(),
   questionTextErrors: new Map(),
-  globalIssues: [],
 };
 
 function newStableId(prefix: string): string {
@@ -101,7 +99,10 @@ function pad(n: number): string {
  *   - `categories[i].title`             → category whose title is empty
  *   - `categories.{id}.questions`       → category with no questions
  *   - `question.{id}.question` / `.answer` → question/answer empty
- *   - everything else                    → surfaced in the global banner
+ *
+ * `categories` must match the tree order the backend used when emitting
+ * indexed paths (the persisted draft), not necessarily the in-memory local
+ * order while unsaved edits exist.
  */
 function buildValidationView(
   issues: readonly ValidationIssue[] | undefined,
@@ -112,7 +113,6 @@ function buildValidationView(
   const categoryTitleErrors = new Set<string>();
   const categoryEmptyErrors = new Set<string>();
   const questionTextErrors = new Map<string, Set<"question" | "answer">>();
-  const globalIssues: ValidationIssue[] = [];
 
   const categoryByIndex = new Map<number, Category>();
   categories.forEach((c, i) => categoryByIndex.set(i, c));
@@ -150,8 +150,6 @@ function buildValidationView(
         continue;
       }
     }
-
-    globalIssues.push(issue);
   }
 
   return {
@@ -160,7 +158,6 @@ function buildValidationView(
     categoryTitleErrors,
     categoryEmptyErrors,
     questionTextErrors,
-    globalIssues,
   };
 }
 
@@ -481,14 +478,20 @@ function FaqForm() {
 
   // Live validation lookup — paths from `collectFaqIssues` are mapped to
   // per-field markers so the user can fix issues without leaving context.
-  const validationView = useMemo(
-    () =>
-      buildValidationView(
-        validation && !validation.ok ? validation.issues : undefined,
-        source?.categories ?? [],
-      ),
-    [validation, source?.categories],
-  );
+  // Indexed paths (`categories[i].title`) refer to the server draft order;
+  // when there are unsaved local edits (including reorder), map those using
+  // the section snapshot, not `source.categories`.
+  const validationView = useMemo(() => {
+    const categoriesForPaths =
+      localDraft !== null && section
+        ? ((section.draftSnapshot ?? section.publishedSnapshot) as FaqSnapshot)
+            .categories
+        : (source?.categories ?? []);
+    return buildValidationView(
+      validation && !validation.ok ? validation.issues : undefined,
+      categoriesForPaths,
+    );
+  }, [validation, localDraft, section, source?.categories]);
 
   const { toolbarPortal, editorRef } = useRegisterCmsEditor({
     section: "faq",
