@@ -288,7 +288,7 @@ export const listPendingDrafts = query({
     if (gearMeta?.hasDraftChanges) sections.push("gear");
     if (galleryMeta?.hasDraftChanges) sections.push("photos");
 
-    return { sections };
+    return { sections: [...new Set(sections)] };
   },
 });
 
@@ -521,6 +521,7 @@ export const publishMarketingFlags = mutation({
 /**
  * Discard marketing-flag drafts: clears `isEnabledDraft` on About /
  * Recordings / Pricing (without rewinding their content drafts).
+ * Gallery-page visibility drafts are discarded from `/admin/photos` only.
  */
 export const discardMarketingFlagsDraft = mutation({
   args: {},
@@ -531,7 +532,6 @@ export const discardMarketingFlagsDraft = mutation({
       "about",
       "recordings",
       "pricing",
-      "photos",
     ] as const) {
       const row = await getSectionMetaRow(ctx, section);
       if (!row || row.isEnabledDraft === undefined) continue;

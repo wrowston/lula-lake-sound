@@ -1037,7 +1037,8 @@ function PhotosEditorForm() {
     busy,
     autosaveStatus: "idle",
     inlineError,
-    previewHref: surfaceTab === "gallery" ? "/preview/gallery" : "/preview",
+    previewHref:
+      surfaceTab === "gallery" ? "/preview/gallery" : "/preview#the-space",
     onPublish: handleToolbarPublish,
     onDiscardConfirm: handleDiscardConfirm,
     // No `flush` — dirty local edits trigger the nav-guard confirm dialog

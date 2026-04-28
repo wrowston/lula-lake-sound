@@ -299,16 +299,25 @@ export const listDraftPhotos = query({
         .query("galleryPhotoMeta")
         .withIndex("by_singleton", (q) => q.eq("singletonKey", "default"))
         .unique(),
-      ctx.db
-        .query("cmsSections")
-        .withIndex("by_section", (q) => q.eq("section", "photos"))
-        .unique(),
+      getSectionMetaRow(ctx, "photos"),
     ]);
+    const metaAt = meta?.publishedAt ?? null;
+    const cmsAt = photosCms?.publishedAt ?? null;
+    const publishedAt =
+      metaAt !== null && cmsAt !== null
+        ? Math.max(metaAt, cmsAt)
+        : (metaAt ?? cmsAt);
+    const publishedBy =
+      metaAt !== null && cmsAt !== null
+        ? (metaAt >= cmsAt
+            ? meta?.publishedBy
+            : photosCms?.publishedBy)
+        : (metaAt !== null ? meta?.publishedBy : photosCms?.publishedBy);
     return {
       photos: await materializeGalleryPhotos(ctx, rows),
       hasDraftChanges: meta?.hasDraftChanges ?? false,
-      publishedAt: meta?.publishedAt ?? null,
-      publishedBy: meta?.publishedBy ?? null,
+      publishedAt,
+      publishedBy: publishedBy ?? null,
       updatedAt: meta?.updatedAt ?? null,
       updatedBy: meta?.updatedBy ?? null,
       galleryPage: {
@@ -517,7 +526,7 @@ export async function publishGalleryDraftCore(
 ): Promise<{
   ok: true;
   kind: "published";
-  /** Matches `galleryPhotoMeta.publishedAt` (may stay null when photos already matched published). */
+  /** Latest publish stamp across gallery photos and gallery-page CMS flag. */
   publishedAt: number | null;
   publishedBy: string | undefined;
 }> {
@@ -557,8 +566,19 @@ export async function publishGalleryDraftCore(
   await promoteGalleryPageCmsFlag(ctx, { userId, updatedBy });
 
   const metaFinal = await ctx.db.get(metaId);
-  const publishedAt = metaFinal?.publishedAt ?? null;
-  const publishedBy = metaFinal?.publishedBy;
+  const photosCmsFinal = await getSectionMetaRow(ctx, "photos");
+  const metaAt = metaFinal?.publishedAt ?? null;
+  const cmsAt = photosCmsFinal?.publishedAt ?? null;
+  const publishedAt =
+    metaAt !== null && cmsAt !== null
+      ? Math.max(metaAt, cmsAt)
+      : (metaAt ?? cmsAt);
+  const publishedBy =
+    metaAt !== null && cmsAt !== null
+      ? (metaAt >= cmsAt
+          ? metaFinal?.publishedBy
+          : photosCmsFinal?.publishedBy)
+      : (metaAt !== null ? metaFinal?.publishedBy : photosCmsFinal?.publishedBy);
 
   return {
     ok: true as const,

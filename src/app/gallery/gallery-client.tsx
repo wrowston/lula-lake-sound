@@ -158,6 +158,10 @@ export function GalleryClient({
   const previousFocusRef = useRef<HTMLElement | null>(null);
 
   const isOpen = activeIndex !== null;
+  const hasActiveLightboxItem =
+    activeIndex !== null &&
+    activeIndex >= 0 &&
+    activeIndex < visibleItems.length;
   const activeItem =
     activeIndex !== null ? (visibleItems[activeIndex] ?? null) : null;
 
@@ -165,9 +169,21 @@ export function GalleryClient({
     setActiveIndex(null);
   }, []);
 
+  useLayoutEffect(() => {
+    if (activeIndex === null) return;
+    if (visibleItems.length === 0) {
+      setActiveIndex(null);
+      return;
+    }
+    if (activeIndex >= visibleItems.length) {
+      setActiveIndex(null);
+    }
+  }, [activeIndex, visibleItems.length]);
+
   const showPrev = useCallback(() => {
     setActiveIndex((current) => {
       if (current === null) return current;
+      if (visibleItems.length === 0) return null;
       return current > 0 ? current - 1 : visibleItems.length - 1;
     });
   }, [visibleItems.length]);
@@ -175,6 +191,7 @@ export function GalleryClient({
   const showNext = useCallback(() => {
     setActiveIndex((current) => {
       if (current === null) return current;
+      if (visibleItems.length === 0) return null;
       return (current + 1) % visibleItems.length;
     });
   }, [visibleItems.length]);
@@ -182,10 +199,10 @@ export function GalleryClient({
   // `useLayoutEffect` keeps body lock + scroll restore stable when `pathname`
   // updates mid-mount (e.g. shallow routing); a ref-callback would re-run with
   // `null` then the node again and overwrite `lockedScrollYRef` while fixed.
-  // Intentionally depends only on `isOpen`: including `activeItem` would run
-  // cleanup on prev/next and unlock the body mid-lightbox.
+  // Depends on `hasActiveLightboxItem` (not `activeItem`) so prev/next does not
+  // unlock mid-lightbox, while live data shrinking the list still runs cleanup.
   useLayoutEffect(() => {
-    if (!isOpen || !activeItem) return undefined;
+    if (!hasActiveLightboxItem) return undefined;
     const node = overlayRef.current;
     if (!node || typeof document === "undefined") return undefined;
 
@@ -218,8 +235,7 @@ export function GalleryClient({
         }
       }
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- `activeItem` is only a guard; adding it would unlock the body on prev/next.
-  }, [isOpen]);
+  }, [hasActiveLightboxItem]);
 
   const handleOverlayKeyDown = useCallback(
     (event: React.KeyboardEvent<HTMLDivElement>) => {
