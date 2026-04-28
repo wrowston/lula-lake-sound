@@ -9,6 +9,7 @@ import { loadGearDocs, mapSortedGearTree } from "./gearTree";
 import type { Doc } from "./_generated/dataModel";
 import { loadGalleryPhotos, materializeGalleryPhotos } from "./galleryPhotos";
 import { loadAudioTracks, materializeAudioTracks } from "./audioTracks";
+import { loadVideos, materializeVideos } from "./videos";
 import { getSectionMetaRow, publishedIsEnabled } from "./cmsMeta";
 import {
   fallbackAmenitiesSnapshotFromTree,
@@ -131,6 +132,19 @@ export const getPublishedAudioTracks = query({
     const rows = await loadAudioTracks(ctx, "published");
     const tracks = await materializeAudioTracks(ctx, rows);
     return tracks.filter((t) => t.url !== null);
+  },
+});
+
+/**
+ * Published CMS videos (INF-92). Anonymous; `scope === "published"` only.
+ * Embed URLs are **not** stored — clients build YouTube/Vimeo/Mux iframes from
+ * `provider` + `externalId`; uploads expose `videoUrl` from storage.
+ */
+export const getPublishedVideos = query({
+  args: {},
+  handler: async (ctx) => {
+    const rows = await loadVideos(ctx, "published");
+    return await materializeVideos(ctx, rows);
   },
 });
 

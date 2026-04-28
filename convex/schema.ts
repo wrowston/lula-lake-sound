@@ -6,7 +6,8 @@ import {
   aboutTeamMemberRowValidator,
   amenitiesNearbyCopyRowValidator,
   amenitiesNearbyItemRowValidator,
-  cmsSectionValidator,
+  cmsSectionRowValidator,
+  videoRowValidator,
   faqCategoryRowValidator,
   faqQuestionRowValidator,
   gearScopeValidator,
@@ -43,7 +44,7 @@ export default defineSchema({
   }),
 
   cmsSections: defineTable({
-    section: cmsSectionValidator,
+    section: cmsSectionRowValidator,
     /** Published visibility. Controls route/section visibility on the public site. */
     isEnabled: v.optional(v.boolean()),
     /** Draft override for `isEnabled`; cleared on publish / discard. */
@@ -222,4 +223,25 @@ export default defineSchema({
     .index("by_storageId", ["storageId"])
     .index("by_albumThumbnailStorageId", ["albumThumbnailStorageId"])
     .index("by_scope_and_createdAt", ["scope", "createdAt"]),
+
+  /**
+   * Video portfolio (INF-92): draft/publish bookkeeping — mirrors `galleryPhotoMeta`.
+   */
+  videoMeta: defineTable({
+    singletonKey: v.literal("default"),
+    hasDraftChanges: v.boolean(),
+    publishedAt: v.union(v.number(), v.null()),
+    publishedBy: v.optional(v.string()),
+    updatedAt: v.number(),
+    updatedBy: v.optional(v.string()),
+  }).index("by_singleton", ["singletonKey"]),
+
+  /**
+   * Video portfolio (INF-92): scoped rows — mirrors `galleryPhotos` / `audioTracks`.
+   */
+  videos: defineTable(videoRowValidator)
+    .index("by_scope_and_sort", ["scope", "sortOrder"])
+    .index("by_scope_and_stableId", ["scope", "stableId"])
+    .index("by_videoStorageId", ["videoStorageId"])
+    .index("by_thumbnailStorageId", ["thumbnailStorageId"]),
 });

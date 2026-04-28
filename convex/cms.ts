@@ -285,6 +285,9 @@ export const listPendingDrafts = query({
       | "photos"
     > = [];
     for (const row of cmsRows) {
+      // Legacy deployments may still have a `cmsSections` row for photos; the
+      // active photo draft state lives in `galleryPhotoMeta`.
+      if (row.section === "photos") continue;
       if (row.hasDraftChanges) sections.push(row.section);
     }
     if (gearMeta?.hasDraftChanges) sections.push("gear");
