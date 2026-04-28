@@ -260,8 +260,16 @@ export function normalizeExternalIdForProvider(
         return match[1];
       }
       const last = path.split("/").filter(Boolean).pop();
-      if (last && /^[a-zA-Z0-9_-]+$/.test(last)) {
-        return last;
+      let segment = last ?? "";
+      const dot = segment.lastIndexOf(".");
+      if (dot > 0) {
+        const ext = segment.slice(dot + 1).toLowerCase();
+        if (ext === "m3u8" || ext === "mp4") {
+          segment = segment.slice(0, dot);
+        }
+      }
+      if (segment && /^[a-zA-Z0-9_-]+$/.test(segment)) {
+        return segment;
       }
       throw new Error("INVALID_MUX_ID");
     } catch (e) {

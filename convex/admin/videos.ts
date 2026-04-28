@@ -581,9 +581,9 @@ export const updateDraftVideo = mutation({
 
     await ctx.db.patch(row._id, patch);
 
-    if (args.thumbnailStorageId !== undefined && args.thumbnailStorageId === null) {
+    if (args.thumbnailStorageId !== undefined) {
       const prev = row.thumbnailStorageId;
-      if (prev) {
+      if (prev && prev !== args.thumbnailStorageId) {
         await deleteStorageIfUnreferenced(ctx, prev);
       }
     }
