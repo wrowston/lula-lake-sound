@@ -90,12 +90,13 @@ export const listDraft = query({
       aboutPage: effectiveIsEnabled(aboutRow, "about"),
       recordingsPage: effectiveIsEnabled(recordingsRow, "recordings"),
       pricingSection: effectiveIsEnabled(pricingRow, "pricing"),
-      galleryPage: effectiveIsEnabled(photosRow, "photos"),
+      galleryPage: publishedIsEnabled(photosRow, "photos"),
     };
     const hasDraftChanges = anyMarketingFlagDraftPending(
       aboutRow,
       recordingsRow,
       pricingRow,
+      photosRow,
     );
 
     const publishedAt = latestTimestamp([

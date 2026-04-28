@@ -548,22 +548,14 @@ export async function publishGalleryDraftCore(
 
   if (!photosMatch) {
     await replaceGalleryScope(ctx, "draft", "published");
-    await ctx.db.patch(metaId, {
-      hasDraftChanges: false,
-      publishedAt: now,
-      publishedBy: userId,
-      updatedAt: now,
-      updatedBy,
-    });
-  } else {
-    await ctx.db.patch(metaId, {
-      hasDraftChanges: false,
-      publishedAt: now,
-      publishedBy: userId,
-      updatedAt: now,
-      updatedBy,
-    });
   }
+  await ctx.db.patch(metaId, {
+    hasDraftChanges: false,
+    publishedAt: now,
+    publishedBy: userId,
+    updatedAt: now,
+    updatedBy,
+  });
 
   await promoteGalleryPageCmsFlag(ctx, { userId, updatedBy, publishedAt: now });
 
@@ -599,7 +591,10 @@ export async function publishGalleryDraftCore(
 export const backfillGallerySurfaceFlags = internalMutation({
   args: {},
   handler: async (ctx) => {
-    const rows = await ctx.db.query("galleryPhotos").collect();
+    const rows = await ctx.db
+      .query("galleryPhotos")
+      .withIndex("by_scope_and_sort", (q) => q.eq("scope", "draft"))
+      .collect();
     let updated = 0;
     for (const row of rows) {
       if (
@@ -630,21 +625,28 @@ export const discardDraftPhotos = mutation({
   args: {},
   handler: async (ctx) => {
     const { updatedBy } = await requireCmsOwner(ctx);
-    await ensureGalleryMeta(ctx);
+    const { row: metaBefore } = await ensureGalleryMeta(ctx);
 
     const draft = await loadGalleryPhotos(ctx, "draft");
     const published = await loadGalleryPhotos(ctx, "published");
-    if (!galleryDraftMatchesPublished(draft, published)) {
-      await replaceGalleryScope(ctx, "published", "draft");
-    }
-
-    await patchGalleryMetaAfterDraftChange(ctx, updatedBy);
+    const photosMismatch = !galleryDraftMatchesPublished(draft, published);
 
     const cmsRow = await getSectionMetaRow(ctx, "photos");
-    if (
-      cmsRow &&
-      (cmsRow.hasDraftChanges || typeof cmsRow.isEnabledDraft === "boolean")
-    ) {
+    const needsCmsPatch =
+      cmsRow !== null &&
+      (cmsRow.hasDraftChanges || typeof cmsRow.isEnabledDraft === "boolean");
+    if (!metaBefore.hasDraftChanges && !photosMismatch && !needsCmsPatch) {
+      return { ok: true as const, discarded: false };
+    }
+
+    if (photosMismatch) {
+      await replaceGalleryScope(ctx, "published", "draft");
+    }
+    if (photosMismatch || metaBefore.hasDraftChanges) {
+      await patchGalleryMetaAfterDraftChange(ctx, updatedBy);
+    }
+
+    if (needsCmsPatch && cmsRow) {
       const now = Date.now();
       await ctx.db.patch(cmsRow._id, {
         isEnabledDraft: undefined,

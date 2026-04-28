@@ -314,13 +314,15 @@ export const listMarketingFlagsDraft = query({
       aboutPage: effectiveIsEnabled(aboutRow, "about"),
       recordingsPage: effectiveIsEnabled(recordingsRow, "recordings"),
       pricingSection: effectiveIsEnabled(pricingRow, "pricing"),
-      galleryPage: effectiveIsEnabled(photosRow, "photos"),
+      galleryPage: publishedIsEnabled(photosRow, "photos"),
     };
 
-    const hasDraftChanges =
-      sectionHasPendingFlagDraft(aboutRow, "about") ||
-      sectionHasPendingFlagDraft(recordingsRow, "recordings") ||
-      sectionHasPendingFlagDraft(pricingRow, "pricing");
+    const hasDraftChanges = anyMarketingFlagDraftPending(
+      aboutRow,
+      recordingsRow,
+      pricingRow,
+      photosRow,
+    );
 
     // Expose per-section meta so the publish toolbar can disambiguate which
     // sections need the `publishSection` mutation to promote a flag draft.
