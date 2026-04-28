@@ -139,6 +139,8 @@ export function GalleryClient({
   const [activeIndex, setActiveIndex] = useState<number | null>(null);
   /** Scroll Y captured when the lightbox opens; ref avoids ref-callback ↔ state loops. */
   const lockedScrollYRef = useRef(0);
+  /** Pathname when the overlay mounted — skip scroll/focus restore after navigation away. */
+  const lightboxOpenedPathnameRef = useRef<string | null>(null);
   const overlayRef = useRef<HTMLDivElement | null>(null);
   const previousFocusRef = useRef<HTMLElement | null>(null);
 
@@ -175,6 +177,7 @@ export function GalleryClient({
       overlayRef.current = node;
       if (typeof document === "undefined") return;
       if (node) {
+        lightboxOpenedPathnameRef.current = pathname;
         previousFocusRef.current =
           (document.activeElement as HTMLElement | null) ?? null;
         const offsetY = window.scrollY;
@@ -191,13 +194,19 @@ export function GalleryClient({
         document.body.style.left = "";
         document.body.style.right = "";
         document.body.style.width = "";
-        window.scrollTo(0, lockedScrollYRef.current);
-        if (previousFocusRef.current) {
-          previousFocusRef.current.focus({ preventScroll: true });
+        const openedAt = lightboxOpenedPathnameRef.current;
+        lightboxOpenedPathnameRef.current = null;
+        const stillOnSameDocumentPath =
+          openedAt !== null && window.location.pathname === openedAt;
+        if (stillOnSameDocumentPath) {
+          window.scrollTo(0, lockedScrollYRef.current);
+          if (previousFocusRef.current) {
+            previousFocusRef.current.focus({ preventScroll: true });
+          }
         }
       }
     },
-    [],
+    [pathname],
   );
 
   const handleOverlayKeyDown = useCallback(

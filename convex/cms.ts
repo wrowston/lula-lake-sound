@@ -178,11 +178,18 @@ export const saveDraft = mutation({
           "content",
         );
       }
-    } else {
+    } else if (args.section === "recordings") {
       cmsValidationError(
         "Recordings has no content; only the visibility flag is editable.",
         "section",
       );
+    } else if (args.section === "photos") {
+      cmsValidationError(
+        "Gallery photos are edited in the admin photos workspace, not via saveDraft.",
+        "section",
+      );
+    } else {
+      cmsValidationError("This section has no saveDraft content path.", "section");
     }
 
     await ensureSectionMetaRow(ctx, args.section, updatedBy);

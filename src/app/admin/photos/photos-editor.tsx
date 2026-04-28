@@ -298,7 +298,6 @@ function PhotosEditorForm() {
   const saveSectionIsEnabledDraft = useMutation(
     api.cms.saveSectionIsEnabledDraft,
   );
-  const discardCmsSection = useMutation(api.cms.discardDraft);
 
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const dragDepthRef = useRef(0);
@@ -989,21 +988,12 @@ function PhotosEditorForm() {
 
   const handleDiscardConfirm = useCallback(async (): Promise<boolean> => {
     setInlineError(null);
-    if (data?.hasDraftChanges) {
+    if (data?.hasDraftChanges || hasGalleryPageFlagPending) {
       const outcome = await runAdminEffect(
         convexMutationEffect(() => discardDraftPhotos({})),
         { onErrorMessage: setInlineError },
       );
       if (outcome === undefined) {
-        return false;
-      }
-    }
-    if (hasGalleryPageFlagPending) {
-      const flagOutcome = await runAdminEffect(
-        convexMutationEffect(() => discardCmsSection({ section: "photos" })),
-        { onErrorMessage: setInlineError },
-      );
-      if (flagOutcome === undefined) {
         return false;
       }
     }
@@ -1017,7 +1007,6 @@ function PhotosEditorForm() {
     return true;
   }, [
     data?.hasDraftChanges,
-    discardCmsSection,
     discardDraftPhotos,
     hasGalleryPageFlagPending,
   ]);

@@ -87,8 +87,8 @@ function comparablePhoto(row: GalleryPhotoDoc) {
     sizeBytes: row.sizeBytes,
     originalFileName: row.originalFileName ?? null,
     categories: row.categories ?? null,
-    showInCarousel: row.showInCarousel ?? null,
-    showInGallery: row.showInGallery ?? null,
+    showInCarousel: row.showInCarousel !== false,
+    showInGallery: row.showInGallery !== false,
   };
 }
 

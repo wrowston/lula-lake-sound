@@ -10,6 +10,7 @@ import {
   type GalleryPublishIssue,
   deleteStorageIfUnreferenced,
   ensureGalleryMeta,
+  galleryDraftMatchesPublished,
   getStorageMetadata,
   isGalleryCategorySlug,
   loadGalleryPhotos,
@@ -18,6 +19,7 @@ import {
   patchGalleryMetaAfterDraftChange,
   replaceGalleryScope,
 } from "../galleryPhotos";
+import { getSectionMetaRow } from "../cmsMeta";
 import { cmsNotFound, cmsPublishValidationFailed, cmsValidationError } from "../errors";
 import { requireCmsOwner } from "../lib/auth";
 import { promoteGalleryPageCmsFlag } from "../photosCmsFlags";
@@ -520,6 +522,7 @@ export async function publishGalleryDraftCore(
 }> {
   const { userId, updatedBy } = args;
   const draft = await loadGalleryPhotos(ctx, "draft");
+  const published = await loadGalleryPhotos(ctx, "published");
   const issues = await validateDraftForPublish(ctx, draft);
   if (issues.length > 0) {
     cmsPublishValidationFailed(
@@ -529,17 +532,26 @@ export async function publishGalleryDraftCore(
     );
   }
 
-  await replaceGalleryScope(ctx, "draft", "published");
-
+  const photosMatch = galleryDraftMatchesPublished(draft, published);
   const now = Date.now();
   const { id: metaId } = await ensureGalleryMeta(ctx);
-  await ctx.db.patch(metaId, {
-    hasDraftChanges: false,
-    publishedAt: now,
-    publishedBy: userId,
-    updatedAt: now,
-    updatedBy,
-  });
+
+  if (!photosMatch) {
+    await replaceGalleryScope(ctx, "draft", "published");
+    await ctx.db.patch(metaId, {
+      hasDraftChanges: false,
+      publishedAt: now,
+      publishedBy: userId,
+      updatedAt: now,
+      updatedBy,
+    });
+  } else {
+    await ctx.db.patch(metaId, {
+      hasDraftChanges: false,
+      updatedAt: now,
+      updatedBy,
+    });
+  }
 
   await promoteGalleryPageCmsFlag(ctx, { userId, updatedBy });
 
@@ -592,15 +604,28 @@ export const discardDraftPhotos = mutation({
   handler: async (ctx) => {
     const { updatedBy } = await requireCmsOwner(ctx);
     await ensureGalleryMeta(ctx);
-    await replaceGalleryScope(ctx, "published", "draft");
 
-    const now = Date.now();
-    const { id: metaId } = await ensureGalleryMeta(ctx);
-    await ctx.db.patch(metaId, {
-      hasDraftChanges: false,
-      updatedAt: now,
-      updatedBy,
-    });
+    const draft = await loadGalleryPhotos(ctx, "draft");
+    const published = await loadGalleryPhotos(ctx, "published");
+    if (!galleryDraftMatchesPublished(draft, published)) {
+      await replaceGalleryScope(ctx, "published", "draft");
+    }
+
+    await patchGalleryMetaAfterDraftChange(ctx, updatedBy);
+
+    const cmsRow = await getSectionMetaRow(ctx, "photos");
+    if (
+      cmsRow &&
+      (cmsRow.hasDraftChanges || typeof cmsRow.isEnabledDraft === "boolean")
+    ) {
+      const now = Date.now();
+      await ctx.db.patch(cmsRow._id, {
+        isEnabledDraft: undefined,
+        hasDraftChanges: false,
+        updatedAt: now,
+        updatedBy,
+      });
+    }
 
     return { ok: true as const, discarded: true };
   },
