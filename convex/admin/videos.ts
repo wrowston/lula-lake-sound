@@ -536,11 +536,7 @@ export const updateDraftVideo = mutation({
 
     if (args.thumbnailStorageId !== undefined) {
       if (args.thumbnailStorageId === null) {
-        const prev = row.thumbnailStorageId;
         patch.thumbnailStorageId = undefined;
-        if (prev) {
-          await deleteStorageIfUnreferenced(ctx, prev);
-        }
       } else {
         patch.thumbnailStorageId = args.thumbnailStorageId;
       }
@@ -549,11 +545,7 @@ export const updateDraftVideo = mutation({
     if (row.provider === "upload") {
       if (args.videoStorageId !== undefined) {
         await validateVideoUploadStorage(ctx, args.videoStorageId);
-        const prev = row.videoStorageId;
         patch.videoStorageId = args.videoStorageId;
-        if (prev && prev !== args.videoStorageId) {
-          await deleteStorageIfUnreferenced(ctx, prev);
-        }
       }
     }
 
@@ -588,6 +580,21 @@ export const updateDraftVideo = mutation({
     }
 
     await ctx.db.patch(row._id, patch);
+
+    if (args.thumbnailStorageId !== undefined && args.thumbnailStorageId === null) {
+      const prev = row.thumbnailStorageId;
+      if (prev) {
+        await deleteStorageIfUnreferenced(ctx, prev);
+      }
+    }
+
+    if (row.provider === "upload" && args.videoStorageId !== undefined) {
+      const prev = row.videoStorageId;
+      if (prev && prev !== args.videoStorageId) {
+        await deleteStorageIfUnreferenced(ctx, prev);
+      }
+    }
+
     await patchCmsVideoMetaAfterDraftChange(ctx, updatedBy);
     return { ok: true as const };
   },
@@ -626,14 +633,18 @@ export const reorderDraftVideos = mutation({
         "orderedStableIds",
       );
     }
-    const idSet = new Set(draft.map((r) => r.stableId));
-    for (const id of args.orderedStableIds) {
-      if (!idSet.has(id)) {
-        cmsValidationError(
-          "Reorder payload must include every draft video exactly once.",
-          "orderedStableIds",
-        );
-      }
+
+    const draftIds = new Set(draft.map((r) => r.stableId));
+    const orderedIds = new Set(args.orderedStableIds);
+    if (
+      orderedIds.size !== args.orderedStableIds.length ||
+      draftIds.size !== orderedIds.size ||
+      args.orderedStableIds.some((stableId) => !draftIds.has(stableId))
+    ) {
+      cmsValidationError(
+        "Reorder payload must include every draft video exactly once.",
+        "orderedStableIds",
+      );
     }
     for (let i = 0; i < args.orderedStableIds.length; i++) {
       const stableId = args.orderedStableIds[i];
