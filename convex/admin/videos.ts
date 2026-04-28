@@ -2,17 +2,17 @@ import { v } from "convex/values";
 import { mutation, query, type MutationCtx } from "../_generated/server";
 import type { Id } from "../_generated/dataModel";
 import {
-  ALLOWED_CMS_VIDEO_MIME_TYPES,
-  MAX_CMS_VIDEO_UPLOAD_BYTES,
-  MAX_CMS_VIDEOS,
-  ensureCmsVideoMeta,
+  ALLOWED_VIDEO_MIME_TYPES,
+  MAX_VIDEO_UPLOAD_BYTES,
+  MAX_VIDEOS,
+  ensureVideoMeta,
   getStorageMetadata,
-  loadCmsVideos,
-  materializeCmsVideos,
-  patchCmsVideoMetaAfterDraftChange,
-  replaceCmsVideosScope,
-  type CmsVideoDoc,
-} from "../cmsVideos";
+  loadVideos,
+  materializeVideos,
+  patchVideoMetaAfterDraftChange,
+  replaceVideosScope,
+  type VideoDoc,
+} from "../videos";
 import { deleteStorageIfUnreferenced } from "../mediaStorage";
 import { cmsNotFound, cmsPublishValidationFailed, cmsValidationError } from "../errors";
 import { requireCmsOwner } from "../lib/auth";
@@ -24,12 +24,12 @@ import {
   parseMuxPlaybackUrl,
   thumbnailUrlErrorMessage,
 } from "../videoUrls";
-import type { CmsVideoProvider } from "../videoUrls";
+import type { VideoProvider } from "../videoUrls";
 
 const MAX_TITLE_LENGTH = 200;
 const MAX_DESCRIPTION_LENGTH = 2000;
 
-const cmsVideoProviderArg = v.union(
+const videoProviderArg = v.union(
   v.literal("youtube"),
   v.literal("vimeo"),
   v.literal("mux"),
@@ -132,8 +132,8 @@ function normalizeDurationSec(raw?: number | null): number | undefined {
 
 function isAllowedVideoMime(
   contentType: string,
-): contentType is (typeof ALLOWED_CMS_VIDEO_MIME_TYPES)[number] {
-  return (ALLOWED_CMS_VIDEO_MIME_TYPES as readonly string[]).includes(
+): contentType is (typeof ALLOWED_VIDEO_MIME_TYPES)[number] {
+  return (ALLOWED_VIDEO_MIME_TYPES as readonly string[]).includes(
     contentType,
   );
 }
@@ -155,9 +155,9 @@ async function validateVideoUploadStorage(
       "videoStorageId",
     );
   }
-  if (storage.size > MAX_CMS_VIDEO_UPLOAD_BYTES) {
+  if (storage.size > MAX_VIDEO_UPLOAD_BYTES) {
     cmsValidationError(
-      `Video uploads must be ${Math.floor(MAX_CMS_VIDEO_UPLOAD_BYTES / (1024 * 1024))}MB or smaller.`,
+      `Video uploads must be ${Math.floor(MAX_VIDEO_UPLOAD_BYTES / (1024 * 1024))}MB or smaller.`,
       "videoStorageId",
     );
   }
@@ -166,9 +166,9 @@ async function validateVideoUploadStorage(
 async function getDraftVideoByStableId(
   ctx: MutationCtx,
   stableId: string,
-): Promise<CmsVideoDoc | null> {
+): Promise<VideoDoc | null> {
   return await ctx.db
-    .query("cmsVideos")
+    .query("videos")
     .withIndex("by_scope_and_stableId", (q) =>
       q.eq("scope", "draft").eq("stableId", stableId),
     )
@@ -176,7 +176,7 @@ async function getDraftVideoByStableId(
 }
 
 function resolveEmbedFields(args: {
-  provider: CmsVideoProvider;
+  provider: VideoProvider;
   externalId?: string | null;
   playbackUrl?: string | null;
 }): { externalId?: string; playbackUrl?: string } {
@@ -229,7 +229,7 @@ function resolveEmbedFields(args: {
 }
 
 async function buildVideoInsertPatch(args: {
-  provider: CmsVideoProvider;
+  provider: VideoProvider;
   title: string;
   description?: string;
   sortOrder: number;
@@ -239,7 +239,7 @@ async function buildVideoInsertPatch(args: {
   thumbnailStorageId?: Id<"_storage"> | null;
   thumbnailUrl?: string | null;
   durationSec?: number | null;
-}): Promise<Omit<CmsVideoDoc, "_id" | "_creationTime">> {
+}): Promise<Omit<VideoDoc, "_id" | "_creationTime">> {
   const title = normalizeTitle(args.title);
   const description = normalizeDescription(args.description);
   const thumbUrl = normalizeOptionalThumbnailUrl(args.thumbnailUrl);
@@ -294,7 +294,7 @@ async function buildVideoInsertPatch(args: {
 
 async function validateDraftForPublish(
   ctx: MutationCtx,
-  rows: CmsVideoDoc[],
+  rows: VideoDoc[],
 ): Promise<VideoPublishIssue[]> {
   const issues: VideoPublishIssue[] = [];
   const stableIds = new Set<string>();
@@ -333,10 +333,10 @@ async function validateDraftForPublish(
             path: `${base}.videoStorageId`,
             message: "Video blob must be MP4, WebM, or QuickTime.",
           });
-        } else if (storage.size > MAX_CMS_VIDEO_UPLOAD_BYTES) {
+        } else if (storage.size > MAX_VIDEO_UPLOAD_BYTES) {
           issues.push({
             path: `${base}.videoStorageId`,
-            message: `Video exceeds ${Math.floor(MAX_CMS_VIDEO_UPLOAD_BYTES / (1024 * 1024))}MB.`,
+            message: `Video exceeds ${Math.floor(MAX_VIDEO_UPLOAD_BYTES / (1024 * 1024))}MB.`,
           });
         }
       }
@@ -382,7 +382,7 @@ async function validateDraftForPublish(
 }
 
 async function resequenceDraftVideos(ctx: MutationCtx): Promise<void> {
-  const draft = await loadCmsVideos(ctx, "draft");
+  const draft = await loadVideos(ctx, "draft");
   draft.sort((a, b) => a.sortOrder - b.sortOrder);
   for (let i = 0; i < draft.length; i++) {
     const row = draft[i];
@@ -396,12 +396,12 @@ export const listDraftVideos = query({
   args: {},
   handler: async (ctx) => {
     await requireCmsOwner(ctx);
-    const rows = await loadCmsVideos(ctx, "draft");
+    const rows = await loadVideos(ctx, "draft");
     const meta = await ctx.db
-      .query("cmsVideoMeta")
+      .query("videoMeta")
       .withIndex("by_singleton", (q) => q.eq("singletonKey", "default"))
       .unique();
-    const videos = await materializeCmsVideos(ctx, rows);
+    const videos = await materializeVideos(ctx, rows);
     return {
       videos,
       meta: meta
@@ -412,14 +412,14 @@ export const listDraftVideos = query({
             updatedAt: meta.updatedAt,
           }
         : null,
-      maxVideos: MAX_CMS_VIDEOS,
+      maxVideos: MAX_VIDEOS,
     };
   },
 });
 
 export const createDraftVideo = mutation({
   args: {
-    provider: cmsVideoProviderArg,
+    provider: videoProviderArg,
     title: v.string(),
     description: v.optional(v.string()),
     externalId: v.optional(v.string()),
@@ -431,12 +431,12 @@ export const createDraftVideo = mutation({
   },
   handler: async (ctx, args) => {
     const { updatedBy } = await requireCmsOwner(ctx);
-    await ensureCmsVideoMeta(ctx);
+    await ensureVideoMeta(ctx);
 
-    const draft = await loadCmsVideos(ctx, "draft");
-    if (draft.length >= MAX_CMS_VIDEOS) {
+    const draft = await loadVideos(ctx, "draft");
+    if (draft.length >= MAX_VIDEOS) {
       cmsValidationError(
-        `Video list supports up to ${MAX_CMS_VIDEOS} items.`,
+        `Video list supports up to ${MAX_VIDEOS} items.`,
         "provider",
       );
     }
@@ -471,8 +471,8 @@ export const createDraftVideo = mutation({
       durationSec: args.durationSec,
     });
 
-    await ctx.db.insert("cmsVideos", patch);
-    await patchCmsVideoMetaAfterDraftChange(ctx, updatedBy);
+    await ctx.db.insert("videos", patch);
+    await patchVideoMetaAfterDraftChange(ctx, updatedBy);
     return { ok: true as const, stableId: patch.stableId };
   },
 });
@@ -493,10 +493,10 @@ export const updateDraftVideo = mutation({
     const { updatedBy } = await requireCmsOwner(ctx);
     const row = await getDraftVideoByStableId(ctx, args.stableId);
     if (!row) {
-      cmsNotFound("cmsVideo", args.stableId);
+      cmsNotFound("video", args.stableId);
     }
 
-    const patch: Partial<CmsVideoDoc> = {};
+    const patch: Partial<VideoDoc> = {};
 
     if (args.title !== undefined) {
       patch.title = normalizeTitle(args.title);
@@ -595,7 +595,7 @@ export const updateDraftVideo = mutation({
       }
     }
 
-    await patchCmsVideoMetaAfterDraftChange(ctx, updatedBy);
+    await patchVideoMetaAfterDraftChange(ctx, updatedBy);
     return { ok: true as const };
   },
 });
@@ -617,7 +617,7 @@ export const removeDraftVideo = mutation({
       await deleteStorageIfUnreferenced(ctx, row.thumbnailStorageId);
     }
     await resequenceDraftVideos(ctx);
-    await patchCmsVideoMetaAfterDraftChange(ctx, updatedBy);
+    await patchVideoMetaAfterDraftChange(ctx, updatedBy);
     return { ok: true as const, removed: true };
   },
 });
@@ -626,7 +626,7 @@ export const reorderDraftVideos = mutation({
   args: { orderedStableIds: v.array(v.string()) },
   handler: async (ctx, args) => {
     const { updatedBy } = await requireCmsOwner(ctx);
-    const draft = await loadCmsVideos(ctx, "draft");
+    const draft = await loadVideos(ctx, "draft");
     if (args.orderedStableIds.length !== draft.length) {
       cmsValidationError(
         "Reorder payload must include every draft video exactly once.",
@@ -650,18 +650,18 @@ export const reorderDraftVideos = mutation({
       const stableId = args.orderedStableIds[i];
       const row = draft.find((r) => r.stableId === stableId);
       if (!row) {
-        cmsNotFound("cmsVideo", stableId);
+        cmsNotFound("video", stableId);
       }
       if (row.sortOrder !== i) {
         await ctx.db.patch(row._id, { sortOrder: i });
       }
     }
-    await patchCmsVideoMetaAfterDraftChange(ctx, updatedBy);
+    await patchVideoMetaAfterDraftChange(ctx, updatedBy);
     return { ok: true as const };
   },
 });
 
-export async function publishCmsVideosDraftCore(
+export async function publishVideosDraftCore(
   ctx: MutationCtx,
   args: { userId: string; updatedBy: string },
 ): Promise<{
@@ -671,16 +671,16 @@ export async function publishCmsVideosDraftCore(
   publishedBy: string;
 }> {
   const { userId, updatedBy } = args;
-  const draft = await loadCmsVideos(ctx, "draft");
+  const draft = await loadVideos(ctx, "draft");
   const issues = await validateDraftForPublish(ctx, draft);
   if (issues.length > 0) {
     cmsPublishValidationFailed("videos", "Publish validation failed.", issues);
   }
 
-  await replaceCmsVideosScope(ctx, "draft", "published");
+  await replaceVideosScope(ctx, "draft", "published");
 
   const now = Date.now();
-  const { id: metaId } = await ensureCmsVideoMeta(ctx);
+  const { id: metaId } = await ensureVideoMeta(ctx);
   await ctx.db.patch(metaId, {
     hasDraftChanges: false,
     publishedAt: now,
@@ -701,7 +701,7 @@ export const publishVideos = mutation({
   args: {},
   handler: async (ctx) => {
     const { userId, updatedBy } = await requireCmsOwner(ctx);
-    return await publishCmsVideosDraftCore(ctx, { userId, updatedBy });
+    return await publishVideosDraftCore(ctx, { userId, updatedBy });
   },
 });
 
@@ -709,11 +709,11 @@ export const discardDraftVideos = mutation({
   args: {},
   handler: async (ctx) => {
     const { updatedBy } = await requireCmsOwner(ctx);
-    await ensureCmsVideoMeta(ctx);
-    await replaceCmsVideosScope(ctx, "published", "draft");
+    await ensureVideoMeta(ctx);
+    await replaceVideosScope(ctx, "published", "draft");
 
     const now = Date.now();
-    const { id: metaId } = await ensureCmsVideoMeta(ctx);
+    const { id: metaId } = await ensureVideoMeta(ctx);
     await ctx.db.patch(metaId, {
       hasDraftChanges: false,
       updatedAt: now,

@@ -5,24 +5,24 @@ import {
   getStorageMetadata,
 } from "./mediaStorage";
 
-const CMS_VIDEOS_QUERY_LIMIT = 64;
+const VIDEO_QUERY_LIMIT = 64;
 
-export const MAX_CMS_VIDEOS = 24;
+export const MAX_VIDEOS = 24;
 
 /** Convex file upload — raw video only; no transcoding (INF-92). */
-export const ALLOWED_CMS_VIDEO_MIME_TYPES = [
+export const ALLOWED_VIDEO_MIME_TYPES = [
   "video/mp4",
   "video/webm",
   "video/quicktime",
 ] as const;
 
-export const MAX_CMS_VIDEO_UPLOAD_BYTES = 100 * 1024 * 1024;
+export const MAX_VIDEO_UPLOAD_BYTES = 100 * 1024 * 1024;
 
-export type CmsVideoScope = Doc<"cmsVideos">["scope"];
-export type CmsVideoDoc = Doc<"cmsVideos">;
-export type CmsVideoMetaDoc = Doc<"cmsVideoMeta">;
+export type VideoScope = Doc<"videos">["scope"];
+export type VideoDoc = Doc<"videos">;
+export type VideoMetaDoc = Doc<"videoMeta">;
 
-function comparableVideo(row: CmsVideoDoc) {
+function comparableVideo(row: VideoDoc) {
   return {
     stableId: row.stableId,
     title: row.title,
@@ -38,9 +38,9 @@ function comparableVideo(row: CmsVideoDoc) {
   };
 }
 
-export function cmsVideoDraftMatchesPublished(
-  draft: CmsVideoDoc[],
-  published: CmsVideoDoc[],
+export function videoDraftMatchesPublished(
+  draft: VideoDoc[],
+  published: VideoDoc[],
 ): boolean {
   if (draft.length !== published.length) {
     return false;
@@ -56,21 +56,21 @@ export function cmsVideoDraftMatchesPublished(
   return true;
 }
 
-export async function loadCmsVideos(
+export async function loadVideos(
   ctx: QueryCtx | MutationCtx,
-  scope: CmsVideoScope,
-): Promise<CmsVideoDoc[]> {
+  scope: VideoScope,
+): Promise<VideoDoc[]> {
   return await ctx.db
-    .query("cmsVideos")
+    .query("videos")
     .withIndex("by_scope_and_sort", (q) => q.eq("scope", scope))
-    .take(CMS_VIDEOS_QUERY_LIMIT);
+    .take(VIDEO_QUERY_LIMIT);
 }
 
-export async function ensureCmsVideoMeta(
+export async function ensureVideoMeta(
   ctx: MutationCtx,
-): Promise<{ id: Id<"cmsVideoMeta">; row: CmsVideoMetaDoc }> {
+): Promise<{ id: Id<"videoMeta">; row: VideoMetaDoc }> {
   const existing = await ctx.db
-    .query("cmsVideoMeta")
+    .query("videoMeta")
     .withIndex("by_singleton", (q) => q.eq("singletonKey", "default"))
     .unique();
 
@@ -79,7 +79,7 @@ export async function ensureCmsVideoMeta(
   }
 
   const now = Date.now();
-  const id = await ctx.db.insert("cmsVideoMeta", {
+  const id = await ctx.db.insert("videoMeta", {
     singletonKey: "default",
     hasDraftChanges: false,
     publishedAt: null,
@@ -87,19 +87,19 @@ export async function ensureCmsVideoMeta(
   });
   const row = await ctx.db.get(id);
   if (!row) {
-    throw new Error("Failed to create cmsVideoMeta row.");
+    throw new Error("Failed to create videoMeta row.");
   }
   return { id, row };
 }
 
-export async function replaceCmsVideosScope(
+export async function replaceVideosScope(
   ctx: MutationCtx,
-  fromScope: CmsVideoScope,
-  toScope: CmsVideoScope,
+  fromScope: VideoScope,
+  toScope: VideoScope,
 ): Promise<void> {
   const [source, target] = await Promise.all([
-    loadCmsVideos(ctx, fromScope),
-    loadCmsVideos(ctx, toScope),
+    loadVideos(ctx, fromScope),
+    loadVideos(ctx, toScope),
   ]);
 
   const sourceStorageIds = new Set<Id<"_storage">>();
@@ -128,7 +128,7 @@ export async function replaceCmsVideosScope(
   }
 
   for (const row of source) {
-    await ctx.db.insert("cmsVideos", {
+    await ctx.db.insert("videos", {
       scope: toScope,
       stableId: row.stableId,
       title: row.title,
@@ -153,29 +153,29 @@ export async function replaceCmsVideosScope(
   }
 }
 
-export async function patchCmsVideoMetaAfterDraftChange(
+export async function patchVideoMetaAfterDraftChange(
   ctx: MutationCtx,
   updatedBy: string,
 ): Promise<void> {
   const [draft, published, meta] = await Promise.all([
-    loadCmsVideos(ctx, "draft"),
-    loadCmsVideos(ctx, "published"),
-    ensureCmsVideoMeta(ctx),
+    loadVideos(ctx, "draft"),
+    loadVideos(ctx, "published"),
+    ensureVideoMeta(ctx),
   ]);
 
   await ctx.db.patch(meta.id, {
-    hasDraftChanges: !cmsVideoDraftMatchesPublished(draft, published),
+    hasDraftChanges: !videoDraftMatchesPublished(draft, published),
     updatedAt: Date.now(),
     updatedBy,
   });
 }
 
-export type MaterializedCmsVideo = {
+export type MaterializedVideo = {
   stableId: string;
   title: string;
   description: string | null;
   sortOrder: number;
-  provider: CmsVideoDoc["provider"];
+  provider: VideoDoc["provider"];
   externalId: string | null;
   playbackUrl: string | null;
   videoStorageId: Id<"_storage"> | null;
@@ -186,10 +186,10 @@ export type MaterializedCmsVideo = {
   durationSec: number | null;
 };
 
-export async function materializeCmsVideos(
+export async function materializeVideos(
   ctx: QueryCtx | MutationCtx,
-  rows: CmsVideoDoc[],
-): Promise<MaterializedCmsVideo[]> {
+  rows: VideoDoc[],
+): Promise<MaterializedVideo[]> {
   return await Promise.all(
     rows.map(async (row) => {
       const videoUrl = row.videoStorageId

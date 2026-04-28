@@ -7,7 +7,7 @@ import {
   amenitiesNearbyCopyRowValidator,
   amenitiesNearbyItemRowValidator,
   cmsSectionValidator,
-  cmsVideoRowValidator,
+  videoRowValidator,
   faqCategoryRowValidator,
   faqQuestionRowValidator,
   gearScopeValidator,
@@ -211,9 +211,9 @@ export default defineSchema({
     .index("by_scope_and_createdAt", ["scope", "createdAt"]),
 
   /**
-   * CMS videos (INF-92): draft/publish bookkeeping — mirrors `galleryPhotoMeta`.
+   * Video portfolio (INF-92): draft/publish bookkeeping — mirrors `galleryPhotoMeta`.
    */
-  cmsVideoMeta: defineTable({
+  videoMeta: defineTable({
     singletonKey: v.literal("default"),
     hasDraftChanges: v.boolean(),
     publishedAt: v.union(v.number(), v.null()),
@@ -223,9 +223,9 @@ export default defineSchema({
   }).index("by_singleton", ["singletonKey"]),
 
   /**
-   * CMS videos (INF-92): scoped rows — mirrors `galleryPhotos` / `audioTracks`.
+   * Video portfolio (INF-92): scoped rows — mirrors `galleryPhotos` / `audioTracks`.
    */
-  cmsVideos: defineTable(cmsVideoRowValidator)
+  videos: defineTable(videoRowValidator)
     .index("by_scope_and_sort", ["scope", "sortOrder"])
     .index("by_scope_and_stableId", ["scope", "stableId"])
     .index("by_videoStorageId", ["videoStorageId"])

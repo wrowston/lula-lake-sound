@@ -322,7 +322,7 @@ export const gearScopeValidator = cmsScopeValidator;
  * CMS video embed/upload providers (INF-92). Only these values may drive embed UI;
  * arbitrary iframe URLs are rejected — see `videoUrls.ts` and `docs/cms-videos.md`.
  */
-export const cmsVideoProviderValidator = v.union(
+export const videoProviderValidator = v.union(
   v.literal("youtube"),
   v.literal("vimeo"),
   v.literal("mux"),
@@ -332,13 +332,13 @@ export const cmsVideoProviderValidator = v.union(
 /**
  * One row per studio video in draft or published scope (same pattern as `galleryPhotos`).
  */
-export const cmsVideoRowValidator = {
+export const videoRowValidator = {
   scope: cmsScopeValidator,
   stableId: v.string(),
   title: v.string(),
   description: v.optional(v.string()),
   sortOrder: v.number(),
-  provider: cmsVideoProviderValidator,
+  provider: videoProviderValidator,
   /** Provider-native id when applicable (e.g. YouTube video id, Vimeo numeric id). */
   externalId: v.optional(v.string()),
   /**

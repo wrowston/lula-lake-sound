@@ -9,7 +9,7 @@ import { loadGearDocs, mapSortedGearTree } from "./gearTree";
 import type { Doc } from "./_generated/dataModel";
 import { loadGalleryPhotos, materializeGalleryPhotos } from "./galleryPhotos";
 import { loadAudioTracks, materializeAudioTracks } from "./audioTracks";
-import { loadCmsVideos, materializeCmsVideos } from "./cmsVideos";
+import { loadVideos, materializeVideos } from "./videos";
 import { getSectionMetaRow, publishedIsEnabled } from "./cmsMeta";
 import {
   fallbackAmenitiesSnapshotFromTree,
@@ -123,11 +123,11 @@ export const getPublishedAudioTracks = query({
  * Embed URLs are **not** stored — clients build YouTube/Vimeo/Mux iframes from
  * `provider` + `externalId`; uploads expose `videoUrl` from storage.
  */
-export const getPublishedCmsVideos = query({
+export const getPublishedVideos = query({
   args: {},
   handler: async (ctx) => {
-    const rows = await loadCmsVideos(ctx, "published");
-    return await materializeCmsVideos(ctx, rows);
+    const rows = await loadVideos(ctx, "published");
+    return await materializeVideos(ctx, rows);
   },
 });
 

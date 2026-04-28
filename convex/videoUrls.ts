@@ -1,6 +1,6 @@
 import type { Doc } from "./_generated/dataModel";
 
-export type CmsVideoProvider = Doc<"cmsVideos">["provider"];
+export type VideoProvider = Doc<"videos">["provider"];
 
 const MAX_URL_LENGTH = 2048;
 
@@ -152,7 +152,7 @@ function urlWithHttpsFallback(raw: string): string {
  * Returns canonical external id for storage, or throws with a code for messaging.
  */
 export function normalizeExternalIdForProvider(
-  provider: Exclude<CmsVideoProvider, "upload">,
+  provider: Exclude<VideoProvider, "upload">,
   raw: string,
 ): string {
   const input = stripOuterQuotes(raw).trim();
@@ -284,7 +284,7 @@ export function normalizeExternalIdForProvider(
 }
 
 export function externalIdValidationMessage(
-  provider: Exclude<CmsVideoProvider, "upload">,
+  provider: Exclude<VideoProvider, "upload">,
   code: string,
 ): string {
   switch (code) {

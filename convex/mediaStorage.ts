@@ -40,11 +40,11 @@ export async function deleteStorageIfUnreferenced(
       )
       .take(1),
     ctx.db
-      .query("cmsVideos")
+      .query("videos")
       .withIndex("by_videoStorageId", (q) => q.eq("videoStorageId", storageId))
       .take(1),
     ctx.db
-      .query("cmsVideos")
+      .query("videos")
       .withIndex("by_thumbnailStorageId", (q) =>
         q.eq("thumbnailStorageId", storageId),
       )

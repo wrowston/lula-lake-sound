@@ -9,7 +9,7 @@
 
 This is **one** mental model: each row is either an embed reference + metadata or an uploaded blob + metadata. There is no parallel “paste any iframe HTML” flow.
 
-## Schema (`cmsVideos`)
+## Schema (`videos` + `videoMeta`)
 
 | Field | Purpose |
 | ----- | ------- |
@@ -25,12 +25,12 @@ This is **one** mental model: each row is either an embed reference + metadata o
 | `thumbnailUrl` | Optional HTTPS poster URL (hostname allowlist — CDNs only, not arbitrary domains). |
 | `durationSec` | Optional length in seconds. |
 
-Bookkeeping: **`cmsVideoMeta`** mirrors **`galleryPhotoMeta`** (`hasDraftChanges`, `publishedAt`, etc.).
+Bookkeeping: **`videoMeta`** mirrors **`galleryPhotoMeta`** (`hasDraftChanges`, `publishedAt`, etc.). Rows live in the **`videos`** table.
 
 ## Constraints (upload)
 
 - **Max videos:** 24 rows (draft list cap).
-- **Max upload size:** 100MB (`MAX_CMS_VIDEO_UPLOAD_BYTES`).
+- **Max upload size:** 100MB (`MAX_VIDEO_UPLOAD_BYTES` in `convex/videos.ts`).
 - **Allowed MIME types:** `video/mp4`, `video/webm`, `video/quicktime`.
 - **Transcoding:** out of scope — owners should upload browser-playable files or use YouTube/Vimeo/Mux embeds.
 
@@ -44,11 +44,11 @@ Bookkeeping: **`cmsVideoMeta`** mirrors **`galleryPhotoMeta`** (`hasDraftChanges
 | Surface | Functions |
 | ------- | --------- |
 | **Admin** | `admin/videos`: `listDraftVideos`, `createDraftVideo`, `updateDraftVideo`, `removeDraftVideo`, `reorderDraftVideos`, `publishVideos`, `discardDraftVideos` |
-| **Public** | `public.getPublishedCmsVideos` — published scope only, materialized URLs for storage-backed assets |
+| **Public** | `public.getPublishedVideos` — published scope only, materialized URLs for storage-backed assets |
 
 Invalid URLs and ids fail with **`ConvexError`** payload `code: "VALIDATION_ERROR"` and a **clear message** (e.g. invalid YouTube URL, thumbnail host not allowed).
 
 ## Follow-ups
 
 - Wire the Next.js admin UI to these mutations.
-- Optional: add `cmsVideos` to `publishSite` if site-wide publish should include videos in one action.
+- Optional: add `videos` to `publishSite` if site-wide publish should include videos in one action.
