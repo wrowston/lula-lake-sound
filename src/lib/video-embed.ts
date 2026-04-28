@@ -226,14 +226,6 @@ export function isPlayableForPublish(row: {
   }
 }
 
-/** Pretty-print bytes for upload size hints (B/KB/MB). */
-export function formatBytes(bytes: number): string {
-  if (!Number.isFinite(bytes) || bytes < 0) return "0 B";
-  if (bytes < 1024) return `${bytes} B`;
-  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
-  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
-}
-
 /**
  * Pretty-print a duration in seconds as `m:ss` or `h:mm:ss`. Returns `null`
  * when the value is not a finite positive number, so the caller can drop

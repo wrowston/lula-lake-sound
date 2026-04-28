@@ -4,7 +4,6 @@ import {
   buildVimeoEmbedUrl,
   buildYouTubeEmbedUrl,
   defaultTitleFromFileName,
-  formatBytes,
   formatDuration,
   getProviderLabel,
   isPlayableForPublish,
@@ -155,15 +154,6 @@ describe("isPlayableForPublish", () => {
         videoUrl: "https://example.com/x.mp4",
       }),
     ).toBe(true);
-  });
-});
-
-describe("formatBytes", () => {
-  test("bytes → KB → MB", () => {
-    expect(formatBytes(0)).toBe("0 B");
-    expect(formatBytes(900)).toBe("900 B");
-    expect(formatBytes(2048)).toBe("2.0 KB");
-    expect(formatBytes(5 * 1024 * 1024)).toBe("5.0 MB");
   });
 });
 

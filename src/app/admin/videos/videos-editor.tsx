@@ -164,6 +164,33 @@ export function validateVideoFields(
   return null;
 }
 
+function buildUpdateDraftVideoArgs(
+  video: Pick<VideoItem, "stableId" | "provider">,
+  fields: VideoEdits[string],
+) {
+  const trimmedExternal = fields.externalId.trim();
+  const trimmedPlayback = fields.playbackUrl.trim();
+  const trimmedThumb = fields.thumbnailUrl.trim();
+  return {
+    stableId: video.stableId,
+    title: fields.title.trim(),
+    description:
+      fields.description.trim().length > 0
+        ? fields.description.trim()
+        : null,
+    ...(video.provider !== "upload" && trimmedExternal.length > 0
+      ? { externalId: trimmedExternal }
+      : {}),
+    ...(video.provider === "mux"
+      ? {
+          playbackUrl:
+            trimmedPlayback.length > 0 ? trimmedPlayback : null,
+        }
+      : {}),
+    thumbnailUrl: trimmedThumb.length > 0 ? trimmedThumb : null,
+  };
+}
+
 function sequentialEffects(
   effects: Array<Effect.Effect<unknown, CmsAppError>>,
 ): Effect.Effect<void, CmsAppError> {
@@ -400,29 +427,9 @@ function VideosEditorForm() {
 
       setInlineError(null);
       setRowAction(video.stableId, "saving");
-      const trimmedExternal = fields.externalId.trim();
-      const trimmedPlayback = fields.playbackUrl.trim();
-      const trimmedThumb = fields.thumbnailUrl.trim();
       const outcome = await runAdminEffect(
         convexMutationEffect(() =>
-          updateDraftVideo({
-            stableId: video.stableId,
-            title: fields.title.trim(),
-            description:
-              fields.description.trim().length > 0
-                ? fields.description.trim()
-                : null,
-            ...(video.provider !== "upload" && trimmedExternal.length > 0
-              ? { externalId: trimmedExternal }
-              : {}),
-            ...(video.provider === "mux"
-              ? {
-                  playbackUrl:
-                    trimmedPlayback.length > 0 ? trimmedPlayback : null,
-                }
-              : {}),
-            thumbnailUrl: trimmedThumb.length > 0 ? trimmedThumb : null,
-          }),
+          updateDraftVideo(buildUpdateDraftVideoArgs(video, fields)),
         ),
         { onErrorMessage: setInlineError },
       );
@@ -457,28 +464,8 @@ function VideosEditorForm() {
 
     const effects = dirty.map((video) => {
       const fields = getEditableFields(video);
-      const trimmedExternal = fields.externalId.trim();
-      const trimmedPlayback = fields.playbackUrl.trim();
-      const trimmedThumb = fields.thumbnailUrl.trim();
       return convexMutationEffect(() =>
-        updateDraftVideo({
-          stableId: video.stableId,
-          title: fields.title.trim(),
-          description:
-            fields.description.trim().length > 0
-              ? fields.description.trim()
-              : null,
-          ...(video.provider !== "upload" && trimmedExternal.length > 0
-            ? { externalId: trimmedExternal }
-            : {}),
-          ...(video.provider === "mux"
-            ? {
-                playbackUrl:
-                  trimmedPlayback.length > 0 ? trimmedPlayback : null,
-              }
-            : {}),
-          thumbnailUrl: trimmedThumb.length > 0 ? trimmedThumb : null,
-        }),
+        updateDraftVideo(buildUpdateDraftVideoArgs(video, fields)),
       );
     });
 
