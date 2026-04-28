@@ -517,8 +517,9 @@ export async function publishGalleryDraftCore(
 ): Promise<{
   ok: true;
   kind: "published";
-  publishedAt: number;
-  publishedBy: string;
+  /** Matches `galleryPhotoMeta.publishedAt` (may stay null when photos already matched published). */
+  publishedAt: number | null;
+  publishedBy: string | undefined;
 }> {
   const { userId, updatedBy } = args;
   const draft = await loadGalleryPhotos(ctx, "draft");
@@ -555,11 +556,15 @@ export async function publishGalleryDraftCore(
 
   await promoteGalleryPageCmsFlag(ctx, { userId, updatedBy });
 
+  const metaFinal = await ctx.db.get(metaId);
+  const publishedAt = metaFinal?.publishedAt ?? null;
+  const publishedBy = metaFinal?.publishedBy;
+
   return {
     ok: true as const,
     kind: "published" as const,
-    publishedAt: now,
-    publishedBy: userId,
+    publishedAt,
+    publishedBy,
   };
 }
 

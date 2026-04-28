@@ -1,5 +1,9 @@
 import type { MutationCtx } from "./_generated/server";
-import { ensureSectionMetaRow, recomputeSectionHasDraftChanges } from "./cmsMeta";
+import {
+  ensureSectionMetaRow,
+  recomputeSectionHasDraftChanges,
+  sectionHasPendingFlagDraft,
+} from "./cmsMeta";
 
 /**
  * Promote `cmsSections.photos.isEnabledDraft` → `isEnabled` (public gallery page + nav).
@@ -17,8 +21,19 @@ export async function promoteGalleryPageCmsFlag(
   if (typeof row.isEnabledDraft !== "boolean") {
     return;
   }
-  const nextIsEnabled = row.isEnabledDraft;
   const now = Date.now();
+
+  if (!sectionHasPendingFlagDraft(row, "photos")) {
+    await ctx.db.patch(id, {
+      isEnabledDraft: undefined,
+      updatedAt: now,
+      updatedBy: args.updatedBy,
+    });
+    await recomputeSectionHasDraftChanges(ctx, "photos", args.updatedBy);
+    return;
+  }
+
+  const nextIsEnabled = row.isEnabledDraft;
   await ctx.db.patch(id, {
     isEnabled: nextIsEnabled,
     isEnabledDraft: undefined,
