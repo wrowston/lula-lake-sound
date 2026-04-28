@@ -156,6 +156,20 @@ export default defineSchema({
     contentType: v.string(),
     sizeBytes: v.number(),
     originalFileName: v.optional(v.string()),
+    /**
+     * INF-47 — gallery filter tags. Lower-case slugs from
+     * `GALLERY_CATEGORY_SLUGS` (`rooms` / `gear` / `grounds`). Optional so
+     * existing rows keep validating; missing means "uncategorized" and the
+     * photo only appears under the implicit "All" filter on the public
+     * gallery page.
+     */
+    categories: v.optional(v.array(v.string())),
+    /**
+     * Which surfaces show this image. Missing defaults to `true` for back-compat.
+     * Both can be `true` so one upload can power the homepage carousel and /gallery.
+     */
+    showInCarousel: v.optional(v.boolean()),
+    showInGallery: v.optional(v.boolean()),
   })
     .index("by_scope_and_sort", ["scope", "sortOrder"])
     .index("by_scope_and_stableId", ["scope", "stableId"])

@@ -36,6 +36,7 @@ describe("isHomepagePricingSectionEnabled", () => {
       aboutPage: false,
       recordingsPage: false,
       pricingSection: false,
+      galleryPage: true,
     };
     expect(isHomepagePricingSectionEnabled(flags)).toBe(false);
   });
@@ -45,6 +46,7 @@ describe("isHomepagePricingSectionEnabled", () => {
       aboutPage: false,
       recordingsPage: false,
       pricingSection: true,
+      galleryPage: true,
     };
     expect(isHomepagePricingSectionEnabled(flags)).toBe(true);
   });

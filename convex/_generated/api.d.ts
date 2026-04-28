@@ -47,6 +47,7 @@ import type * as mediaStorage from "../mediaStorage.js";
 import type * as migrations_amenitiesNearbyPublishedIfEmpty from "../migrations/amenitiesNearbyPublishedIfEmpty.js";
 import type * as migrations_gearFromEquipmentSpecs from "../migrations/gearFromEquipmentSpecs.js";
 import type * as observability from "../observability.js";
+import type * as photosCmsFlags from "../photosCmsFlags.js";
 import type * as photosPreviewDraft from "../photosPreviewDraft.js";
 import type * as pricingPreviewDraft from "../pricingPreviewDraft.js";
 import type * as pricingTree from "../pricingTree.js";
@@ -103,6 +104,7 @@ declare const fullApi: ApiFromModules<{
   "migrations/amenitiesNearbyPublishedIfEmpty": typeof migrations_amenitiesNearbyPublishedIfEmpty;
   "migrations/gearFromEquipmentSpecs": typeof migrations_gearFromEquipmentSpecs;
   observability: typeof observability;
+  photosCmsFlags: typeof photosCmsFlags;
   photosPreviewDraft: typeof photosPreviewDraft;
   pricingPreviewDraft: typeof pricingPreviewDraft;
   pricingTree: typeof pricingTree;

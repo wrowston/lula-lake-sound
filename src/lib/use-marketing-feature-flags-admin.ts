@@ -13,11 +13,16 @@ const FLAGS_DEFAULT: MarketingFeatureFlags = {
   aboutPage: false,
   recordingsPage: false,
   pricingSection: true,
+  galleryPage: true,
 };
 
-type FlagKey = keyof MarketingFeatureFlags;
+/** Settings-UI marketing flags only (gallery page is edited in /admin/photos). */
+type MarketingFlagKey = "aboutPage" | "recordingsPage" | "pricingSection";
 
-const FLAG_TO_SECTION: Record<FlagKey, "about" | "recordings" | "pricing"> = {
+const FLAG_TO_SECTION: Record<
+  MarketingFlagKey,
+  "about" | "recordings" | "pricing"
+> = {
   aboutPage: "about",
   recordingsPage: "recordings",
   pricingSection: "pricing",
@@ -58,7 +63,7 @@ export function useMarketingFeatureFlagsAdmin(pauseWhen: boolean) {
   const saveEffect = useCallback(() => {
     if (source === undefined) return Effect.void;
     const base = data?.flags ?? FLAGS_DEFAULT;
-    const dirtyKeys: FlagKey[] = (
+    const dirtyKeys: MarketingFlagKey[] = (
       ["aboutPage", "recordingsPage", "pricingSection"] as const
     ).filter((k) => source[k] !== base[k]);
     if (dirtyKeys.length === 0) return Effect.void;
@@ -90,7 +95,7 @@ export function useMarketingFeatureFlagsAdmin(pauseWhen: boolean) {
   kickFFAutosaveRef.current = kickFFAutosave;
 
   const patchFlags = useCallback(
-    (partial: Partial<MarketingFeatureFlags>) => {
+    (partial: Partial<Pick<MarketingFeatureFlags, MarketingFlagKey>>) => {
       if (!source) return;
       setLocalDraft({ ...source, ...partial });
       kickFFAutosaveRef.current();

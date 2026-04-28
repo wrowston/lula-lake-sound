@@ -249,6 +249,9 @@ export function defaultSnapshotForSection(section: CmsSection): CmsSnapshot {
       return FAQ_DEFAULTS;
     case "amenitiesNearby":
       return { rows: [] };
+    case "photos":
+      // No snapshot table for studio photos; placeholder for the legacy `saveDraft` union.
+      return { rows: [] };
   }
 }
 

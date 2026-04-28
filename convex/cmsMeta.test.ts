@@ -40,6 +40,10 @@ describe("DEFAULT_IS_ENABLED", () => {
   test("amenities nearby ships on with the homepage", () => {
     expect(DEFAULT_IS_ENABLED.amenitiesNearby).toBe(true);
   });
+
+  test("public gallery page ships on by default", () => {
+    expect(DEFAULT_IS_ENABLED.photos).toBe(true);
+  });
 });
 
 describe("effectiveIsEnabled", () => {
@@ -114,14 +118,14 @@ describe("sectionHasPendingFlagDraft", () => {
 describe("anyMarketingFlagDraftPending", () => {
   test("false when no section has a flag draft", () => {
     expect(
-      anyMarketingFlagDraftPending(row(), row(), row()),
+      anyMarketingFlagDraftPending(row(), row(), row(), null),
     ).toBe(false);
   });
 
   test("true when about has a pending flag draft", () => {
     const about = row({ isEnabled: false, isEnabledDraft: true });
     expect(
-      anyMarketingFlagDraftPending(about, row(), row()),
+      anyMarketingFlagDraftPending(about, row(), row(), null),
     ).toBe(true);
   });
 
@@ -132,7 +136,7 @@ describe("anyMarketingFlagDraftPending", () => {
       isEnabledDraft: true,
     });
     expect(
-      anyMarketingFlagDraftPending(row(), recordings, row()),
+      anyMarketingFlagDraftPending(row(), recordings, row(), null),
     ).toBe(true);
   });
 
@@ -143,11 +147,22 @@ describe("anyMarketingFlagDraftPending", () => {
       isEnabledDraft: false,
     });
     expect(
-      anyMarketingFlagDraftPending(row(), row(), pricing),
+      anyMarketingFlagDraftPending(row(), row(), pricing, null),
+    ).toBe(true);
+  });
+
+  test("true when photos (gallery page) has a pending flag draft", () => {
+    const photos = row({
+      section: "photos",
+      isEnabled: true,
+      isEnabledDraft: false,
+    });
+    expect(
+      anyMarketingFlagDraftPending(row(), row(), row(), photos),
     ).toBe(true);
   });
 
   test("null rows are tolerated", () => {
-    expect(anyMarketingFlagDraftPending(null, null, null)).toBe(false);
+    expect(anyMarketingFlagDraftPending(null, null, null, null)).toBe(false);
   });
 });

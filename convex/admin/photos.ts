@@ -1,22 +1,28 @@
 import { v } from "convex/values";
-import { mutation, query, type MutationCtx } from "../_generated/server";
+import { internalMutation, mutation, query, type MutationCtx } from "../_generated/server";
 import type { Id } from "../_generated/dataModel";
 import {
   ALLOWED_GALLERY_IMAGE_TYPES,
+  GALLERY_CATEGORY_SLUGS,
   MAX_GALLERY_IMAGE_BYTES,
   MAX_GALLERY_PHOTOS,
   type GalleryPhotoDoc,
   type GalleryPublishIssue,
   deleteStorageIfUnreferenced,
   ensureGalleryMeta,
+  galleryDraftMatchesPublished,
   getStorageMetadata,
+  isGalleryCategorySlug,
   loadGalleryPhotos,
   materializeGalleryPhotos,
+  normalizeGalleryCategories,
   patchGalleryMetaAfterDraftChange,
   replaceGalleryScope,
 } from "../galleryPhotos";
+import { getSectionMetaRow, recomputeSectionHasDraftChanges } from "../cmsMeta";
 import { cmsNotFound, cmsPublishValidationFailed, cmsValidationError } from "../errors";
 import { requireCmsOwner } from "../lib/auth";
+import { promoteGalleryPageCmsFlag } from "../photosCmsFlags";
 
 const MAX_ALT_LENGTH = 240;
 const MAX_CAPTION_LENGTH = 600;
@@ -79,6 +85,28 @@ function normalizeFileName(raw?: string | null): string | undefined {
     );
   }
   return value;
+}
+
+function normalizeCategoriesInput(
+  raw: readonly string[] | null | undefined,
+): string[] | undefined {
+  if (raw === undefined || raw === null) return undefined;
+  if (raw.length === 0) return undefined;
+  for (const value of raw) {
+    if (typeof value !== "string") {
+      cmsValidationError("Category values must be strings.", "categories");
+    }
+    const slug = value.trim().toLowerCase();
+    if (slug.length === 0) continue;
+    if (!isGalleryCategorySlug(slug)) {
+      cmsValidationError(
+        `Unknown gallery category: ${value}. Allowed: ${GALLERY_CATEGORY_SLUGS.join(", ")}.`,
+        "categories",
+      );
+    }
+  }
+  // Re-use the public normaliser to dedupe + canonicalise the order.
+  return normalizeGalleryCategories(raw);
 }
 
 function normalizeDimension(
@@ -184,6 +212,17 @@ function collectPhotoIssues(
       stableIds.add(row.stableId);
     }
 
+    if (row.categories !== undefined) {
+      for (const category of row.categories) {
+        if (!isGalleryCategorySlug(category)) {
+          issues.push({
+            path: `${base}.categories`,
+            message: `Unknown category: ${category}. Allowed: ${GALLERY_CATEGORY_SLUGS.join(", ")}.`,
+          });
+        }
+      }
+    }
+
     const storage = storageById.get(row.storageId) ?? null;
     if (!storage) {
       issues.push({
@@ -255,18 +294,36 @@ export const listDraftPhotos = query({
   handler: async (ctx) => {
     await requireCmsOwner(ctx);
     const rows = await loadGalleryPhotos(ctx, "draft");
-    const meta = await ctx.db
-      .query("galleryPhotoMeta")
-      .withIndex("by_singleton", (q) => q.eq("singletonKey", "default"))
-      .unique();
-
+    const [meta, photosCms] = await Promise.all([
+      ctx.db
+        .query("galleryPhotoMeta")
+        .withIndex("by_singleton", (q) => q.eq("singletonKey", "default"))
+        .unique(),
+      getSectionMetaRow(ctx, "photos"),
+    ]);
+    const metaAt = meta?.publishedAt ?? null;
+    const cmsAt = photosCms?.publishedAt ?? null;
+    const publishedAt =
+      metaAt !== null && cmsAt !== null
+        ? Math.max(metaAt, cmsAt)
+        : (metaAt ?? cmsAt);
+    const publishedBy =
+      metaAt !== null && cmsAt !== null
+        ? (metaAt >= cmsAt
+            ? meta?.publishedBy
+            : photosCms?.publishedBy)
+        : (metaAt !== null ? meta?.publishedBy : photosCms?.publishedBy);
     return {
       photos: await materializeGalleryPhotos(ctx, rows),
       hasDraftChanges: meta?.hasDraftChanges ?? false,
-      publishedAt: meta?.publishedAt ?? null,
-      publishedBy: meta?.publishedBy ?? null,
+      publishedAt,
+      publishedBy: publishedBy ?? null,
       updatedAt: meta?.updatedAt ?? null,
       updatedBy: meta?.updatedBy ?? null,
+      galleryPage: {
+        isEnabledPublished: photosCms?.isEnabled,
+        isEnabledDraft: photosCms?.isEnabledDraft,
+      },
       limits: {
         maxPhotos: MAX_GALLERY_PHOTOS,
         maxImageBytes: MAX_GALLERY_IMAGE_BYTES,
@@ -292,6 +349,9 @@ export const saveUploadedPhoto = mutation({
     width: v.optional(v.union(v.number(), v.null())),
     height: v.optional(v.union(v.number(), v.null())),
     originalFileName: v.optional(v.union(v.string(), v.null())),
+    categories: v.optional(v.union(v.array(v.string()), v.null())),
+    showInCarousel: v.optional(v.boolean()),
+    showInGallery: v.optional(v.boolean()),
   },
   handler: async (ctx, args) => {
     const { updatedBy } = await requireCmsOwner(ctx);
@@ -315,6 +375,9 @@ export const saveUploadedPhoto = mutation({
       const width = normalizeDimension(args.width, "width");
       const height = normalizeDimension(args.height, "height");
       const originalFileName = normalizeFileName(args.originalFileName);
+      const categories = normalizeCategoriesInput(args.categories);
+      const showInCarousel = args.showInCarousel ?? true;
+      const showInGallery = args.showInGallery ?? true;
 
       const sortOrder =
         draft.length === 0
@@ -333,6 +396,10 @@ export const saveUploadedPhoto = mutation({
         contentType,
         sizeBytes: storage.size,
         ...(originalFileName !== undefined ? { originalFileName } : {}),
+        ...(categories !== undefined ? { categories } : {}),
+        ...(showInCarousel !== true || showInGallery !== true
+          ? { showInCarousel, showInGallery }
+          : {}),
       });
     } catch (error) {
       await deleteStorageIfUnreferenced(ctx, args.storageId);
@@ -349,6 +416,15 @@ export const updateDraftPhotoMetadata = mutation({
     stableId: v.string(),
     alt: v.string(),
     caption: v.optional(v.union(v.string(), v.null())),
+    /**
+     * INF-47 — full replacement of the photo's category tags. Pass `[]`
+     * (or `null`) to clear all categories. Field omitted = leave the
+     * existing categories untouched, so old admin clients that haven't
+     * been redeployed still work unchanged.
+     */
+    categories: v.optional(v.union(v.array(v.string()), v.null())),
+    showInCarousel: v.optional(v.boolean()),
+    showInGallery: v.optional(v.boolean()),
   },
   handler: async (ctx, args) => {
     const { updatedBy } = await requireCmsOwner(ctx);
@@ -357,10 +433,28 @@ export const updateDraftPhotoMetadata = mutation({
       cmsNotFound("galleryPhoto", args.stableId);
     }
 
-    await ctx.db.patch(row._id, {
+    const patch: {
+      alt: string;
+      caption: string | undefined;
+      categories?: string[] | undefined;
+      showInCarousel?: boolean;
+      showInGallery?: boolean;
+    } = {
       alt: normalizeAlt(args.alt),
       caption: normalizeCaption(args.caption),
-    });
+    };
+
+    if (args.categories !== undefined) {
+      patch.categories = normalizeCategoriesInput(args.categories);
+    }
+    if (args.showInCarousel !== undefined) {
+      patch.showInCarousel = args.showInCarousel;
+    }
+    if (args.showInGallery !== undefined) {
+      patch.showInGallery = args.showInGallery;
+    }
+
+    await ctx.db.patch(row._id, patch);
 
     await patchGalleryMetaAfterDraftChange(ctx, updatedBy);
     return { ok: true as const };
@@ -432,11 +526,13 @@ export async function publishGalleryDraftCore(
 ): Promise<{
   ok: true;
   kind: "published";
-  publishedAt: number;
-  publishedBy: string;
+  /** Latest publish stamp across gallery photos and gallery-page CMS flag. */
+  publishedAt: number | null;
+  publishedBy: string | undefined;
 }> {
   const { userId, updatedBy } = args;
   const draft = await loadGalleryPhotos(ctx, "draft");
+  const published = await loadGalleryPhotos(ctx, "published");
   const issues = await validateDraftForPublish(ctx, draft);
   if (issues.length > 0) {
     cmsPublishValidationFailed(
@@ -446,10 +542,13 @@ export async function publishGalleryDraftCore(
     );
   }
 
-  await replaceGalleryScope(ctx, "draft", "published");
-
+  const photosMatch = galleryDraftMatchesPublished(draft, published);
   const now = Date.now();
   const { id: metaId } = await ensureGalleryMeta(ctx);
+
+  if (!photosMatch) {
+    await replaceGalleryScope(ctx, "draft", "published");
+  }
   await ctx.db.patch(metaId, {
     hasDraftChanges: false,
     publishedAt: now,
@@ -458,13 +557,61 @@ export async function publishGalleryDraftCore(
     updatedBy,
   });
 
+  await promoteGalleryPageCmsFlag(ctx, { userId, updatedBy, publishedAt: now });
+
+  const metaFinal = await ctx.db.get(metaId);
+  const photosCmsFinal = await getSectionMetaRow(ctx, "photos");
+  const metaAt = metaFinal?.publishedAt ?? null;
+  const cmsAt = photosCmsFinal?.publishedAt ?? null;
+  const publishedAt =
+    metaAt !== null && cmsAt !== null
+      ? Math.max(metaAt, cmsAt)
+      : (metaAt ?? cmsAt);
+  const publishedBy =
+    metaAt !== null && cmsAt !== null
+      ? (metaAt >= cmsAt
+          ? metaFinal?.publishedBy
+          : photosCmsFinal?.publishedBy)
+      : (metaAt !== null ? metaFinal?.publishedBy : photosCmsFinal?.publishedBy);
+
   return {
     ok: true as const,
     kind: "published" as const,
-    publishedAt: now,
-    publishedBy: userId,
+    publishedAt,
+    publishedBy,
   };
 }
+
+/**
+ * One-shot: set `showInCarousel` / `showInGallery` to `true` where missing so
+ * existing rows behave like before surface flags existed.
+ *
+ * `bunx convex run admin/photos:backfillGallerySurfaceFlags`
+ */
+export const backfillGallerySurfaceFlags = internalMutation({
+  args: {},
+  handler: async (ctx) => {
+    const rows = await ctx.db
+      .query("galleryPhotos")
+      .withIndex("by_scope_and_sort", (q) => q.eq("scope", "draft"))
+      .collect();
+    let updated = 0;
+    for (const row of rows) {
+      if (
+        row.showInCarousel !== undefined &&
+        row.showInGallery !== undefined
+      ) {
+        continue;
+      }
+      await ctx.db.patch(row._id, {
+        ...(row.showInCarousel === undefined ? { showInCarousel: true } : {}),
+        ...(row.showInGallery === undefined ? { showInGallery: true } : {}),
+      });
+      updated++;
+    }
+    return { ok: true as const, updated };
+  },
+});
 
 export const publishPhotos = mutation({
   args: {},
@@ -478,16 +625,36 @@ export const discardDraftPhotos = mutation({
   args: {},
   handler: async (ctx) => {
     const { updatedBy } = await requireCmsOwner(ctx);
-    await ensureGalleryMeta(ctx);
-    await replaceGalleryScope(ctx, "published", "draft");
+    const { row: metaBefore } = await ensureGalleryMeta(ctx);
 
-    const now = Date.now();
-    const { id: metaId } = await ensureGalleryMeta(ctx);
-    await ctx.db.patch(metaId, {
-      hasDraftChanges: false,
-      updatedAt: now,
-      updatedBy,
-    });
+    const draft = await loadGalleryPhotos(ctx, "draft");
+    const published = await loadGalleryPhotos(ctx, "published");
+    const photosMismatch = !galleryDraftMatchesPublished(draft, published);
+
+    const cmsRow = await getSectionMetaRow(ctx, "photos");
+    const needsCmsPatch =
+      cmsRow !== null &&
+      (cmsRow.hasDraftChanges || typeof cmsRow.isEnabledDraft === "boolean");
+    if (!metaBefore.hasDraftChanges && !photosMismatch && !needsCmsPatch) {
+      return { ok: true as const, discarded: false };
+    }
+
+    if (photosMismatch) {
+      await replaceGalleryScope(ctx, "published", "draft");
+    }
+    if (photosMismatch || metaBefore.hasDraftChanges) {
+      await patchGalleryMetaAfterDraftChange(ctx, updatedBy);
+    }
+
+    if (needsCmsPatch && cmsRow) {
+      const now = Date.now();
+      await ctx.db.patch(cmsRow._id, {
+        isEnabledDraft: undefined,
+        updatedAt: now,
+        updatedBy,
+      });
+      await recomputeSectionHasDraftChanges(ctx, "photos", updatedBy);
+    }
 
     return { ok: true as const, discarded: true };
   },

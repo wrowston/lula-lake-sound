@@ -32,6 +32,8 @@ export const DEFAULT_IS_ENABLED: Record<CmsSection, boolean> = {
   recordings: false,
   faq: true,
   amenitiesNearby: true,
+  /** Public `/gallery` page + "Gallery" nav; carousel uses `showInCarousel` on each photo. */
+  photos: true,
 };
 
 export async function getSectionMetaRow(
@@ -123,6 +125,7 @@ export async function sectionHasContentDraftDiff(
   section: CmsSection,
 ): Promise<boolean> {
   if (section === "recordings") return false;
+  if (section === "photos") return false;
 
   if (section === "faq") {
     const draft = await loadFaqTree(ctx, "draft");
@@ -170,16 +173,18 @@ export function sectionHasPendingFlagDraft(
   return row.isEnabledDraft !== (row.isEnabled ?? DEFAULT_IS_ENABLED[section]);
 }
 
-/** True when about, recordings, or pricing has a pending `isEnabledDraft`. */
+/** True when any marketing-visibility or gallery-page section has a pending `isEnabledDraft`. */
 export function anyMarketingFlagDraftPending(
   aboutRow: Doc<"cmsSections"> | null,
   recordingsRow: Doc<"cmsSections"> | null,
   pricingRow: Doc<"cmsSections"> | null,
+  photosRow: Doc<"cmsSections"> | null = null,
 ): boolean {
   return (
     sectionHasPendingFlagDraft(aboutRow, "about") ||
     sectionHasPendingFlagDraft(recordingsRow, "recordings") ||
-    sectionHasPendingFlagDraft(pricingRow, "pricing")
+    sectionHasPendingFlagDraft(pricingRow, "pricing") ||
+    sectionHasPendingFlagDraft(photosRow, "photos")
   );
 }
 

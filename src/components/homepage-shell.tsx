@@ -18,6 +18,7 @@ import {
   type MarketingFeatureFlags,
   type PricingFlags,
   isHomepagePricingSectionEnabled,
+  isGalleryPageEnabled,
   previewHasActivePricingPackages,
 } from "@/lib/site-settings";
 
@@ -84,6 +85,7 @@ export function HomepageShell({
   const showAbout = marketing != null && marketing.aboutPage === true;
   const showRecordings =
     marketing != null && marketing.recordingsPage === true;
+  const showGallery = marketing != null && isGalleryPageEnabled(marketing);
 
   return (
     <div
@@ -97,6 +99,7 @@ export function HomepageShell({
         showAbout={showAbout}
         aboutHref={aboutHref}
         showRecordings={showRecordings}
+        showGallery={showGallery}
         homeSectionBase={homeSectionBase}
         recordingsHref={recordingsNavHref}
       />

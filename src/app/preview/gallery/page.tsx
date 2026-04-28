@@ -7,25 +7,22 @@ import {
   useQuery,
 } from "convex/react";
 import { api } from "../../../../convex/_generated/api";
-import { AboutLayout } from "../../about/about-layout";
+import { GalleryClient } from "../../gallery/gallery-client";
 import { PreviewBanner } from "@/components/preview-banner";
-import { isHomepagePricingSectionEnabled } from "@/lib/site-settings";
 
 /**
- * Owner-only preview of the About page using the draft CMS snapshot. Mirrors
- * `/preview` (homepage): unauthenticated visitors are told to sign in, and
- * the preview query itself returns `null` for non-owners so drafts never
- * leak. The `published` flag is taken from the draft so the owner can verify
- * how the public page will look with the feature flag either on or off.
+ * Owner-only preview of the public Gallery page using draft photos. Mirrors
+ * `/preview/about` — non-owners get a friendly notice; the underlying
+ * `getPreviewGalleryPhotos` query returns `null` for unauthenticated /
+ * non-owner callers so drafts never leak.
  */
-function AboutPreviewContent() {
-  const about = useQuery(api.aboutPreviewDraft.getPreviewAbout);
-  const pricingPreview = useQuery(
-    api.pricingPreviewDraft.getPreviewPricingFlags,
+function GalleryPreviewContent() {
+  const photoPreview = useQuery(
+    api.photosPreviewDraft.getPreviewGalleryPhotos,
   );
   const marketing = useQuery(api.cms.getPreviewMarketingFeatureFlags);
 
-  if (about === undefined || pricingPreview === undefined || marketing === undefined) {
+  if (photoPreview === undefined || marketing === undefined) {
     return (
       <div className="flex min-h-screen items-center justify-center bg-deep-forest">
         <p className="text-ivory/60">Loading preview…</p>
@@ -33,7 +30,7 @@ function AboutPreviewContent() {
     );
   }
 
-  if (about === null || pricingPreview === null || marketing === null) {
+  if (photoPreview === null || marketing === null) {
     return (
       <div className="flex min-h-screen items-center justify-center bg-deep-forest">
         <p className="text-ivory/60">
@@ -44,30 +41,39 @@ function AboutPreviewContent() {
     );
   }
 
-  const { hasDraftChanges: _aboutDrafty, ...data } = about;
-  void _aboutDrafty;
-  const showPricing = isHomepagePricingSectionEnabled(marketing);
-  const hasDraftChanges =
-    about.hasDraftChanges ||
-    pricingPreview.hasDraftChanges ||
-    marketing.hasDraftChanges;
+  const publicGalleryDisabled = !marketing.galleryPagePublished;
 
   return (
-    <AboutLayout
-      data={data}
-      showPricing={showPricing}
+    <GalleryClient
+      photos={photoPreview.photos}
       marketing={{
         aboutPage: marketing.aboutPage,
         recordingsPage: marketing.recordingsPage,
         pricingSection: marketing.pricingSection,
         galleryPage: marketing.galleryPage,
       }}
-      banner={<PreviewBanner hasDraftChanges={hasDraftChanges} />}
+      banner={
+        <>
+          <PreviewBanner hasDraftChanges={photoPreview.hasDraftChanges} />
+          {publicGalleryDisabled ? (
+            <div
+              className="border-b border-amber-500/30 bg-amber-500/10 px-4 py-3 text-center text-sm text-amber-100"
+              role="status"
+            >
+              The public Gallery page and nav link are currently{" "}
+              <span className="font-medium">hidden</span> for visitors. Turn
+              on &quot;Gallery page visibility&quot; in{" "}
+              <span className="font-mono">/admin/photos</span> (Gallery tab) and
+              publish to go live.
+            </div>
+          ) : null}
+        </>
+      }
     />
   );
 }
 
-export default function AboutPreviewPage() {
+export default function GalleryPreviewPage() {
   return (
     <>
       <AuthLoading>
@@ -85,7 +91,7 @@ export default function AboutPreviewPage() {
       </Unauthenticated>
 
       <Authenticated>
-        <AboutPreviewContent />
+        <GalleryPreviewContent />
       </Authenticated>
     </>
   );

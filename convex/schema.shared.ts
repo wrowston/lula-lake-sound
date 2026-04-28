@@ -212,6 +212,7 @@ export const cmsSectionValidator = v.union(
   v.literal("recordings"),
   v.literal("faq"),
   v.literal("amenitiesNearby"),
+  v.literal("photos"),
 );
 
 /**
