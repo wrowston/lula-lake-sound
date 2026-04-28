@@ -6,7 +6,7 @@ import {
   aboutTeamMemberRowValidator,
   amenitiesNearbyCopyRowValidator,
   amenitiesNearbyItemRowValidator,
-  cmsSectionValidator,
+  cmsSectionRowValidator,
   videoRowValidator,
   faqCategoryRowValidator,
   faqQuestionRowValidator,
@@ -44,7 +44,7 @@ export default defineSchema({
   }),
 
   cmsSections: defineTable({
-    section: cmsSectionValidator,
+    section: cmsSectionRowValidator,
     /** Published visibility. Controls route/section visibility on the public site. */
     isEnabled: v.optional(v.boolean()),
     /** Draft override for `isEnabled`; cleared on publish / discard. */

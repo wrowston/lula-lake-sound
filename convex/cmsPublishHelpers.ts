@@ -540,8 +540,17 @@ export const publishSettingsSectionCore = publishSectionCore;
  */
 export function rowsWithPublishableDraft(
   rows: Doc<"cmsSections">[],
-): Doc<"cmsSections">[] {
-  return rows.filter((row) => row.hasDraftChanges === true);
+): Array<Doc<"cmsSections"> & { section: CmsSection }> {
+  return rows.filter(
+    (row): row is Doc<"cmsSections"> & { section: CmsSection } =>
+      row.hasDraftChanges === true && isPublishableCmsSection(row.section),
+  );
+}
+
+function isPublishableCmsSection(
+  section: Doc<"cmsSections">["section"],
+): section is CmsSection {
+  return section !== "photos";
 }
 
 /**
@@ -551,7 +560,7 @@ export function rowsWithPublishableDraft(
  */
 export async function collectAllPublishIssues(
   ctx: QueryCtx | MutationCtx,
-  targets: Doc<"cmsSections">[],
+  targets: Array<Doc<"cmsSections"> & { section: CmsSection }>,
 ): Promise<PublishIssue[]> {
   const issues: PublishIssue[] = [];
   for (const row of targets) {

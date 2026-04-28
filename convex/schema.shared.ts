@@ -201,9 +201,10 @@ export const cmsSnapshotValidator = v.union(
 );
 
 /**
- * The set of sections tracked in `cmsSections`. `recordings` was added when
- * flags moved off the `marketingFeatureFlags` singleton and onto `cmsSections`
- * rows; its visibility is flag-only while audio content is stored separately.
+ * The set of active sections tracked in `cmsSections`. `recordings` was added
+ * when flags moved off the `marketingFeatureFlags` singleton and onto
+ * `cmsSections` rows; its visibility is flag-only while audio content is stored
+ * separately.
  */
 export const cmsSectionValidator = v.union(
   v.literal("settings"),
@@ -212,6 +213,19 @@ export const cmsSectionValidator = v.union(
   v.literal("recordings"),
   v.literal("faq"),
   v.literal("amenitiesNearby"),
+);
+
+/**
+ * Table-level validator for `cmsSections.section`.
+ *
+ * Some deployments have a stale `"photos"` row from before gallery publishing
+ * moved fully to `galleryPhotoMeta`. Keep the row schema tolerant so Convex can
+ * validate existing data, but keep public/admin function args on
+ * `cmsSectionValidator` so new CMS section mutations cannot target it.
+ */
+export const cmsSectionRowValidator = v.union(
+  cmsSectionValidator,
+  v.literal("photos"),
 );
 
 /**

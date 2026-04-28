@@ -38,6 +38,17 @@ describe("rowsWithPublishableDraft", () => {
     expect(rowsWithPublishableDraft([])).toEqual([]);
   });
 
+  test("ignores legacy photos rows handled by galleryPhotoMeta", () => {
+    const rows = [
+      row({ section: "photos", hasDraftChanges: true }),
+      row({ section: "about", hasDraftChanges: true }),
+    ];
+
+    expect(rowsWithPublishableDraft(rows).map((r) => r.section)).toEqual([
+      "about",
+    ]);
+  });
+
   test("does not mutate the input", () => {
     const rows = [
       row({ section: "about", hasDraftChanges: true }),

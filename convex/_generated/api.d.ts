@@ -57,6 +57,8 @@ import type * as seed from "../seed.js";
 import type * as sentryNodeReport from "../sentryNodeReport.js";
 import type * as settingsTree from "../settingsTree.js";
 import type * as siteSettingsPreviewDraft from "../siteSettingsPreviewDraft.js";
+import type * as videoUrls from "../videoUrls.js";
+import type * as videos from "../videos.js";
 
 import type {
   ApiFromModules,
@@ -114,6 +116,8 @@ declare const fullApi: ApiFromModules<{
   sentryNodeReport: typeof sentryNodeReport;
   settingsTree: typeof settingsTree;
   siteSettingsPreviewDraft: typeof siteSettingsPreviewDraft;
+  videoUrls: typeof videoUrls;
+  videos: typeof videos;
 }>;
 
 /**
