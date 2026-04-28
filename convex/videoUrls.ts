@@ -223,7 +223,10 @@ export function normalizeExternalIdForProvider(
         throw new Error("INVALID_VIMEO_HOST");
       }
       const parts = u.pathname.split("/").filter(Boolean);
-      const videoIdx = parts.indexOf("video");
+      let videoIdx = parts.indexOf("video");
+      if (videoIdx < 0) {
+        videoIdx = parts.indexOf("videos");
+      }
       const idCandidate =
         videoIdx >= 0 && parts[videoIdx + 1]
           ? parts[videoIdx + 1]
