@@ -87,7 +87,8 @@ export type PendingDraftKey =
   | "faq"
   | "amenitiesNearby"
   | "gear"
-  | "photos";
+  | "photos"
+  | "videos";
 
 /**
  * Nav target + user-facing label for each pending-draft key. `recordings` is
@@ -108,6 +109,7 @@ export const PENDING_SECTION_NAV: Record<
   },
   gear: { href: "/admin/gear", label: "Gear" },
   photos: { href: "/admin/photos", label: "Photos" },
+  videos: { href: "/admin/videos", label: "Videos" },
 };
 
 /** Stable display order for pending-draft chips / dots. */
@@ -119,5 +121,6 @@ export const PENDING_SECTION_ORDER: readonly PendingDraftKey[] = [
   "amenitiesNearby",
   "gear",
   "photos",
+  "videos",
   "recordings",
 ];

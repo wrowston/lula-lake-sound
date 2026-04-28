@@ -412,8 +412,27 @@ export const listDraftVideos = query({
             updatedAt: meta.updatedAt,
           }
         : null,
+      limits: {
+        maxVideos: MAX_VIDEOS,
+        maxUploadBytes: MAX_VIDEO_UPLOAD_BYTES,
+        acceptedMimeTypes: [...ALLOWED_VIDEO_MIME_TYPES],
+      },
+      /** @deprecated — read `limits.maxVideos` instead. */
       maxVideos: MAX_VIDEOS,
     };
+  },
+});
+
+/**
+ * Owner-only short-lived upload URL for the `provider: "upload"` flow.
+ * The admin client `POST`s the raw video blob here, then calls
+ * `createDraftVideo` / `updateDraftVideo` with the returned `storageId`.
+ */
+export const generateUploadUrl = mutation({
+  args: {},
+  handler: async (ctx) => {
+    await requireCmsOwner(ctx);
+    return { uploadUrl: await ctx.storage.generateUploadUrl() };
   },
 });
 

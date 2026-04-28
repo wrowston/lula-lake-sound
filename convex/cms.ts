@@ -256,13 +256,14 @@ export const listPendingDrafts = query({
           | "amenitiesNearby"
           | "gear"
           | "photos"
+          | "videos"
         >,
       };
     }
 
     await requireCmsOwner(ctx);
 
-    const [cmsRows, gearMeta, galleryMeta] = await Promise.all([
+    const [cmsRows, gearMeta, galleryMeta, videoMeta] = await Promise.all([
       ctx.db.query("cmsSections").collect(),
       ctx.db
         .query("gearMeta")
@@ -270,6 +271,10 @@ export const listPendingDrafts = query({
         .unique(),
       ctx.db
         .query("galleryPhotoMeta")
+        .withIndex("by_singleton", (q) => q.eq("singletonKey", "default"))
+        .unique(),
+      ctx.db
+        .query("videoMeta")
         .withIndex("by_singleton", (q) => q.eq("singletonKey", "default"))
         .unique(),
     ]);
@@ -283,6 +288,7 @@ export const listPendingDrafts = query({
       | "amenitiesNearby"
       | "gear"
       | "photos"
+      | "videos"
     > = [];
     for (const row of cmsRows) {
       // Legacy deployments may still have a `cmsSections` row for photos; the
@@ -292,6 +298,7 @@ export const listPendingDrafts = query({
     }
     if (gearMeta?.hasDraftChanges) sections.push("gear");
     if (galleryMeta?.hasDraftChanges) sections.push("photos");
+    if (videoMeta?.hasDraftChanges) sections.push("videos");
 
     return { sections: [...new Set(sections)] };
   },
