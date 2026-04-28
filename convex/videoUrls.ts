@@ -122,7 +122,7 @@ export function muxPlaybackUrlErrorMessage(fieldLabel: string): string {
 
 const YOUTUBE_ID_RE = /^[\w-]{11}$/;
 /** Vimeo numeric id or legacy hash-style id (short hex). */
-const VIMEO_ID_RE = /^\d{6,12}$/;
+const VIMEO_ID_RE = /^\d{1,12}$/;
 const VIMEO_HASH_RE = /^[a-f0-9]{8,12}$/i;
 
 function stripOuterQuotes(raw: string): string {
