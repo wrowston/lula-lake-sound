@@ -38,7 +38,7 @@ function comparableVideo(row: VideoDoc) {
   };
 }
 
-export function videoDraftMatchesPublished(
+function videoDraftMatchesPublished(
   draft: VideoDoc[],
   published: VideoDoc[],
 ): boolean {

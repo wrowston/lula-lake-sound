@@ -292,7 +292,7 @@ async function buildVideoInsertPatch(args: {
   };
 }
 
-async function validateDraftForPublish(
+export async function validateDraftVideosForPublish(
   ctx: MutationCtx,
   rows: VideoDoc[],
 ): Promise<VideoPublishIssue[]> {
@@ -301,7 +301,7 @@ async function validateDraftForPublish(
 
   for (let i = 0; i < rows.length; i++) {
     const row = rows[i];
-    const base = `videos[${i}]`;
+    const base = `items[${i}]`;
 
     if (row.title.trim().length === 0) {
       issues.push({ path: `${base}.title`, message: "Title is required." });
@@ -672,7 +672,7 @@ export async function publishVideosDraftCore(
 }> {
   const { userId, updatedBy } = args;
   const draft = await loadVideos(ctx, "draft");
-  const issues = await validateDraftForPublish(ctx, draft);
+  const issues = await validateDraftVideosForPublish(ctx, draft);
   if (issues.length > 0) {
     cmsPublishValidationFailed("videos", "Publish validation failed.", issues);
   }

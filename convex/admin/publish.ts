@@ -15,6 +15,7 @@ import { requireCmsOwner } from "../lib/auth";
 import { cmsPublishValidationFailed } from "../errors";
 import { loadGalleryPhotos } from "../galleryPhotos";
 import { loadAudioTracks } from "../audioTracks";
+import { loadVideos } from "../videos";
 import { collectAboutTeamBlobIssues } from "../aboutTeamStorage";
 import {
   collectAllPublishIssues,
@@ -24,6 +25,10 @@ import {
 import { ensureSectionMetaRow } from "../cmsMeta";
 import { publishGalleryDraftCore, validateDraftForPublish } from "./photos";
 import { publishAudioDraftCore, validateDraftAudioForPublish } from "./audio";
+import {
+  publishVideosDraftCore,
+  validateDraftVideosForPublish,
+} from "./videos";
 
 export const publish = mutation({
   args: { section: cmsSectionValidator },
@@ -60,7 +65,13 @@ export const publishSite = mutation({
       .unique();
     const audioPending = audioMeta?.hasDraftChanges ?? false;
 
-    if (targets.length === 0 && !galleryPending && !audioPending) {
+    const videoMeta = await ctx.db
+      .query("videoMeta")
+      .withIndex("by_singleton", (q) => q.eq("singletonKey", "default"))
+      .unique();
+    const videosPending = videoMeta?.hasDraftChanges ?? false;
+
+    if (targets.length === 0 && !galleryPending && !audioPending && !videosPending) {
       return {
         ok: true as const,
         kind: "nothing_to_publish" as const,
@@ -100,6 +111,16 @@ export const publishSite = mutation({
         });
       }
     }
+    if (videosPending) {
+      const draftVideos = await loadVideos(ctx, "draft");
+      const videoIssues = await validateDraftVideosForPublish(ctx, draftVideos);
+      for (const issue of videoIssues) {
+        issues.push({
+          path: `videos.${issue.path}`,
+          message: issue.message,
+        });
+      }
+    }
     if (issues.length > 0) {
       cmsPublishValidationFailed(
         "site",
@@ -129,6 +150,10 @@ export const publishSite = mutation({
       ? await publishAudioDraftCore(ctx, { userId, updatedBy })
       : undefined;
 
+    const videosResult = videosPending
+      ? await publishVideosDraftCore(ctx, { userId, updatedBy })
+      : undefined;
+
     return {
       ok: true as const,
       kind: "published" as const,
@@ -136,6 +161,7 @@ export const publishSite = mutation({
       results,
       ...(galleryResult !== undefined ? { gallery: galleryResult } : {}),
       ...(audioResult !== undefined ? { audio: audioResult } : {}),
+      ...(videosResult !== undefined ? { videos: videosResult } : {}),
     };
   },
 });

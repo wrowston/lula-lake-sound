@@ -26,7 +26,6 @@ const ALLOWED_THUMB_HOST_SUFFIXES = [
 const MUX_PLAYBACK_HOST_SUFFIXES = [
   "mux.com",
   "muxcdn.com",
-  "fastly.mux.com",
 ] as const;
 
 function normalizeHostname(raw: string): string | null {
@@ -122,7 +121,7 @@ export function muxPlaybackUrlErrorMessage(fieldLabel: string): string {
 
 const YOUTUBE_ID_RE = /^[\w-]{11}$/;
 /** Vimeo numeric id or legacy hash-style id (short hex). */
-const VIMEO_ID_RE = /^\d{6,12}$/;
+const VIMEO_ID_RE = /^\d{1,12}$/;
 const VIMEO_HASH_RE = /^[a-f0-9]{8,12}$/i;
 
 function stripOuterQuotes(raw: string): string {
@@ -223,7 +222,10 @@ export function normalizeExternalIdForProvider(
         throw new Error("INVALID_VIMEO_HOST");
       }
       const parts = u.pathname.split("/").filter(Boolean);
-      const videoIdx = parts.indexOf("video");
+      let videoIdx = parts.indexOf("video");
+      if (videoIdx < 0) {
+        videoIdx = parts.indexOf("videos");
+      }
       const idCandidate =
         videoIdx >= 0 && parts[videoIdx + 1]
           ? parts[videoIdx + 1]
