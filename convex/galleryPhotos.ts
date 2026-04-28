@@ -113,7 +113,7 @@ function comparablePhoto(row: GalleryPhotoDoc) {
     sizeBytes: row.sizeBytes,
     originalFileName: row.originalFileName ?? null,
     categories:
-      row.categories && row.categories.length > 0 ? row.categories : null,
+      normalizeGalleryCategories(row.categories ?? null) ?? null,
     showInCarousel: row.showInCarousel !== false,
     showInGallery: row.showInGallery !== false,
   };
@@ -199,6 +199,7 @@ export async function replaceGalleryScope(
   }
 
   for (const row of source) {
+    const categories = normalizeGalleryCategories(row.categories);
     await ctx.db.insert("galleryPhotos", {
       scope: toScope,
       stableId: row.stableId,
@@ -213,9 +214,7 @@ export async function replaceGalleryScope(
       ...(row.originalFileName !== undefined
         ? { originalFileName: row.originalFileName }
         : {}),
-      ...(row.categories !== undefined && row.categories.length > 0
-        ? { categories: [...row.categories] }
-        : {}),
+      ...(categories !== undefined ? { categories } : {}),
       ...(row.showInCarousel !== undefined
         ? { showInCarousel: row.showInCarousel }
         : {}),

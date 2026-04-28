@@ -15,17 +15,28 @@ export async function promoteGalleryPageCmsFlag(
   args: {
     userId: string;
     updatedBy: string | undefined;
+    publishedAt?: number;
   },
 ): Promise<void> {
   const { id, row } = await ensureSectionMetaRow(ctx, "photos", args.updatedBy);
+  const now = args.publishedAt ?? Date.now();
   if (typeof row.isEnabledDraft !== "boolean") {
+    await ctx.db.patch(id, {
+      hasDraftChanges: false,
+      publishedAt: now,
+      publishedBy: args.userId,
+      updatedAt: now,
+      updatedBy: args.updatedBy,
+    });
     return;
   }
-  const now = Date.now();
 
   if (!sectionHasPendingFlagDraft(row, "photos")) {
     await ctx.db.patch(id, {
       isEnabledDraft: undefined,
+      hasDraftChanges: false,
+      publishedAt: now,
+      publishedBy: args.userId,
       updatedAt: now,
       updatedBy: args.updatedBy,
     });

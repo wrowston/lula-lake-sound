@@ -66,6 +66,8 @@ import {
 } from "./faqTree";
 import { cmsValidationError } from "./errors";
 
+const MARKETING_FLAG_SECTIONS = ["about", "recordings", "pricing"] as const;
+
 /**
  * Snapshot-shaped admin view of a section. Reads per-section scoped tables
  * and folds them back into the historical `publishedSnapshot` / `draftSnapshot`
@@ -315,12 +317,10 @@ export const listMarketingFlagsDraft = query({
       galleryPage: effectiveIsEnabled(photosRow, "photos"),
     };
 
-    const hasDraftChanges = anyMarketingFlagDraftPending(
-      aboutRow,
-      recordingsRow,
-      pricingRow,
-      photosRow,
-    );
+    const hasDraftChanges =
+      sectionHasPendingFlagDraft(aboutRow, "about") ||
+      sectionHasPendingFlagDraft(recordingsRow, "recordings") ||
+      sectionHasPendingFlagDraft(pricingRow, "pricing");
 
     // Expose per-section meta so the publish toolbar can disambiguate which
     // sections need the `publishSection` mutation to promote a flag draft.
@@ -328,13 +328,11 @@ export const listMarketingFlagsDraft = query({
       aboutRow?.publishedAt ?? null,
       recordingsRow?.publishedAt ?? null,
       pricingRow?.publishedAt ?? null,
-      photosRow?.publishedAt ?? null,
     ]);
     const updatedAt = latestNumber([
       aboutRow?.updatedAt ?? null,
       recordingsRow?.updatedAt ?? null,
       pricingRow?.updatedAt ?? null,
-      photosRow?.updatedAt ?? null,
     ]);
 
     return {
@@ -346,12 +344,10 @@ export const listMarketingFlagsDraft = query({
           aboutRow,
           recordingsRow,
           pricingRow,
-          photosRow,
         ]) ?? null,
       updatedAt,
       updatedBy:
-        mostRecentUpdatedBy([aboutRow, recordingsRow, pricingRow, photosRow]) ??
-        null,
+        mostRecentUpdatedBy([aboutRow, recordingsRow, pricingRow]) ?? null,
       perSection: {
         about: {
           isEnabled: publishedIsEnabled(aboutRow, "about"),
@@ -484,12 +480,7 @@ export const publishMarketingFlags = mutation({
     const published: Array<
       Awaited<ReturnType<typeof publishSectionCore>>
     > = [];
-    for (const section of [
-      "about",
-      "recordings",
-      "pricing",
-      "photos",
-    ] as const) {
+    for (const section of MARKETING_FLAG_SECTIONS) {
       const row = await getSectionMetaRow(ctx, section);
       if (!row || !sectionHasPendingFlagDraft(row, section)) continue;
       const result = await publishSectionCore(ctx, {
@@ -528,11 +519,7 @@ export const discardMarketingFlagsDraft = mutation({
   handler: async (ctx) => {
     const { updatedBy } = await requireCmsOwner(ctx);
     let discarded = false;
-    for (const section of [
-      "about",
-      "recordings",
-      "pricing",
-    ] as const) {
+    for (const section of MARKETING_FLAG_SECTIONS) {
       const row = await getSectionMetaRow(ctx, section);
       if (!row || row.isEnabledDraft === undefined) continue;
       await ctx.db.patch(row._id, {

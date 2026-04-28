@@ -109,6 +109,15 @@ describe("galleryDraftMatchesPublished", () => {
     ).toBe(false);
   });
 
+  test("category order is canonicalized before comparing", () => {
+    expect(
+      galleryDraftMatchesPublished(
+        [row({ categories: ["rooms", "gear"] })],
+        [row({ categories: ["gear", "rooms"] })],
+      ),
+    ).toBe(true);
+  });
+
   test("different showInCarousel / showInGallery are not a match", () => {
     expect(
       galleryDraftMatchesPublished(

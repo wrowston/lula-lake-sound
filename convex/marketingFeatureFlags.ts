@@ -40,6 +40,11 @@ const SECTIONS: Array<"about" | "recordings" | "pricing" | "photos"> = [
   "pricing",
   "photos",
 ];
+const MARKETING_FLAG_SECTIONS: Array<"about" | "recordings" | "pricing"> = [
+  "about",
+  "recordings",
+  "pricing",
+];
 
 function latestTimestamp(values: Array<number | null | undefined>): number | null {
   let out: number | null = null;
@@ -91,20 +96,17 @@ export const listDraft = query({
       aboutRow,
       recordingsRow,
       pricingRow,
-      photosRow,
     );
 
     const publishedAt = latestTimestamp([
       aboutRow?.publishedAt ?? null,
       recordingsRow?.publishedAt ?? null,
       pricingRow?.publishedAt ?? null,
-      photosRow?.publishedAt ?? null,
     ]);
     const updatedAt = latestTimestamp([
       aboutRow?.updatedAt,
       recordingsRow?.updatedAt,
       pricingRow?.updatedAt,
-      photosRow?.updatedAt,
     ]);
 
     return {
@@ -115,14 +117,12 @@ export const listDraft = query({
         aboutRow?.publishedBy ??
         recordingsRow?.publishedBy ??
         pricingRow?.publishedBy ??
-        photosRow?.publishedBy ??
         null,
       updatedAt,
       updatedBy:
         aboutRow?.updatedBy ??
         recordingsRow?.updatedBy ??
         pricingRow?.updatedBy ??
-        photosRow?.updatedBy ??
         null,
     };
   },
@@ -207,7 +207,7 @@ export const publishMarketingFeatureFlags = mutation({
     const published: Array<
       Awaited<ReturnType<typeof publishSectionCore>>
     > = [];
-    for (const section of SECTIONS) {
+    for (const section of MARKETING_FLAG_SECTIONS) {
       const row = await getSectionMetaRow(ctx, section);
       if (!row) continue;
       const flagPending =
@@ -241,14 +241,15 @@ export const publishMarketingFeatureFlags = mutation({
 
 /**
  * Legacy `marketingFeatureFlags:discardMarketingFeatureFlagsDraft`. Clears
- * `isEnabledDraft` on every section without touching their content drafts.
+ * `isEnabledDraft` on legacy marketing sections without touching their
+ * content drafts. Gallery-page visibility drafts belong to `/admin/photos`.
  */
 export const discardMarketingFeatureFlagsDraft = mutation({
   args: {},
   handler: async (ctx) => {
     const { updatedBy } = await requireCmsOwner(ctx);
     let discarded = false;
-    for (const section of SECTIONS) {
+    for (const section of MARKETING_FLAG_SECTIONS) {
       const row = await getSectionMetaRow(ctx, section);
       if (!row || row.isEnabledDraft === undefined) continue;
       await ctx.db.patch(row._id, {

@@ -558,12 +558,14 @@ export async function publishGalleryDraftCore(
   } else {
     await ctx.db.patch(metaId, {
       hasDraftChanges: false,
+      publishedAt: now,
+      publishedBy: userId,
       updatedAt: now,
       updatedBy,
     });
   }
 
-  await promoteGalleryPageCmsFlag(ctx, { userId, updatedBy });
+  await promoteGalleryPageCmsFlag(ctx, { userId, updatedBy, publishedAt: now });
 
   const metaFinal = await ctx.db.get(metaId);
   const photosCmsFinal = await getSectionMetaRow(ctx, "photos");
