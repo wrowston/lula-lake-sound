@@ -26,7 +26,6 @@ const ALLOWED_THUMB_HOST_SUFFIXES = [
 const MUX_PLAYBACK_HOST_SUFFIXES = [
   "mux.com",
   "muxcdn.com",
-  "fastly.mux.com",
 ] as const;
 
 function normalizeHostname(raw: string): string | null {
