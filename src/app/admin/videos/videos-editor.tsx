@@ -8,7 +8,7 @@ import {
   useQuery,
 } from "convex/react";
 import { useUser } from "@clerk/nextjs";
-import { Effect, pipe } from "effect";
+import { Effect } from "effect";
 import { toast } from "sonner";
 import {
   ArrowDown,
@@ -52,7 +52,11 @@ import {
 } from "@/components/ui/alert-dialog";
 import { useRegisterCmsEditor } from "@/components/admin/cms-workspace";
 import { runAdminEffect } from "@/lib/admin-run-effect";
-import { convexMutationEffect, type CmsAppError } from "@/lib/effect-errors";
+import {
+  convexMutationEffect,
+  sequentialEffects,
+  type CmsAppError,
+} from "@/lib/effect-errors";
 import { cn } from "@/lib/utils";
 import {
   defaultTitleFromFileName,
@@ -178,7 +182,7 @@ function buildUpdateDraftVideoArgs(
       fields.description.trim().length > 0
         ? fields.description.trim()
         : null,
-    ...(video.provider !== "upload" && trimmedExternal.length > 0
+    ...(video.provider !== "upload"
       ? { externalId: trimmedExternal }
       : {}),
     ...(video.provider === "mux"
@@ -189,15 +193,6 @@ function buildUpdateDraftVideoArgs(
       : {}),
     thumbnailUrl: trimmedThumb.length > 0 ? trimmedThumb : null,
   };
-}
-
-function sequentialEffects(
-  effects: Array<Effect.Effect<unknown, CmsAppError>>,
-): Effect.Effect<void, CmsAppError> {
-  return effects.reduce(
-    (acc, effect) => pipe(acc, Effect.flatMap(() => effect)),
-    Effect.succeed(undefined) as Effect.Effect<void, CmsAppError>,
-  );
 }
 
 async function uploadFileWithProgress(

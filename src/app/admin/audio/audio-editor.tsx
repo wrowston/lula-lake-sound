@@ -19,7 +19,7 @@ import {
   type ChangeEvent,
   type DragEvent as ReactDragEvent,
 } from "react";
-import { Effect, pipe } from "effect";
+import { Effect } from "effect";
 import { toast } from "sonner";
 import {
   ArrowDown,
@@ -47,7 +47,11 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { useRegisterCmsEditor } from "@/components/admin/cms-workspace";
-import { convexMutationEffect, type CmsAppError } from "@/lib/effect-errors";
+import {
+  convexMutationEffect,
+  sequentialEffects,
+  type CmsAppError,
+} from "@/lib/effect-errors";
 import { runAdminEffect } from "@/lib/admin-run-effect";
 import {
   mergeAutosaveStatus,
@@ -288,19 +292,6 @@ function httpsImagePreviewUrl(raw: string): string | null {
 
 function isAcceptedAlbumArtFile(file: File): boolean {
   return ["image/jpeg", "image/png", "image/webp"].includes(file.type);
-}
-
-function sequentialEffects(
-  effects: Array<Effect.Effect<unknown, CmsAppError>>,
-): Effect.Effect<void, CmsAppError> {
-  return effects.reduce(
-    (acc, effect) =>
-      pipe(
-        acc,
-        Effect.flatMap(() => effect),
-      ),
-    Effect.succeed(undefined) as Effect.Effect<void, CmsAppError>,
-  );
 }
 
 async function readAudioDurationSec(file: File): Promise<number | null> {
