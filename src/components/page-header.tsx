@@ -45,7 +45,19 @@ interface PageHeaderProps {
   readonly aside?: ReactNode;
   /** Stable id used by `aria-labelledby` on the surrounding section. */
   readonly titleId?: string;
+  /**
+   * `hero` — large cover title (Gallery). `about` / `standard` — tuned for
+   * longer hero titles on inner marketing pages.
+   */
+  readonly titleSize?: "hero" | "about" | "standard";
 }
+
+const TITLE_FONT_SIZE: Record<NonNullable<PageHeaderProps["titleSize"]>, string> =
+  {
+    hero: "clamp(3rem, 11vw, 8.5rem)",
+    about: "clamp(2.5rem, 6vw, 5.5rem)",
+    standard: "clamp(2rem, 4.5vw, 4rem)",
+  };
 
 export function PageHeader({
   eyebrow,
@@ -55,6 +67,7 @@ export function PageHeader({
   backLabel = "← Lula Lake Sound",
   aside,
   titleId = "page-header-title",
+  titleSize = "hero",
 }: PageHeaderProps) {
   return (
     <section
@@ -87,7 +100,7 @@ export function PageHeader({
             revealDelay(2),
             "headline-primary mt-8 text-balance leading-[0.95] text-warm-white md:mt-10",
           )}
-          style={{ fontSize: "clamp(3rem, 11vw, 8.5rem)" }}
+          style={{ fontSize: TITLE_FONT_SIZE[titleSize] }}
         >
           {title}
         </h1>

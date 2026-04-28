@@ -12,6 +12,10 @@ import { useUser } from "@clerk/nextjs";
 import { api } from "../../../../convex/_generated/api";
 import type { Id } from "../../../../convex/_generated/dataModel";
 import {
+  GALLERY_CATEGORY_ADMIN_OPTIONS,
+  type GalleryCategorySlug,
+} from "../../../../convex/galleryPhotos";
+import {
   useCallback,
   useMemo,
   useRef,
@@ -60,27 +64,8 @@ const MAX_CAPTION_LENGTH = 600;
  */
 const REORDER_MIME = "application/x-lls-photo-reorder";
 
-/**
- * Controlled vocabulary for the public `/gallery` filter pills (INF-47).
- * Mirrors `GALLERY_CATEGORY_SLUGS` / `GALLERY_CATEGORY_LABELS` in
- * `convex/galleryPhotos.ts` — kept in lock-step so admin checkboxes can't
- * write a slug that the Convex normaliser will silently drop.
- */
-export const GALLERY_CATEGORY_OPTIONS: ReadonlyArray<{
-  readonly slug: "rooms" | "gear" | "grounds";
-  readonly label: string;
-  readonly description: string;
-}> = [
-  { slug: "rooms", label: "Rooms", description: "Live rooms, control room, iso booths." },
-  { slug: "gear", label: "Gear", description: "Console, racks, mics, instruments." },
-  {
-    slug: "grounds",
-    label: "Grounds",
-    description: "Exteriors, hallway, residential wing.",
-  },
-];
-
-type GalleryCategorySlug = (typeof GALLERY_CATEGORY_OPTIONS)[number]["slug"];
+/** Re-export for tests; canonical definitions live in `convex/galleryPhotos.ts`. */
+export const GALLERY_CATEGORY_OPTIONS = GALLERY_CATEGORY_ADMIN_OPTIONS;
 
 type PhotoItem = {
   stableId: string;

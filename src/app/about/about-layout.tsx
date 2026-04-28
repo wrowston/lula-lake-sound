@@ -187,6 +187,7 @@ export function AboutLayout({ data, showPricing, marketing, banner }: AboutLayou
           meta="Lookout Mountain, TN — Est. 2019"
           backHref={backToHomeHref}
           titleId="about-hero-title"
+          titleSize="about"
         />
 
         {data.heroSubtitle ? (

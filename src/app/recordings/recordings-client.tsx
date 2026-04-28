@@ -649,6 +649,7 @@ export function RecordingsClient({
           meta="Tracked · Mixed · Mastered"
           backHref={backToHomeHref}
           titleId="recordings-title"
+          titleSize="standard"
         />
 
         <section

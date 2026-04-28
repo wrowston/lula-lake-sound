@@ -39,6 +39,32 @@ export const GALLERY_CATEGORY_LABELS: Record<GalleryCategorySlug, string> = {
   grounds: "Grounds",
 };
 
+/**
+ * Admin checkbox copy for each catalogue slug. Single source for public pills
+ * (`GALLERY_CATEGORY_LABELS`) + editor UI.
+ */
+export const GALLERY_CATEGORY_ADMIN_OPTIONS: ReadonlyArray<{
+  readonly slug: GalleryCategorySlug;
+  readonly label: string;
+  readonly description: string;
+}> = [
+  {
+    slug: "rooms",
+    label: GALLERY_CATEGORY_LABELS.rooms,
+    description: "Live rooms, control room, iso booths.",
+  },
+  {
+    slug: "gear",
+    label: GALLERY_CATEGORY_LABELS.gear,
+    description: "Console, racks, mics, instruments.",
+  },
+  {
+    slug: "grounds",
+    label: GALLERY_CATEGORY_LABELS.grounds,
+    description: "Exteriors, hallway, residential wing.",
+  },
+];
+
 export function isGalleryCategorySlug(
   value: string,
 ): value is GalleryCategorySlug {
@@ -86,7 +112,8 @@ function comparablePhoto(row: GalleryPhotoDoc) {
     contentType: row.contentType,
     sizeBytes: row.sizeBytes,
     originalFileName: row.originalFileName ?? null,
-    categories: row.categories ?? null,
+    categories:
+      row.categories && row.categories.length > 0 ? row.categories : null,
     showInCarousel: row.showInCarousel !== false,
     showInGallery: row.showInGallery !== false,
   };

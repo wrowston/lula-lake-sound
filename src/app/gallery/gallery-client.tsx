@@ -3,8 +3,18 @@
 import Image from "next/image";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { useCallback, useMemo, useRef, useState } from "react";
+import {
+  useCallback,
+  useLayoutEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
 
+import {
+  GALLERY_CATEGORY_LABELS,
+  GALLERY_CATEGORY_SLUGS,
+} from "@convex/galleryPhotos";
 import { Header } from "@/components/header";
 import { PageHeader } from "@/components/page-header";
 import { SiteFooter } from "@/components/site-footer";
@@ -37,10 +47,11 @@ import { cn } from "@/lib/utils";
  */
 
 const FILTER_PILLS = [
-  { id: "all", label: "All" },
-  { id: "rooms", label: "Rooms" },
-  { id: "gear", label: "Gear" },
-  { id: "grounds", label: "Grounds" },
+  { id: "all" as const, label: "All" },
+  ...GALLERY_CATEGORY_SLUGS.map((slug) => ({
+    id: slug,
+    label: GALLERY_CATEGORY_LABELS[slug],
+  })),
 ] as const;
 
 type FilterId = (typeof FILTER_PILLS)[number]["id"];
@@ -142,6 +153,8 @@ export function GalleryClient({
   /** Pathname when the overlay mounted — skip scroll/focus restore after navigation away. */
   const lightboxOpenedPathnameRef = useRef<string | null>(null);
   const overlayRef = useRef<HTMLDivElement | null>(null);
+  const pathnameRef = useRef(pathname);
+  pathnameRef.current = pathname;
   const previousFocusRef = useRef<HTMLElement | null>(null);
 
   const isOpen = activeIndex !== null;
@@ -166,48 +179,47 @@ export function GalleryClient({
     });
   }, [visibleItems.length]);
 
-  // Ref-callback for the overlay handles three concerns without `useEffect`:
-  //   1. lock body scroll while the lightbox is open (and pin the page so
-  //      iOS doesn't bounce-scroll behind the overlay),
-  //   2. move focus into the overlay so screen readers + keyboard users
-  //      land in the dialog,
-  //   3. restore focus + scroll position on close.
-  const overlayRefCallback = useCallback(
-    (node: HTMLDivElement | null) => {
-      overlayRef.current = node;
-      if (typeof document === "undefined") return;
-      if (node) {
-        lightboxOpenedPathnameRef.current = pathname;
-        previousFocusRef.current =
-          (document.activeElement as HTMLElement | null) ?? null;
-        const offsetY = window.scrollY;
-        lockedScrollYRef.current = offsetY;
-        document.body.style.position = "fixed";
-        document.body.style.top = `-${offsetY}px`;
-        document.body.style.left = "0";
-        document.body.style.right = "0";
-        document.body.style.width = "100%";
-        node.focus({ preventScroll: true });
-      } else {
-        document.body.style.position = "";
-        document.body.style.top = "";
-        document.body.style.left = "";
-        document.body.style.right = "";
-        document.body.style.width = "";
-        const openedAt = lightboxOpenedPathnameRef.current;
-        lightboxOpenedPathnameRef.current = null;
-        const stillOnSameDocumentPath =
-          openedAt !== null && window.location.pathname === openedAt;
-        if (stillOnSameDocumentPath) {
-          window.scrollTo(0, lockedScrollYRef.current);
-          if (previousFocusRef.current) {
-            previousFocusRef.current.focus({ preventScroll: true });
-          }
+  // `useLayoutEffect` keeps body lock + scroll restore stable when `pathname`
+  // updates mid-mount (e.g. shallow routing); a ref-callback would re-run with
+  // `null` then the node again and overwrite `lockedScrollYRef` while fixed.
+  // Intentionally depends only on `isOpen`: including `activeItem` would run
+  // cleanup on prev/next and unlock the body mid-lightbox.
+  useLayoutEffect(() => {
+    if (!isOpen || !activeItem) return undefined;
+    const node = overlayRef.current;
+    if (!node || typeof document === "undefined") return undefined;
+
+    lightboxOpenedPathnameRef.current = pathnameRef.current;
+    previousFocusRef.current =
+      (document.activeElement as HTMLElement | null) ?? null;
+    const offsetY = window.scrollY;
+    lockedScrollYRef.current = offsetY;
+    document.body.style.position = "fixed";
+    document.body.style.top = `-${offsetY}px`;
+    document.body.style.left = "0";
+    document.body.style.right = "0";
+    document.body.style.width = "100%";
+    node.focus({ preventScroll: true });
+
+    return () => {
+      document.body.style.position = "";
+      document.body.style.top = "";
+      document.body.style.left = "";
+      document.body.style.right = "";
+      document.body.style.width = "";
+      const openedAt = lightboxOpenedPathnameRef.current;
+      lightboxOpenedPathnameRef.current = null;
+      const stillOnSameDocumentPath =
+        openedAt !== null && window.location.pathname === openedAt;
+      if (stillOnSameDocumentPath) {
+        window.scrollTo(0, lockedScrollYRef.current);
+        if (previousFocusRef.current) {
+          previousFocusRef.current.focus({ preventScroll: true });
         }
       }
-    },
-    [pathname],
-  );
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- `activeItem` is only a guard; adding it would unlock the body on prev/next.
+  }, [isOpen]);
 
   const handleOverlayKeyDown = useCallback(
     (event: React.KeyboardEvent<HTMLDivElement>) => {
@@ -346,7 +358,7 @@ export function GalleryClient({
 
       {isOpen && activeItem ? (
         <div
-          ref={overlayRefCallback}
+          ref={overlayRef}
           role="dialog"
           aria-modal="true"
           aria-label={activeItem.alt || "Gallery image"}

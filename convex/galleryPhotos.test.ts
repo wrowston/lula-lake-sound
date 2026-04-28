@@ -119,12 +119,15 @@ describe("galleryDraftMatchesPublished", () => {
   });
 
   test("undefined vs empty-array categories normalize to the same value", () => {
-    // Empty arrays serialize the same as `null` per `comparablePhoto`
-    // (both → `[]` ≠ `null`), so we explicitly check the undefined case
-    // to lock in the normalisation contract.
     expect(
       galleryDraftMatchesPublished(
         [row({ categories: undefined })],
+        [row({ categories: [] })],
+      ),
+    ).toBe(true);
+    expect(
+      galleryDraftMatchesPublished(
+        [row({ categories: [] })],
         [row({ categories: undefined })],
       ),
     ).toBe(true);

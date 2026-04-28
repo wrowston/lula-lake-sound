@@ -19,7 +19,7 @@ import {
   patchGalleryMetaAfterDraftChange,
   replaceGalleryScope,
 } from "../galleryPhotos";
-import { getSectionMetaRow } from "../cmsMeta";
+import { getSectionMetaRow, recomputeSectionHasDraftChanges } from "../cmsMeta";
 import { cmsNotFound, cmsPublishValidationFailed, cmsValidationError } from "../errors";
 import { requireCmsOwner } from "../lib/auth";
 import { promoteGalleryPageCmsFlag } from "../photosCmsFlags";
@@ -626,10 +626,10 @@ export const discardDraftPhotos = mutation({
       const now = Date.now();
       await ctx.db.patch(cmsRow._id, {
         isEnabledDraft: undefined,
-        hasDraftChanges: false,
         updatedAt: now,
         updatedBy,
       });
+      await recomputeSectionHasDraftChanges(ctx, "photos", updatedBy);
     }
 
     return { ok: true as const, discarded: true };
