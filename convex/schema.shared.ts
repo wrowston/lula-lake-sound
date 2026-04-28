@@ -319,6 +319,40 @@ export const amenitiesNearbyItemRowValidator = {
 export const gearScopeValidator = cmsScopeValidator;
 
 /**
+ * CMS video embed/upload providers (INF-92). Only these values may drive embed UI;
+ * arbitrary iframe URLs are rejected — see `videoUrls.ts` and `docs/cms-videos.md`.
+ */
+export const cmsVideoProviderValidator = v.union(
+  v.literal("youtube"),
+  v.literal("vimeo"),
+  v.literal("mux"),
+  v.literal("upload"),
+);
+
+/**
+ * One row per studio video in draft or published scope (same pattern as `galleryPhotos`).
+ */
+export const cmsVideoRowValidator = {
+  scope: cmsScopeValidator,
+  stableId: v.string(),
+  title: v.string(),
+  description: v.optional(v.string()),
+  sortOrder: v.number(),
+  provider: cmsVideoProviderValidator,
+  /** Provider-native id when applicable (e.g. YouTube video id, Vimeo numeric id). */
+  externalId: v.optional(v.string()),
+  /**
+   * HTTPS playback URL when stored explicitly (e.g. Mux `.m3u8`); upload rows may omit and use `videoStorageId` only.
+   */
+  playbackUrl: v.optional(v.string()),
+  /** Uploaded video blob (`provider === "upload"`). */
+  videoStorageId: v.optional(v.id("_storage")),
+  thumbnailStorageId: v.optional(v.id("_storage")),
+  thumbnailUrl: v.optional(v.string()),
+  durationSec: v.optional(v.number()),
+} as const;
+
+/**
  * Item specs: markdown string or structured key/value pairs.
  */
 export const gearSpecsValidator = v.union(
