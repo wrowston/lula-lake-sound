@@ -58,6 +58,7 @@ import {
   useMarketingFeatureFlagsAdmin,
 } from "@/lib/use-marketing-feature-flags-admin";
 import { cn } from "@/lib/utils";
+import { AudioEditorSkeleton } from "./audio-editor-skeleton";
 
 const MAX_TITLE_LENGTH = 200;
 const MAX_ARTIST_LENGTH = 200;
@@ -1344,7 +1345,7 @@ function AudioEditorForm() {
   );
 
   if (data === undefined || featureFlagsLoading) {
-    return <p className="body-text text-foreground/80">Loading audio…</p>;
+    return <AudioEditorSkeleton />;
   }
 
   const anyUploading = uploadQueue.some(

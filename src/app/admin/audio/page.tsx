@@ -1,14 +1,11 @@
 import type { Metadata } from "next";
 import dynamic from "next/dynamic";
 import { AdminHeader } from "@/components/admin/admin-header";
+import { AudioEditorSkeleton } from "./audio-editor-skeleton";
 
 const AudioEditor = dynamic(
   () => import("./audio-editor").then((m) => ({ default: m.AudioEditor })),
-  {
-    loading: () => (
-      <p className="body-text text-muted-foreground">Loading audio…</p>
-    ),
-  },
+  { loading: () => <AudioEditorSkeleton /> },
 );
 
 export const metadata: Metadata = {

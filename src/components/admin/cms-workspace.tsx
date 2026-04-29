@@ -18,7 +18,10 @@ import { CmsPublishToolbar } from "@/components/admin/cms-publish-toolbar";
 import { CrossSectionPendingBanner } from "@/components/admin/cross-section-pending-banner";
 import { UnsavedChangesDialog } from "@/components/admin/unsaved-changes-dialog";
 import { BeforeUnloadGuard } from "@/components/admin/before-unload-guard";
-import { usePendingDraftSections } from "@/components/admin/use-pending-drafts";
+import {
+  PendingDraftSectionsProvider,
+  usePendingDraftSections,
+} from "@/components/admin/use-pending-drafts";
 import { cn } from "@/lib/utils";
 
 /**
@@ -138,13 +141,15 @@ export function CmsWorkspaceProvider({ children }: { children: ReactNode }) {
 
   return (
     <CmsWorkspaceContext.Provider value={value}>
-      {children}
-      <BeforeUnloadGuard />
-      <UnsavedChangesDialog
-        open={confirmOpen}
-        onLeave={() => handleConfirmResult("leave")}
-        onStay={() => handleConfirmResult("stay")}
-      />
+      <PendingDraftSectionsProvider>
+        {children}
+        <BeforeUnloadGuard />
+        <UnsavedChangesDialog
+          open={confirmOpen}
+          onLeave={() => handleConfirmResult("leave")}
+          onStay={() => handleConfirmResult("stay")}
+        />
+      </PendingDraftSectionsProvider>
     </CmsWorkspaceContext.Provider>
   );
 }
