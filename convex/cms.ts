@@ -8,6 +8,7 @@ import {
   settingsContentValidator,
 } from "./schema.shared";
 import {
+  CMS_PENDING_DRAFT_QUERY_LIMIT,
   defaultSnapshotForSection,
   type AboutSnapshot,
   type AmenitiesNearbySnapshot,
@@ -264,7 +265,10 @@ export const listPendingDrafts = query({
     await requireCmsOwner(ctx);
 
     const [cmsRows, gearMeta, galleryMeta, videoMeta] = await Promise.all([
-      ctx.db.query("cmsSections").collect(),
+      ctx.db
+        .query("cmsSections")
+        .withIndex("by_hasDraftChanges", (q) => q.eq("hasDraftChanges", true))
+        .take(CMS_PENDING_DRAFT_QUERY_LIMIT),
       ctx.db
         .query("gearMeta")
         .withIndex("by_singleton", (q) => q.eq("singletonKey", "default"))

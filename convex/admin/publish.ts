@@ -29,6 +29,7 @@ import {
   publishVideosDraftCore,
   validateDraftVideosForPublish,
 } from "./videos";
+import { CMS_PENDING_DRAFT_QUERY_LIMIT } from "../cmsShared";
 
 export const publish = mutation({
   args: { section: cmsSectionValidator },
@@ -50,7 +51,10 @@ export const publishSite = mutation({
   handler: async (ctx) => {
     const { userId, updatedBy } = await requireCmsOwner(ctx);
 
-    const rows = await ctx.db.query("cmsSections").take(50);
+    const rows = await ctx.db
+      .query("cmsSections")
+      .withIndex("by_hasDraftChanges", (q) => q.eq("hasDraftChanges", true))
+      .take(CMS_PENDING_DRAFT_QUERY_LIMIT);
     const targets = rowsWithPublishableDraft(rows);
 
     const galleryMeta = await ctx.db
