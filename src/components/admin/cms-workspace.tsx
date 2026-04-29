@@ -192,12 +192,20 @@ export function CmsWorkspaceProvider({ children }: { children: ReactNode }) {
       return;
     }
 
-    if (
-      prevPathname !== pathname &&
-      !isRouteTransitionPending &&
-      !pathMatchesPending(pathname, pendingNavigationHref)
-    ) {
-      setPendingNavigationHref(null);
+    if (!isRouteTransitionPending) {
+      if (
+        prevPathname !== pathname &&
+        !pathMatchesPending(pathname, pendingNavigationHref)
+      ) {
+        setPendingNavigationHref(null);
+        return;
+      }
+      if (
+        prevPathname === pathname &&
+        !pathMatchesPending(pathname, pendingNavigationHref)
+      ) {
+        setPendingNavigationHref(null);
+      }
     }
   }, [pathname, pendingNavigationHref, isRouteTransitionPending]);
 
