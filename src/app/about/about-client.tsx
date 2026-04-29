@@ -1,9 +1,14 @@
 "use client";
 
-import { usePreloadedQuery, type Preloaded } from "convex/react";
+import type { Preloaded } from "convex/react";
 import { api } from "../../../convex/_generated/api";
 import { AboutLayout } from "./about-layout";
-import { isHomepagePricingSectionEnabled } from "@/lib/site-settings";
+import {
+  DEFAULT_MARKETING_FEATURE_FLAGS,
+  isHomepagePricingSectionEnabled,
+  type MarketingFeatureFlags,
+} from "@/lib/site-settings";
+import { useSafePreloadedQuery } from "@/lib/use-public-convex-query";
 
 type PreloadedAbout = Preloaded<typeof api.public.getPublishedAbout>;
 type PreloadedMarketing = Preloaded<
@@ -22,9 +27,23 @@ export function AboutClient({
   readonly aboutPreloaded: PreloadedAbout;
   readonly marketingPreloaded: PreloadedMarketing;
 }) {
-  const data = usePreloadedQuery(aboutPreloaded);
-  const marketing = usePreloadedQuery(marketingPreloaded);
-  const showPricing = isHomepagePricingSectionEnabled(marketing);
+  const data = useSafePreloadedQuery(aboutPreloaded, { section: "about_body" });
+  const marketingLive = useSafePreloadedQuery(marketingPreloaded, {
+    section: "about_marketing_flags",
+  });
+  const marketing: MarketingFeatureFlags =
+    marketingLive ?? DEFAULT_MARKETING_FEATURE_FLAGS;
+  const showPricing =
+    marketingLive === null
+      ? true
+      : isHomepagePricingSectionEnabled(marketingLive);
 
-  return <AboutLayout data={data} showPricing={showPricing} marketing={marketing} />;
+  return (
+    <AboutLayout
+      data={data}
+      showPricing={showPricing}
+      marketing={marketing}
+      convexUnavailable={data === null}
+    />
+  );
 }

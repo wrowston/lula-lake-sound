@@ -9,8 +9,10 @@ import type {
   PublicAboutSnapshot,
   PublicAboutTeamMember,
 } from "../../../convex/cmsShared";
+import { ABOUT_DEFAULTS } from "@convex/cmsShared";
 import { Header } from "@/components/header";
 import { PageHeader } from "@/components/page-header";
+import { PublicSectionNotice } from "@/components/public-section-notice";
 import { SiteFooter } from "@/components/site-footer";
 import { AboutBodyContent } from "./about-body-content";
 import { cn } from "@/lib/utils";
@@ -121,7 +123,7 @@ function Headshot({ member, fallbackRole }: HeadshotProps) {
 }
 
 interface AboutLayoutProps {
-  readonly data: PublicAboutSnapshot;
+  readonly data: PublicAboutSnapshot | null | undefined;
   readonly showPricing: boolean;
   /** Nav visibility: About / Recordings / pricing block (published or preview). */
   readonly marketing: MarketingFeatureFlags;
@@ -130,9 +132,24 @@ interface AboutLayoutProps {
    * "Draft" / "No unpublished changes" state).
    */
   readonly banner?: React.ReactNode;
+  /** Live Convex subscription failed while hydrating preloaded About content. */
+  readonly convexUnavailable?: boolean;
 }
 
-export function AboutLayout({ data, showPricing, marketing, banner }: AboutLayoutProps) {
+export function AboutLayout({
+  data: dataProp,
+  showPricing,
+  marketing,
+  banner,
+  convexUnavailable = false,
+}: AboutLayoutProps) {
+  const data: PublicAboutSnapshot =
+    dataProp ??
+    ({
+      ...ABOUT_DEFAULTS,
+      heroImageUrl: null,
+      teamMembers: [],
+    } as PublicAboutSnapshot);
   const { scrollY, containerRef } = useScrollAndReveal();
   const pathname = usePathname();
   const showRecordings = marketing.recordingsPage === true;
@@ -181,6 +198,16 @@ export function AboutLayout({ data, showPricing, marketing, banner }: AboutLayou
       />
 
       <main>
+        {convexUnavailable ? (
+          <div className="bg-washed-black px-6 py-8 md:px-16">
+            <div className="mx-auto max-w-3xl">
+              <PublicSectionNotice title="Unable to refresh About content">
+                You may be seeing cached copy or images from your last visit.
+                Try refreshing the page when you are back online.
+              </PublicSectionNotice>
+            </div>
+          </div>
+        ) : null}
         <PageHeader
           eyebrow="About the studio"
           title={data.heroTitle}

@@ -9,6 +9,7 @@ import {
   AccordionPanel,
   AccordionTrigger,
 } from "@/components/ui/accordion";
+import { PublicSectionNotice } from "@/components/public-section-notice";
 
 /**
  * Published (or preview) gear payload surfaced to the marketing site.
@@ -142,8 +143,8 @@ function EquipmentSpecsEmpty() {
 interface EquipmentSpecsProps {
   /**
    * `undefined` → still loading (render skeleton).
-   * `null` → query unavailable or caller not permitted (render empty state).
-   * Payload → render accordion.
+   * `null` → query failed or unavailable (friendly notice).
+   * Empty categories → published empty state ("coming soon").
    */
   readonly gear: GearPayload | null | undefined;
 }
@@ -153,7 +154,20 @@ export function EquipmentSpecs({ gear }: EquipmentSpecsProps) {
     return <EquipmentSpecsSkeleton />;
   }
 
-  const categories = gear?.categories ?? [];
+  if (gear === null) {
+    return (
+      <SectionShell>
+        <div className="reveal reveal-delay-2">
+          <PublicSectionNotice title="Unable to load equipment list">
+            We couldn&rsquo;t load the detailed gear list. Studio specifications
+            above are still accurate; try again shortly for the full inventory.
+          </PublicSectionNotice>
+        </div>
+      </SectionShell>
+    );
+  }
+
+  const categories = gear.categories ?? [];
 
   if (categories.length === 0) {
     return (

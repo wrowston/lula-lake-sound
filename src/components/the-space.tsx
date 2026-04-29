@@ -60,10 +60,27 @@ function StudioGallery({
   const [currentIndex, setCurrentIndex] = useState(0);
 
   const isLoading = photos === undefined;
+  const isError = photos === null;
   const availablePhotos = photos ?? [];
 
   if (isLoading) {
     return <GallerySkeleton />;
+  }
+
+  if (isError) {
+    return (
+      <div className="reveal reveal-delay-2">
+        <div className="relative mx-auto w-full max-w-5xl">
+          <div className="relative flex min-h-[40vh] w-full items-center justify-center overflow-hidden border border-sand/10 bg-washed-black px-6 py-20 md:min-h-[50vh]">
+            <div className="body-text-small max-w-md text-center text-ivory/78">
+              We couldn&rsquo;t load the gallery preview. Your connection or our
+              servers may be having a moment. Try refreshing the page in a little
+              while.
+            </div>
+          </div>
+        </div>
+      </div>
+    );
   }
 
   if (availablePhotos.length === 0) {
@@ -71,7 +88,10 @@ function StudioGallery({
       <div className="reveal reveal-delay-2">
         <div className="relative mx-auto w-full max-w-5xl">
           <div className="relative flex h-[60vh] w-full items-center justify-center overflow-hidden border border-sand/10 bg-washed-black md:h-[72vh]">
-            <div className="body-text-small text-ivory/50">No images available</div>
+            <div className="body-text-small text-ivory/78 px-6 text-center max-w-md">
+              Photo carousel is not published yet. New images will appear here
+              when they go live.
+            </div>
           </div>
         </div>
       </div>

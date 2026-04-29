@@ -42,6 +42,14 @@ export type MarketingFeatureFlags = {
   galleryPage: boolean;
 };
 
+/** Conservative defaults when Convex marketing flags are unavailable (error UI). */
+export const DEFAULT_MARKETING_FEATURE_FLAGS: MarketingFeatureFlags = {
+  aboutPage: false,
+  recordingsPage: true,
+  pricingSection: true,
+  galleryPage: true,
+};
+
 /**
  * When `false`, `/gallery` 404s and the Gallery nav item is hidden.
  * Missing `galleryPage` is treated as on (matches `DEFAULT_IS_ENABLED.photos`).

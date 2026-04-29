@@ -1,7 +1,7 @@
 "use client";
 
 import { useMemo } from "react";
-import { usePreloadedQuery, type Preloaded } from "convex/react";
+import type { Preloaded } from "convex/react";
 
 import { api } from "../../../convex/_generated/api";
 import { RecordingsClient } from "./recordings-client";
@@ -9,7 +9,11 @@ import {
   mapPublishedAudioToRecordings,
   type Recording,
 } from "./recordings-data";
-import { type MarketingFeatureFlags } from "@/lib/site-settings";
+import {
+  type MarketingFeatureFlags,
+  DEFAULT_MARKETING_FEATURE_FLAGS,
+} from "@/lib/site-settings";
+import { useSafePreloadedQuery } from "@/lib/use-public-convex-query";
 
 type PreloadedAudio = Preloaded<typeof api.public.getPublishedAudioTracks>;
 
@@ -24,11 +28,22 @@ export function RecordingsPageClient({
   readonly preloadedAudio: PreloadedAudio;
   readonly marketing: MarketingFeatureFlags;
 }) {
-  const raw = usePreloadedQuery(preloadedAudio);
-  const recordings = useMemo(
-    (): Recording[] => mapPublishedAudioToRecordings(raw),
-    [raw],
-  );
+  const raw = useSafePreloadedQuery(preloadedAudio, {
+    section: "recordings_audio",
+  });
+  const recordings = useMemo((): Recording[] => {
+    if (raw === null || raw === undefined) return [];
+    return mapPublishedAudioToRecordings(raw);
+  }, [raw]);
 
-  return <RecordingsClient recordings={recordings} marketing={marketing} />;
+  const resolvedMarketing: MarketingFeatureFlags =
+    raw === null ? DEFAULT_MARKETING_FEATURE_FLAGS : marketing;
+
+  return (
+    <RecordingsClient
+      recordings={recordings}
+      marketing={resolvedMarketing}
+      convexUnavailable={raw === null}
+    />
+  );
 }

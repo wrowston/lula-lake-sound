@@ -1,6 +1,7 @@
 "use client";
 
 import { AmenityCard } from "./ui/amenity-card";
+import { PublicSectionNotice } from "@/components/public-section-notice";
 
 const STATIC_EYEBROW = "Local Favorites";
 const STATIC_HEADING = "Amenities Nearby";
@@ -40,7 +41,20 @@ export function AmenitiesNearby({ amenities }: AmenitiesNearbyProps) {
   }
 
   if (amenities === null) {
-    return null;
+    return (
+      <section
+        id="local-favorites"
+        className="relative overflow-hidden bg-forest px-6 py-28 md:py-40"
+      >
+        <div className="absolute inset-0 bg-texture-canvas opacity-14" />
+        <div className="relative z-10 mx-auto max-w-6xl">
+          <PublicSectionNotice title="Unable to load local favorites">
+            Nearby dining and lodging picks will appear here when we can reach
+            the server again.
+          </PublicSectionNotice>
+        </div>
+      </section>
+    );
   }
 
   if (!amenities.isEnabled || amenities.rows.length === 0) {

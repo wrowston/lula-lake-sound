@@ -2,6 +2,7 @@ import {
   ServicesAndPricing,
   ServicesAndPricingSkeleton,
 } from "@/components/services-pricing";
+import { PublicSectionNotice } from "@/components/public-section-notice";
 import {
   type MarketingFeatureFlags,
   type PricingFlags,
@@ -50,6 +51,25 @@ export function MarketingPricingSection({
 
   if (loading) {
     return <ServicesAndPricingSkeleton />;
+  }
+
+  if (pricingFlags === null) {
+    return (
+      <section
+        id="services-pricing"
+        className="relative overflow-hidden bg-washed-black px-6 py-28 md:py-40"
+      >
+        <div className="absolute inset-0 bg-texture-ink-wash opacity-55" />
+        <div className="absolute inset-0 bg-texture-stone opacity-20" />
+        <div className="relative z-10 mx-auto max-w-6xl">
+          <PublicSectionNotice title="Unable to load rates">
+            We couldn&rsquo;t reach our booking system just now. Pricing will
+            appear again when the connection is restored. You can still reach
+            out below &mdash; we&rsquo;ll reply with current rates.
+          </PublicSectionNotice>
+        </div>
+      </section>
+    );
   }
 
   const packages = pricingFlags.packages ?? [];

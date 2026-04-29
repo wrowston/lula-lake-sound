@@ -1,8 +1,8 @@
 "use client";
 
-import { useQuery } from "convex/react";
 import { usePathname } from "next/navigation";
 import { api } from "../../convex/_generated/api";
+import { usePublicConvexQuery } from "@/lib/use-public-convex-query";
 import { AmenitiesNearby } from "@/components/amenities-nearby";
 import { ArtistInquiries } from "@/components/artist-inquiries";
 import { MarketingPricingSection } from "@/components/dynamic-pricing";
@@ -65,9 +65,13 @@ export function HomepageShell({
   const homeSectionBase = isPreview ? "/preview" : "/";
   const recordingsNavHref = isPreview ? "/preview/recordings" : "/recordings";
 
-  const liveMarketing = useQuery(
+  const liveMarketing = usePublicConvexQuery(
     api.public.getPublishedMarketingFeatureFlags,
-    marketingFromProps === undefined ? {} : "skip",
+    {},
+    {
+      section: "home_marketing_flags",
+      skip: marketingFromProps !== undefined,
+    },
   );
   const marketing =
     marketingFromProps === undefined ? liveMarketing : marketingFromProps;
