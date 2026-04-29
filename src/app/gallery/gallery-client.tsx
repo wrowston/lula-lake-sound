@@ -302,6 +302,8 @@ export function GalleryClient({
           meta="Rooms · Gear · Grounds"
           backHref={isPreview ? "/preview" : "/"}
           titleId="gallery-title"
+          titleSize="about"
+          density="compact"
           aside={
             <CategoryFilter filter={filter} onChange={handleSelectFilter} />
           }

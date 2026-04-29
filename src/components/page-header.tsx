@@ -46,10 +46,15 @@ interface PageHeaderProps {
   /** Stable id used by `aria-labelledby` on the surrounding section. */
   readonly titleId?: string;
   /**
-   * `hero` — large cover title (Gallery). `about` / `standard` — tuned for
-   * longer hero titles on inner marketing pages.
+   * `hero` — largest cover title. `about` / `standard` — tuned for longer hero
+   * titles on inner marketing pages (Gallery uses `about` + compact density).
    */
   readonly titleSize?: "hero" | "about" | "standard";
+  /**
+   * `compact` — tighter vertical padding and spacing so below-the-fold content
+   * (e.g. gallery grids) lands sooner.
+   */
+  readonly density?: "default" | "compact";
 }
 
 const TITLE_FONT_SIZE: Record<NonNullable<PageHeaderProps["titleSize"]>, string> =
@@ -68,10 +73,18 @@ export function PageHeader({
   aside,
   titleId = "page-header-title",
   titleSize = "hero",
+  density = "default",
 }: PageHeaderProps) {
+  const compact = density === "compact";
+
   return (
     <section
-      className="relative overflow-hidden bg-washed-black px-6 pb-16 pt-32 md:px-16 md:pb-24 md:pt-44"
+      className={cn(
+        "relative overflow-hidden bg-washed-black px-6 md:px-16",
+        compact
+          ? "pb-10 pt-20 md:pb-14 md:pt-24"
+          : "pb-16 pt-32 md:pb-24 md:pt-44",
+      )}
       aria-labelledby={titleId}
     >
       <div className="relative mx-auto w-full max-w-7xl">
@@ -89,7 +102,8 @@ export function PageHeader({
           className={cn(
             revealDelay(1),
             "label-text text-[11px] tracking-[0.3em] text-sand/55",
-            backHref ? "mt-12 md:mt-16" : "",
+            backHref &&
+              (compact ? "mt-6 md:mt-8" : "mt-12 md:mt-16"),
           )}
         >
           {eyebrow}
@@ -98,7 +112,8 @@ export function PageHeader({
           id={titleId}
           className={cn(
             revealDelay(2),
-            "headline-primary mt-8 text-balance leading-[0.95] text-warm-white md:mt-10",
+            "headline-primary text-balance leading-[0.95] text-warm-white",
+            compact ? "mt-5 md:mt-7" : "mt-8 md:mt-10",
           )}
           style={{ fontSize: TITLE_FONT_SIZE[titleSize] }}
         >
@@ -109,7 +124,10 @@ export function PageHeader({
           <div
             className={cn(
               revealDelay(3),
-              "mt-12 flex flex-col gap-8 md:mt-16 md:flex-row md:items-end md:justify-between md:gap-12",
+              "flex flex-col md:flex-row md:items-end md:justify-between",
+              compact
+                ? "mt-8 gap-6 md:mt-10 md:gap-10"
+                : "mt-12 gap-8 md:mt-16 md:gap-12",
             )}
           >
             {meta ? (
