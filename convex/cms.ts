@@ -8,6 +8,7 @@ import {
   settingsContentValidator,
 } from "./schema.shared";
 import {
+  CMS_PENDING_DRAFT_QUERY_LIMIT,
   defaultSnapshotForSection,
   type AboutSnapshot,
   type AmenitiesNearbySnapshot,
@@ -67,7 +68,6 @@ import {
 import { cmsValidationError } from "./errors";
 
 const MARKETING_FLAG_SECTIONS = ["about", "recordings", "pricing"] as const;
-const CMS_PENDING_DRAFT_QUERY_LIMIT = 16;
 
 /**
  * Snapshot-shaped admin view of a section. Reads per-section scoped tables

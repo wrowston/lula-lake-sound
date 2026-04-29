@@ -29,8 +29,7 @@ import {
   publishVideosDraftCore,
   validateDraftVideosForPublish,
 } from "./videos";
-
-const CMS_PENDING_DRAFT_QUERY_LIMIT = 16;
+import { CMS_PENDING_DRAFT_QUERY_LIMIT } from "../cmsShared";
 
 export const publish = mutation({
   args: { section: cmsSectionValidator },
