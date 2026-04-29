@@ -97,15 +97,15 @@ function classifyKind(contentType: string): "image" | "video" {
 function toGalleryItems(photos: readonly GalleryPhoto[]): GalleryItem[] {
   return photos.map((photo) => ({
     id: photo.stableId,
-    kind: classifyKind(photo.contentType),
+    kind: classifyKind(photo.contentType ?? "image/jpeg"),
     src: photo.url,
     poster: null,
     alt: photo.alt,
-    caption: photo.caption,
+    caption: photo.caption ?? null,
     width: photo.width,
     height: photo.height,
     categories: photo.categories ?? [],
-    contentType: photo.contentType,
+    contentType: photo.contentType ?? "image/jpeg",
   }));
 }
 

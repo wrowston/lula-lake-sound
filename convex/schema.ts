@@ -56,7 +56,10 @@ export default defineSchema({
     updatedAt: v.number(),
     /** Clerk user id (`subject`) when the last write was authenticated. */
     updatedBy: v.optional(v.string()),
-  }).index("by_section", ["section"]),
+  })
+    .index("by_section", ["section"])
+    // Admin pending-draft badges and publish-all only need rows with drafts.
+    .index("by_hasDraftChanges", ["hasDraftChanges"]),
 
   aboutContent: defineTable(aboutContentRowValidator).index("by_scope", [
     "scope",

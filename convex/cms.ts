@@ -67,6 +67,7 @@ import {
 import { cmsValidationError } from "./errors";
 
 const MARKETING_FLAG_SECTIONS = ["about", "recordings", "pricing"] as const;
+const CMS_PENDING_DRAFT_QUERY_LIMIT = 16;
 
 /**
  * Snapshot-shaped admin view of a section. Reads per-section scoped tables
@@ -264,7 +265,10 @@ export const listPendingDrafts = query({
     await requireCmsOwner(ctx);
 
     const [cmsRows, gearMeta, galleryMeta, videoMeta] = await Promise.all([
-      ctx.db.query("cmsSections").collect(),
+      ctx.db
+        .query("cmsSections")
+        .withIndex("by_hasDraftChanges", (q) => q.eq("hasDraftChanges", true))
+        .take(CMS_PENDING_DRAFT_QUERY_LIMIT),
       ctx.db
         .query("gearMeta")
         .withIndex("by_singleton", (q) => q.eq("singletonKey", "default"))

@@ -20,6 +20,76 @@ import {
 import { FAQ_DEFAULTS } from "./cmsShared";
 import { loadFaqTree, materializeFaqCategories } from "./faqTree";
 
+type MaterializedGalleryPhoto = Awaited<
+  ReturnType<typeof materializeGalleryPhotos>
+>[number];
+type MaterializedAudioTrack = Awaited<
+  ReturnType<typeof materializeAudioTracks>
+>[number];
+type MaterializedVideo = Awaited<ReturnType<typeof materializeVideos>>[number];
+
+function hasResolvedUrl<T extends { url: string | null }>(
+  row: T,
+): row is T & { url: string } {
+  return row.url !== null;
+}
+
+function publicGalleryPhoto(photo: MaterializedGalleryPhoto) {
+  return {
+    stableId: photo.stableId,
+    url: photo.url,
+    alt: photo.alt,
+    caption: photo.caption,
+    width: photo.width,
+    height: photo.height,
+    sortOrder: photo.sortOrder,
+    contentType: photo.contentType,
+    categories: photo.categories,
+  };
+}
+
+function publicCarouselPhoto(photo: MaterializedGalleryPhoto) {
+  return {
+    stableId: photo.stableId,
+    url: photo.url,
+    alt: photo.alt,
+    width: photo.width,
+    height: photo.height,
+    sortOrder: photo.sortOrder,
+  };
+}
+
+function publicAudioTrack(track: MaterializedAudioTrack & { url: string }) {
+  return {
+    stableId: track.stableId,
+    url: track.url,
+    title: track.title,
+    artist: track.artist,
+    genre: track.genre,
+    year: track.year,
+    role: track.role,
+    sortOrder: track.sortOrder,
+    albumThumbnailDisplayUrl: track.albumThumbnailDisplayUrl,
+    spotifyUrl: track.spotifyUrl,
+    appleMusicUrl: track.appleMusicUrl,
+  };
+}
+
+function publicVideo(video: MaterializedVideo) {
+  return {
+    stableId: video.stableId,
+    title: video.title,
+    description: video.description,
+    sortOrder: video.sortOrder,
+    provider: video.provider,
+    externalId: video.externalId,
+    playbackUrl: video.playbackUrl,
+    videoUrl: video.videoUrl,
+    resolvedThumbnailUrl: video.resolvedThumbnailUrl,
+    durationSec: video.durationSec,
+  };
+}
+
 /**
  * **Public (anonymous) site reads** — published only.
  *
@@ -97,9 +167,9 @@ export const getPublishedGalleryPhotos = query({
   handler: async (ctx) => {
     const rows = await loadGalleryPhotos(ctx, "published");
     const photos = await materializeGalleryPhotos(ctx, rows);
-    return photos.filter(
-      (photo) => photo.url !== null && photo.showInGallery !== false,
-    );
+    return photos
+      .filter((photo) => photo.url !== null && photo.showInGallery !== false)
+      .map(publicGalleryPhoto);
   },
 });
 
@@ -111,9 +181,9 @@ export const getPublishedCarouselPhotos = query({
   handler: async (ctx) => {
     const rows = await loadGalleryPhotos(ctx, "published");
     const photos = await materializeGalleryPhotos(ctx, rows);
-    return photos.filter(
-      (photo) => photo.url !== null && photo.showInCarousel !== false,
-    );
+    return photos
+      .filter((photo) => photo.url !== null && photo.showInCarousel !== false)
+      .map(publicCarouselPhoto);
   },
 });
 
@@ -131,7 +201,7 @@ export const getPublishedAudioTracks = query({
   handler: async (ctx) => {
     const rows = await loadAudioTracks(ctx, "published");
     const tracks = await materializeAudioTracks(ctx, rows);
-    return tracks.filter((t) => t.url !== null);
+    return tracks.filter(hasResolvedUrl).map(publicAudioTrack);
   },
 });
 
@@ -144,7 +214,8 @@ export const getPublishedVideos = query({
   args: {},
   handler: async (ctx) => {
     const rows = await loadVideos(ctx, "published");
-    return await materializeVideos(ctx, rows);
+    const videos = await materializeVideos(ctx, rows);
+    return videos.map(publicVideo);
   },
 });
 
