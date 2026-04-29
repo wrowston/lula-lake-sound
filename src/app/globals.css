@@ -540,7 +540,7 @@ html.light {
 
 .bg-texture-stone {
   background-image:
-    url("/Textures/News%20Pulp%20Texture.png"),
+    url("/Textures/News%20Pulp%20Texture.optimized.jpg"),
     radial-gradient(circle at 18% 78%, rgba(85, 101, 106, 0.1) 0%, transparent 55%),
     radial-gradient(circle at 82% 22%, rgba(163, 130, 46, 0.07) 0%, transparent 55%),
     radial-gradient(circle at 50% 50%, rgba(31, 30, 28, 0.04) 0%, transparent 65%);
@@ -561,7 +561,7 @@ html.light {
 
 .bg-texture-canvas {
   background-image:
-    url("/Textures/Canvas%20Texture.png"),
+    url("/Textures/Canvas%20Texture.optimized.jpg"),
     radial-gradient(circle at 50% 0%, rgba(198, 189, 160, 0.05) 0%, transparent 45%),
     radial-gradient(circle at 50% 100%, rgba(28, 30, 21, 0.15) 0%, transparent 55%);
   background-size:
@@ -611,7 +611,7 @@ html.light {
  */
 .bg-chladni-1 {
   background-image:
-    url("/Chladni/CHLADNI_clean.png"),
+    url("/Chladni/CHLADNI_clean.optimized.png"),
     repeating-radial-gradient(
       circle at 20% 30%,
       rgba(198, 189, 160, 0.04) 0px,
@@ -639,7 +639,7 @@ html.light {
  * brand guide pg 26: "Chladni 1.2 Overlayed on Washed Black Canvas."
  */
 .bg-chladni-1-2 {
-  background-image: url("/Chladni/CHLADNI_1.2.png");
+  background-image: url("/Chladni/CHLADNI_1.2.optimized.png");
   background-size: 62% auto;
   background-position: 115% 115%;
   background-repeat: no-repeat;
@@ -654,7 +654,7 @@ html.light {
  * the Forest ground stays the dominant tone.
  */
 .bg-chladni-2 {
-  background-image: url("/Chladni/CHLADNI_2.png");
+  background-image: url("/Chladni/CHLADNI_2.optimized.png");
   background-size: 48% auto;
   background-position: -10% -10%;
   background-repeat: no-repeat;
@@ -667,7 +667,7 @@ html.light {
  * of a composition so it reads like rhythm, not decoration.
  */
 .bg-chladni-3 {
-  background-image: url("/Chladni/CHLADNI_3.png");
+  background-image: url("/Chladni/CHLADNI_3.optimized.png");
   background-size: 46% auto;
   background-position: 135% 50%;
   background-repeat: no-repeat;
@@ -684,49 +684,49 @@ html.light {
  * ———————————————————————————————— */
 
 .bg-texture-emerald {
-  background-image: url("/Textured%20Backgrounds/LLS_Texture_Emerald.jpg");
+  background-image: url("/Textured%20Backgrounds/LLS_Texture_Emerald.optimized.jpg");
   background-size: cover;
   background-position: center;
   background-repeat: no-repeat;
 }
 
 .bg-texture-sagebrush {
-  background-image: url("/Textured%20Backgrounds/LLS_Texture_Sagebrush.jpg");
+  background-image: url("/Textured%20Backgrounds/LLS_Texture_Sagebrush.optimized.jpg");
   background-size: cover;
   background-position: center;
   background-repeat: no-repeat;
 }
 
 .bg-texture-seafoam {
-  background-image: url("/Textured%20Backgrounds/LLS_Texture_Seafoam.jpg");
+  background-image: url("/Textured%20Backgrounds/LLS_Texture_Seafoam.optimized.jpg");
   background-size: cover;
   background-position: center;
   background-repeat: no-repeat;
 }
 
 .bg-texture-sunset {
-  background-image: url("/Textured%20Backgrounds/LLS_Texture_Sunset.jpg");
+  background-image: url("/Textured%20Backgrounds/LLS_Texture_Sunset.optimized.jpg");
   background-size: cover;
   background-position: center;
   background-repeat: no-repeat;
 }
 
 .bg-texture-goldenhour {
-  background-image: url("/Textured%20Backgrounds/LLS_Texture_GoldenHour.jpg");
+  background-image: url("/Textured%20Backgrounds/LLS_Texture_GoldenHour.optimized.jpg");
   background-size: cover;
   background-position: center;
   background-repeat: no-repeat;
 }
 
 .bg-texture-starburst {
-  background-image: url("/Textured%20Backgrounds/LLS_Texture_Starburst.jpg");
+  background-image: url("/Textured%20Backgrounds/LLS_Texture_Starburst.optimized.jpg");
   background-size: cover;
   background-position: center;
   background-repeat: no-repeat;
 }
 
 .bg-texture-coral {
-  background-image: url("/Textured%20Backgrounds/LLS_Texture_Coral.jpg");
+  background-image: url("/Textured%20Backgrounds/LLS_Texture_Coral.optimized.jpg");
   background-size: cover;
   background-position: center;
   background-repeat: no-repeat;
