@@ -1,18 +1,17 @@
 import { AdminSectionLoadingFrame } from "@/components/admin/admin-section-loading-frame";
-import { SettingsEditorSkeleton } from "./settings-editor-skeleton";
+import { VideosEditorSkeleton } from "./videos-editor-skeleton";
 import { getAdminPendingLayout } from "@/lib/admin-pending-layout";
 
-const layout = getAdminPendingLayout("/admin/settings");
+const layout = getAdminPendingLayout("/admin/videos");
 
-/** Settings route: form-shaped skeleton while RSC + Convex section loads. */
-export default function SettingsLoading() {
+export default function VideosLoading() {
   return (
     <AdminSectionLoadingFrame
       title={layout.title}
       outerClassName={layout.outerClassName}
       innerClassName={layout.innerClassName}
     >
-      <SettingsEditorSkeleton />
+      <VideosEditorSkeleton />
     </AdminSectionLoadingFrame>
   );
 }

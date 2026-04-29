@@ -1,18 +1,17 @@
 import { AdminSectionLoadingFrame } from "@/components/admin/admin-section-loading-frame";
-import { SettingsEditorSkeleton } from "./settings-editor-skeleton";
+import { AmenitiesEditorSkeleton } from "./amenities-editor-skeleton";
 import { getAdminPendingLayout } from "@/lib/admin-pending-layout";
 
-const layout = getAdminPendingLayout("/admin/settings");
+const layout = getAdminPendingLayout("/admin/amenities-nearby");
 
-/** Settings route: form-shaped skeleton while RSC + Convex section loads. */
-export default function SettingsLoading() {
+export default function AmenitiesNearbyLoading() {
   return (
     <AdminSectionLoadingFrame
       title={layout.title}
       outerClassName={layout.outerClassName}
       innerClassName={layout.innerClassName}
     >
-      <SettingsEditorSkeleton />
+      <AmenitiesEditorSkeleton />
     </AdminSectionLoadingFrame>
   );
 }
