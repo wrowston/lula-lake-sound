@@ -57,6 +57,7 @@ import {
 } from "@/lib/effect-errors";
 import { runAdminEffect } from "@/lib/admin-run-effect";
 import { cn } from "@/lib/utils";
+import { PhotosEditorSkeleton } from "./photos-editor-skeleton";
 
 const MAX_ALT_LENGTH = 240;
 const MAX_CAPTION_LENGTH = 600;
@@ -1041,7 +1042,7 @@ function PhotosEditorForm() {
   });
 
   if (data === undefined) {
-    return <p className="body-text text-foreground/80">Loading photos…</p>;
+    return <PhotosEditorSkeleton />;
   }
 
   const galleryPageEffective =

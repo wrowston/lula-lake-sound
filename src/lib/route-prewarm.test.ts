@@ -123,7 +123,7 @@ describe("prewarmAdminNavigation", () => {
     expect(prewarmQuery.mock.calls.length).toBe(0);
   });
 
-  test("prewarms pricing (section + marketing flags)", () => {
+  test("prewarms pricing (draft rows + marketing flags)", () => {
     const { client, prewarmQuery } = makeFakeClient();
     prewarmAdminNavigation(client, "/admin/pricing");
     expect(prewarmQuery.mock.calls.length).toBe(2);
@@ -135,16 +135,29 @@ describe("prewarmAdminNavigation", () => {
     expect(prewarmQuery.mock.calls.length).toBe(1);
   });
 
-  test("prewarms about (section + marketing flags)", () => {
+  test("prewarms about (section + marketing flags only)", () => {
     const { client, prewarmQuery } = makeFakeClient();
     prewarmAdminNavigation(client, "/admin/about");
     expect(prewarmQuery.mock.calls.length).toBe(2);
   });
 
-  test("prewarms audio (marketing flags only)", () => {
+  test("prewarms audio (tracks + marketing flags)", () => {
     const { client, prewarmQuery } = makeFakeClient();
     prewarmAdminNavigation(client, "/admin/audio");
-    expect(prewarmQuery.mock.calls.length).toBe(1);
+    expect(prewarmQuery.mock.calls.length).toBe(2);
+  });
+
+  test("prewarms media routes with their draft lists", () => {
+    const { client, prewarmQuery } = makeFakeClient();
+    prewarmAdminNavigation(client, "/admin/photos");
+    prewarmAdminNavigation(client, "/admin/videos");
+    expect(prewarmQuery.mock.calls.length).toBe(2);
+  });
+
+  test("prewarms amenities data and validation", () => {
+    const { client, prewarmQuery } = makeFakeClient();
+    prewarmAdminNavigation(client, "/admin/amenities-nearby");
+    expect(prewarmQuery.mock.calls.length).toBe(2);
   });
 });
 
