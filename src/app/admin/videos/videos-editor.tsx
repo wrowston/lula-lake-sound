@@ -39,7 +39,6 @@ import type { Id } from "../../../../convex/_generated/dataModel";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
-import { Skeleton } from "@/components/ui/skeleton";
 import { Textarea } from "@/components/ui/textarea";
 import {
   AlertDialog,
@@ -66,6 +65,7 @@ import {
   resolveVideoPreview,
   type VideoProvider,
 } from "@/lib/video-embed";
+import { VideosEditorSkeleton } from "./videos-editor-skeleton";
 
 const MAX_TITLE_LENGTH = 200;
 const MAX_DESCRIPTION_LENGTH = 2000;
@@ -255,19 +255,6 @@ export function VideosEditor() {
         <VideosEditorForm />
       </Authenticated>
     </>
-  );
-}
-
-function VideosEditorSkeleton() {
-  return (
-    <div className="space-y-6">
-      <Skeleton className="h-8 w-48" />
-      <Skeleton className="h-32 w-full" />
-      <div className="grid gap-4 md:grid-cols-2">
-        <Skeleton className="h-72 w-full" />
-        <Skeleton className="h-72 w-full" />
-      </div>
-    </div>
   );
 }
 
