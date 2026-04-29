@@ -1,5 +1,6 @@
 import { withSentryConfig } from "@sentry/nextjs";
 import type { NextConfig } from "next";
+import { PREVIEW_CACHE_CONTROL } from "./src/lib/preview-cache-headers";
 
 // Node can install a broken `globalThis.localStorage` when `--localstorage-file` is set
 // without a valid path (often via NODE_OPTIONS). Next.js dev UI checks for `localStorage`
@@ -32,7 +33,26 @@ const hasSentryBuildUploadConfig = Boolean(
     process.env.SENTRY_PROJECT
 );
 
+const previewCacheHeaders = [
+  { key: "Cache-Control", value: PREVIEW_CACHE_CONTROL },
+  /** Vercel: override any default CDN caching for this path (defense in depth). */
+  { key: "CDN-Cache-Control", value: PREVIEW_CACHE_CONTROL },
+  { key: "Vercel-CDN-Cache-Control", value: PREVIEW_CACHE_CONTROL },
+] as const;
+
 const nextConfig: NextConfig = {
+  async headers() {
+    return [
+      {
+        source: "/preview",
+        headers: [...previewCacheHeaders],
+      },
+      {
+        source: "/preview/:path*",
+        headers: [...previewCacheHeaders],
+      },
+    ];
+  },
   env: {
     NEXT_PUBLIC_SENTRY_DSN: sentryPublicDsn,
     NEXT_PUBLIC_SENTRY_ENVIRONMENT: sentryEnvironment,
