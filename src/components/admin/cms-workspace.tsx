@@ -4,15 +4,18 @@ import {
   createContext,
   useCallback,
   useContext,
+  useLayoutEffect,
   useMemo,
   useRef,
   useState,
+  useTransition,
   type MutableRefObject,
   type ReactNode,
 } from "react";
 import { createPortal } from "react-dom";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { toast } from "sonner";
+import { AdminRoutePendingShell } from "@/components/admin/admin-route-pending-shell";
 import type { AutosaveStatus } from "@/components/admin/cms-publish-toolbar";
 import { CmsPublishToolbar } from "@/components/admin/cms-publish-toolbar";
 import { CrossSectionPendingBanner } from "@/components/admin/cross-section-pending-banner";
@@ -72,6 +75,20 @@ interface CmsWorkspaceContextValue {
   readonly activeEditorMountRef: MutableRefObject<unknown>;
   readonly attemptNavigate: () => Promise<boolean>;
   readonly openConfirm: () => Promise<ConfirmResult>;
+  /** After nav guard passes, moves URL and shows optimistic active + skeleton until the route lands. */
+  readonly navigateWithinCms: (href: string) => void;
+  /** Sidebar highlight: pending target until pathname catches up, else current path. */
+  readonly activeAdminHref: string;
+  /** True while optimistic target differs from current pathname (client transition in flight). */
+  readonly routePending: boolean;
+  /** In-flight client navigation target (null when not optimistically navigating). */
+  readonly pendingNavigationHref: string | null;
+}
+
+export function pathMatchesPending(pathname: string, pending: string): boolean {
+  const p = pathname || "";
+  if (pending === "/admin") return p === "/admin";
+  return p === pending || p.startsWith(`${pending}/`);
 }
 
 const CmsWorkspaceContext = createContext<CmsWorkspaceContextValue | null>(
@@ -86,6 +103,13 @@ const CmsWorkspaceContext = createContext<CmsWorkspaceContextValue | null>(
  * if we notified subscribers from the editor's render body.
  */
 export function CmsWorkspaceProvider({ children }: { children: ReactNode }) {
+  const router = useRouter();
+  const pathname = usePathname() ?? "";
+  const [isRouteTransitionPending, startTransition] = useTransition();
+  const [pendingNavigationHref, setPendingNavigationHref] = useState<
+    string | null
+  >(null);
+
   const [hostNode, setHostNode] = useState<HTMLDivElement | null>(null);
   const navStateRef = useRef<CmsNavState>({ hasLocalEdits: false });
   const activeEditorMountRef = useRef<unknown>(null);
@@ -127,6 +151,64 @@ export function CmsWorkspaceProvider({ children }: { children: ReactNode }) {
     return result === "leave";
   }, [openConfirm]);
 
+  const navigateWithinCms = useCallback(
+    (href: string) => {
+      setPendingNavigationHref(href);
+      startTransition(() => {
+        router.push(href);
+      });
+    },
+    [router],
+  );
+
+  const activeAdminHref = useMemo(() => {
+    if (
+      pendingNavigationHref &&
+      !pathMatchesPending(pathname, pendingNavigationHref)
+    ) {
+      return pendingNavigationHref;
+    }
+    return pathname;
+  }, [pathname, pendingNavigationHref]);
+
+  const routePending = useMemo(
+    () =>
+      Boolean(
+        pendingNavigationHref &&
+          !pathMatchesPending(pathname, pendingNavigationHref),
+      ),
+    [pathname, pendingNavigationHref],
+  );
+
+  const prevPathnameRef = useRef(pathname);
+  useLayoutEffect(() => {
+    const prevPathname = prevPathnameRef.current;
+    prevPathnameRef.current = pathname;
+
+    if (!pendingNavigationHref) return;
+
+    if (pathMatchesPending(pathname, pendingNavigationHref)) {
+      setPendingNavigationHref(null);
+      return;
+    }
+
+    if (!isRouteTransitionPending) {
+      if (
+        prevPathname !== pathname &&
+        !pathMatchesPending(pathname, pendingNavigationHref)
+      ) {
+        setPendingNavigationHref(null);
+        return;
+      }
+      if (
+        prevPathname === pathname &&
+        !pathMatchesPending(pathname, pendingNavigationHref)
+      ) {
+        setPendingNavigationHref(null);
+      }
+    }
+  }, [pathname, pendingNavigationHref, isRouteTransitionPending]);
+
   const value = useMemo<CmsWorkspaceContextValue>(
     () => ({
       hostNode,
@@ -135,8 +217,21 @@ export function CmsWorkspaceProvider({ children }: { children: ReactNode }) {
       activeEditorMountRef,
       attemptNavigate,
       openConfirm,
+      navigateWithinCms,
+      activeAdminHref,
+      routePending,
+      pendingNavigationHref,
     }),
-    [hostNode, registerHostNode, attemptNavigate, openConfirm],
+    [
+      hostNode,
+      registerHostNode,
+      attemptNavigate,
+      openConfirm,
+      navigateWithinCms,
+      activeAdminHref,
+      routePending,
+      pendingNavigationHref,
+    ],
   );
 
   return (
@@ -174,6 +269,32 @@ export function useCmsNavGuard(): {
 } {
   const { attemptNavigate } = useCmsWorkspace();
   return { attemptNavigate };
+}
+
+/**
+ * Optimistic admin in-app navigation + tab highlighting for sidebar and dashboard cards.
+ */
+export function useCmsAdminNavigation(): {
+  readonly navigateWithinCms: (href: string) => void;
+  readonly activeAdminHref: string;
+  readonly routePending: boolean;
+} {
+  const { navigateWithinCms, activeAdminHref, routePending } = useCmsWorkspace();
+  return { navigateWithinCms, activeAdminHref, routePending };
+}
+
+/**
+ * Swaps the admin page slot to a skeleton during client-side navigations so the
+ * UI does not keep showing the previous editor until RSC payload arrives.
+ */
+export function CmsAdminPageSlot({ children }: { children: ReactNode }) {
+  const { routePending, pendingNavigationHref } = useCmsWorkspace();
+  if (routePending && pendingNavigationHref) {
+    return (
+      <AdminRoutePendingShell targetHref={pendingNavigationHref} />
+    );
+  }
+  return children;
 }
 
 /**

@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import Image from "next/image";
-import { usePathname, useRouter } from "next/navigation";
+import { useRouter } from "next/navigation";
 import { useConvex } from "convex/react";
 import { LayoutDashboard, ArrowLeft } from "lucide-react";
 import { ADMIN_MANAGE_NAV_ITEMS } from "@/lib/admin-nav";
@@ -22,7 +22,10 @@ import {
   prewarmAdminNavigation,
   useRoutePrewarmIntent,
 } from "@/lib/route-prewarm";
-import { useCmsNavGuard } from "@/components/admin/cms-workspace";
+import {
+  useCmsNavGuard,
+  useCmsAdminNavigation,
+} from "@/components/admin/cms-workspace";
 import { usePendingDraftSections } from "@/components/admin/use-pending-drafts";
 import { useMemo, type MouseEvent as ReactMouseEvent } from "react";
 
@@ -33,23 +36,27 @@ const navItems = [
 
 function AdminNavLinkItem({
   item,
-  pathname,
+  activeHref,
   hasPendingChanges,
 }: {
   item: (typeof navItems)[number];
-  pathname: string;
+  activeHref: string;
   hasPendingChanges: boolean;
 }) {
   const convex = useConvex();
   const router = useRouter();
   const { attemptNavigate } = useCmsNavGuard();
+  const { navigateWithinCms } = useCmsAdminNavigation();
   const { handlers: prewarmHandlers, intentRootRef } = useRoutePrewarmIntent(
-    () => prewarmAdminNavigation(convex, item.href),
+    () => {
+      router.prefetch(item.href);
+      prewarmAdminNavigation(convex, item.href);
+    },
   );
 
   function isActive(href: string) {
-    if (href === "/admin") return pathname === "/admin";
-    return pathname.startsWith(href);
+    if (href === "/admin") return activeHref === "/admin";
+    return activeHref.startsWith(href);
   }
 
   async function handleClick(event: ReactMouseEvent<HTMLAnchorElement>) {
@@ -68,7 +75,7 @@ function AdminNavLinkItem({
     }
     event.preventDefault();
     const ok = await attemptNavigate();
-    if (ok) router.push(item.href);
+    if (ok) navigateWithinCms(item.href);
   }
 
   const tooltipLabel = hasPendingChanges
@@ -141,7 +148,7 @@ function BackToSiteLink() {
 }
 
 export function AdminSidebar() {
-  const pathname = usePathname();
+  const { activeAdminHref } = useCmsAdminNavigation();
   const pending = usePendingDraftSections();
   const pendingHrefs = useMemo(
     () => new Set(pending.map((section) => section.href)),
@@ -190,7 +197,7 @@ export function AdminSidebar() {
                 <AdminNavLinkItem
                   key={item.href}
                   item={item}
-                  pathname={pathname}
+                  activeHref={activeAdminHref}
                   hasPendingChanges={pendingHrefs.has(item.href)}
                 />
               ))}
