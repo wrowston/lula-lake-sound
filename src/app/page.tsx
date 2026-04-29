@@ -9,7 +9,6 @@ export default async function Home() {
       pricingSettled,
       gearSettled,
       photosSettled,
-      videosSettled,
       faqSettled,
       marketingSettled,
       amenitiesSettled,
@@ -17,7 +16,6 @@ export default async function Home() {
       preloadQuery(api.public.getPublishedPricingFlags),
       preloadQuery(api.public.getPublishedGear),
       preloadQuery(api.public.getPublishedCarouselPhotos),
-      preloadQuery(api.public.getPublishedVideos),
       preloadQuery(api.public.getPublishedFaq),
       preloadQuery(api.public.getPublishedMarketingFeatureFlags),
       preloadQuery(api.public.getPublishedAmenitiesNearby),
@@ -28,8 +26,6 @@ export default async function Home() {
       gearSettled.status === "fulfilled" ? gearSettled.value : null;
     const preloadedPhotos =
       photosSettled.status === "fulfilled" ? photosSettled.value : null;
-    const preloadedVideos =
-      videosSettled.status === "fulfilled" ? videosSettled.value : null;
     const preloadedFaq =
       faqSettled.status === "fulfilled" ? faqSettled.value : null;
     const preloadedMarketing =
@@ -40,7 +36,6 @@ export default async function Home() {
       preloadedPricing === null &&
       preloadedGear === null &&
       preloadedPhotos === null &&
-      preloadedVideos === null &&
       preloadedFaq === null &&
       preloadedMarketing === null &&
       preloadedAmenities === null
@@ -51,7 +46,6 @@ export default async function Home() {
           marketingFeatureFlags={null}
           gear={null}
           photos={null}
-          videos={null}
           faqCategories={null}
           amenities={null}
         />
@@ -62,7 +56,6 @@ export default async function Home() {
         preloadedPricing={preloadedPricing}
         preloadedGear={preloadedGear}
         preloadedPhotos={preloadedPhotos}
-        preloadedVideos={preloadedVideos}
         preloadedFaq={preloadedFaq}
         preloadedMarketing={preloadedMarketing}
         preloadedAmenities={preloadedAmenities}
@@ -75,7 +68,6 @@ export default async function Home() {
         marketingFeatureFlags={null}
         gear={null}
         photos={null}
-        videos={null}
         faqCategories={null}
         amenities={null}
       />

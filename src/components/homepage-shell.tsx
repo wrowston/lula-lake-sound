@@ -13,10 +13,6 @@ import { Hero } from "@/components/hero";
 import { SiteFooter } from "@/components/site-footer";
 import type { PublishedAmenitiesNearby } from "@/components/amenities-nearby";
 import { TheSpace, type GalleryPhoto } from "@/components/the-space";
-import {
-  VideoShowcase,
-  type PublishedVideo,
-} from "@/components/video-showcase";
 import { useScrollAndReveal } from "@/hooks/use-scroll-and-reveal";
 import {
   type MarketingFeatureFlags,
@@ -45,8 +41,6 @@ interface HomepageShellProps {
   readonly gear: GearPayload | null | undefined;
   /** Published (or preview) gallery payload. */
   readonly photos: GalleryPhoto[] | null | undefined;
-  /** Published (or preview) video payload. */
-  readonly videos?: readonly PublishedVideo[] | null | undefined;
   /** FAQ categories from Convex; `undefined` renders the loading state. */
   readonly faqCategories?: readonly FaqCategoryProps[] | null | undefined;
   /** Amenities payload from Convex; `undefined` renders the loading state. */
@@ -59,7 +53,6 @@ export function HomepageShell({
   marketingFeatureFlags: marketingFromProps,
   gear,
   photos,
-  videos,
   faqCategories,
   amenities,
   banner,
@@ -114,7 +107,6 @@ export function HomepageShell({
 
       <main className="relative z-10">
         <TheSpace photos={photos} />
-        <VideoShowcase videos={videos} />
         <EquipmentSpecs gear={gear} />
         <MarketingPricingSection
           pricingFlags={pricingFlags}

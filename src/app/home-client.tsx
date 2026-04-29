@@ -6,13 +6,11 @@ import { HomepageShell } from "@/components/homepage-shell";
 import type { PublishedAmenitiesNearby } from "@/components/amenities-nearby";
 import type { GalleryPhoto } from "@/components/the-space";
 import type { FaqCategoryProps } from "@/components/faq";
-import type { PublishedVideo } from "@/components/video-showcase";
 import type { MarketingFeatureFlags } from "@/lib/site-settings";
 
 type PreloadedPricing = Preloaded<typeof api.public.getPublishedPricingFlags> | null;
 type PreloadedGear = Preloaded<typeof api.public.getPublishedGear> | null;
 type PreloadedPhotos = Preloaded<typeof api.public.getPublishedCarouselPhotos> | null;
-type PreloadedVideos = Preloaded<typeof api.public.getPublishedVideos> | null;
 type PreloadedFaq = Preloaded<typeof api.public.getPublishedFaq> | null;
 type PreloadedMarketing =
   | Preloaded<typeof api.public.getPublishedMarketingFeatureFlags>
@@ -54,39 +52,6 @@ function PhotosLive({
 }) {
   const photos = useQuery(api.public.getPublishedCarouselPhotos);
   return <>{children(photos)}</>;
-}
-
-function VideosData({
-  preloaded,
-  children,
-}: {
-  preloaded: PreloadedVideos | null;
-  children: (videos: readonly PublishedVideo[] | undefined) => React.ReactNode;
-}) {
-  if (preloaded) {
-    return <VideosFromPreload preloaded={preloaded}>{children}</VideosFromPreload>;
-  }
-  return <VideosLive>{children}</VideosLive>;
-}
-
-function VideosFromPreload({
-  preloaded,
-  children,
-}: {
-  preloaded: NonNullable<PreloadedVideos>;
-  children: (videos: readonly PublishedVideo[] | undefined) => React.ReactNode;
-}) {
-  const videos = usePreloadedQuery(preloaded);
-  return <>{children(videos)}</>;
-}
-
-function VideosLive({
-  children,
-}: {
-  children: (videos: readonly PublishedVideo[] | undefined) => React.ReactNode;
-}) {
-  const videos = useQuery(api.public.getPublishedVideos);
-  return <>{children(videos)}</>;
 }
 
 function FaqData({
@@ -212,7 +177,6 @@ function BothPreloaded({
   preloadedPricing,
   preloadedGear,
   photos,
-  videos,
   faq,
   marketing,
   amenities,
@@ -220,7 +184,6 @@ function BothPreloaded({
   preloadedPricing: NonNullable<PreloadedPricing>;
   preloadedGear: NonNullable<PreloadedGear>;
   photos: GalleryPhoto[] | undefined;
-  videos: readonly PublishedVideo[] | undefined;
   faq: PublishedFaqPayload | undefined;
   marketing: MarketingFeatureFlags | null | undefined;
   amenities: PublishedAmenitiesNearby | null | undefined;
@@ -233,7 +196,6 @@ function BothPreloaded({
       marketingFeatureFlags={marketing}
       gear={gear}
       photos={photos}
-      videos={videos}
       faqCategories={faq?.categories}
       amenities={amenities}
     />
@@ -243,14 +205,12 @@ function BothPreloaded({
 function PricingPreloadedGearLive({
   preloadedPricing,
   photos,
-  videos,
   faq,
   marketing,
   amenities,
 }: {
   preloadedPricing: NonNullable<PreloadedPricing>;
   photos: GalleryPhoto[] | undefined;
-  videos: readonly PublishedVideo[] | undefined;
   faq: PublishedFaqPayload | undefined;
   marketing: MarketingFeatureFlags | null | undefined;
   amenities: PublishedAmenitiesNearby | null | undefined;
@@ -263,7 +223,6 @@ function PricingPreloadedGearLive({
       marketingFeatureFlags={marketing}
       gear={gear}
       photos={photos}
-      videos={videos}
       faqCategories={faq?.categories}
       amenities={amenities}
     />
@@ -273,14 +232,12 @@ function PricingPreloadedGearLive({
 function PricingLiveGearPreloaded({
   preloadedGear,
   photos,
-  videos,
   faq,
   marketing,
   amenities,
 }: {
   preloadedGear: NonNullable<PreloadedGear>;
   photos: GalleryPhoto[] | undefined;
-  videos: readonly PublishedVideo[] | undefined;
   faq: PublishedFaqPayload | undefined;
   marketing: MarketingFeatureFlags | null | undefined;
   amenities: PublishedAmenitiesNearby | null | undefined;
@@ -293,7 +250,6 @@ function PricingLiveGearPreloaded({
       marketingFeatureFlags={marketing}
       gear={gear}
       photos={photos}
-      videos={videos}
       faqCategories={faq?.categories}
       amenities={amenities}
     />
@@ -302,13 +258,11 @@ function PricingLiveGearPreloaded({
 
 function BothLive({
   photos,
-  videos,
   faq,
   marketing,
   amenities,
 }: {
   photos: GalleryPhoto[] | undefined;
-  videos: readonly PublishedVideo[] | undefined;
   faq: PublishedFaqPayload | undefined;
   marketing: MarketingFeatureFlags | null | undefined;
   amenities: PublishedAmenitiesNearby | null | undefined;
@@ -321,7 +275,6 @@ function BothLive({
       marketingFeatureFlags={marketing}
       gear={gear}
       photos={photos}
-      videos={videos}
       faqCategories={faq?.categories}
       amenities={amenities}
     />
@@ -332,7 +285,6 @@ export function HomeClient({
   preloadedPricing,
   preloadedGear,
   preloadedPhotos,
-  preloadedVideos,
   preloadedFaq,
   preloadedMarketing,
   preloadedAmenities,
@@ -340,7 +292,6 @@ export function HomeClient({
   preloadedPricing: PreloadedPricing;
   preloadedGear: PreloadedGear;
   preloadedPhotos: PreloadedPhotos;
-  preloadedVideos: PreloadedVideos;
   preloadedFaq: PreloadedFaq;
   preloadedMarketing: PreloadedMarketing;
   preloadedAmenities: PreloadedAmenities;
@@ -350,64 +301,56 @@ export function HomeClient({
       {(marketing) => (
         <PhotosData preloaded={preloadedPhotos}>
           {(photos) => (
-            <VideosData preloaded={preloadedVideos}>
-              {(videos) => (
-                <FaqData preloaded={preloadedFaq}>
-                  {(faq) => (
-                    <AmenitiesData preloaded={preloadedAmenities}>
-                      {(amenities) => {
-                        if (preloadedPricing && preloadedGear) {
-                          return (
-                            <BothPreloaded
-                              preloadedPricing={preloadedPricing}
-                              preloadedGear={preloadedGear}
-                              photos={photos}
-                              videos={videos}
-                              faq={faq}
-                              marketing={marketing}
-                              amenities={amenities}
-                            />
-                          );
-                        }
-                        if (preloadedPricing) {
-                          return (
-                            <PricingPreloadedGearLive
-                              preloadedPricing={preloadedPricing}
-                              photos={photos}
-                              videos={videos}
-                              faq={faq}
-                              marketing={marketing}
-                              amenities={amenities}
-                            />
-                          );
-                        }
-                        if (preloadedGear) {
-                          return (
-                            <PricingLiveGearPreloaded
-                              preloadedGear={preloadedGear}
-                              photos={photos}
-                              videos={videos}
-                              faq={faq}
-                              marketing={marketing}
-                              amenities={amenities}
-                            />
-                          );
-                        }
-                        return (
-                          <BothLive
-                            photos={photos}
-                            videos={videos}
-                            faq={faq}
-                            marketing={marketing}
-                            amenities={amenities}
-                          />
-                        );
-                      }}
-                    </AmenitiesData>
-                  )}
-                </FaqData>
+            <FaqData preloaded={preloadedFaq}>
+              {(faq) => (
+                <AmenitiesData preloaded={preloadedAmenities}>
+                  {(amenities) => {
+                    if (preloadedPricing && preloadedGear) {
+                      return (
+                        <BothPreloaded
+                          preloadedPricing={preloadedPricing}
+                          preloadedGear={preloadedGear}
+                          photos={photos}
+                          faq={faq}
+                          marketing={marketing}
+                          amenities={amenities}
+                        />
+                      );
+                    }
+                    if (preloadedPricing) {
+                      return (
+                        <PricingPreloadedGearLive
+                          preloadedPricing={preloadedPricing}
+                          photos={photos}
+                          faq={faq}
+                          marketing={marketing}
+                          amenities={amenities}
+                        />
+                      );
+                    }
+                    if (preloadedGear) {
+                      return (
+                        <PricingLiveGearPreloaded
+                          preloadedGear={preloadedGear}
+                          photos={photos}
+                          faq={faq}
+                          marketing={marketing}
+                          amenities={amenities}
+                        />
+                      );
+                    }
+                    return (
+                      <BothLive
+                        photos={photos}
+                        faq={faq}
+                        marketing={marketing}
+                        amenities={amenities}
+                      />
+                    );
+                  }}
+                </AmenitiesData>
               )}
-            </VideosData>
+            </FaqData>
           )}
         </PhotosData>
       )}

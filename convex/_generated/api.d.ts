@@ -60,7 +60,6 @@ import type * as settingsTree from "../settingsTree.js";
 import type * as siteSettingsPreviewDraft from "../siteSettingsPreviewDraft.js";
 import type * as videoUrls from "../videoUrls.js";
 import type * as videos from "../videos.js";
-import type * as videosPreviewDraft from "../videosPreviewDraft.js";
 
 import type {
   ApiFromModules,
@@ -121,7 +120,6 @@ declare const fullApi: ApiFromModules<{
   siteSettingsPreviewDraft: typeof siteSettingsPreviewDraft;
   videoUrls: typeof videoUrls;
   videos: typeof videos;
-  videosPreviewDraft: typeof videosPreviewDraft;
 }>;
 
 /**
