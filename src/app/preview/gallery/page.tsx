@@ -26,7 +26,10 @@ function GalleryPreviewContent() {
     api.photosPreviewDraft.getPreviewGalleryPhotos,
   );
   const previewVideos = useQuery(api.photosPreviewDraft.getPreviewVideos);
-  const publishedVideos = useQuery(api.public.getPublishedVideos);
+  const publishedVideos = useQuery(
+    api.public.getPublishedVideos,
+    previewVideos !== undefined && previewVideos !== null ? "skip" : {},
+  );
   const marketing = useQuery(api.cms.getPreviewMarketingFeatureFlags);
 
   let mergedVideos: readonly PublishedVideo[] | undefined;
