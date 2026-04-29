@@ -103,18 +103,19 @@ function StudioGallery({
                     alt={galleryImageAlt(photo.alt)}
                     fill
                     sizes="(max-width: 768px) 100vw, (max-width: 1200px) 90vw, 1200px"
-                    className={`object-contain transition-opacity duration-1000 ease-[cubic-bezier(0.16,1,0.3,1)] ${
-                      index === safeIndex ? "z-[1] opacity-100" : "z-0 opacity-0"
+                    className={`absolute inset-0 object-contain transition-opacity duration-1000 ease-[cubic-bezier(0.16,1,0.3,1)] ${
+                      index === safeIndex
+                        ? "z-[2] opacity-100"
+                        : "pointer-events-none z-[1] opacity-0"
                     }`}
-                    loading="eager"
-                    priority={index === 0}
+                    loading={index === 0 ? "eager" : "lazy"}
                     quality={82}
                     aria-hidden={index !== safeIndex}
                   />
                 ) : null,
               )}
               {!currentPhoto.url ? (
-                <div className="absolute inset-0 z-[2] flex items-center justify-center bg-washed-black">
+                <div className="absolute inset-0 z-[3] flex items-center justify-center bg-washed-black">
                   <div className="body-text-small text-ivory/50">Image unavailable</div>
                 </div>
               ) : null}

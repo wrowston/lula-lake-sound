@@ -22,9 +22,10 @@ export function Hero({ logoScale }: HeroProps) {
     >
       <div className="absolute inset-0 z-0">
         <Image
-          src="/Textured Backgrounds/LLS_Texture_Emerald.jpg"
+          src="/Textured Backgrounds/LLS_Texture_Emerald.optimized.jpg"
           alt=""
           fill
+          sizes="100vw"
           className="object-cover object-center"
           priority
           quality={85}
@@ -47,7 +48,6 @@ export function Hero({ logoScale }: HeroProps) {
             alt="Lula Lake Sound"
             width={800}
             height={260}
-            priority
             className="h-auto max-w-[78%] transition-transform duration-[1200ms] ease-[cubic-bezier(0.16,1,0.3,1)]"
             style={{ transform: `scale(${logoScale})` }}
           />

@@ -141,7 +141,6 @@ export function Header({
               width={1024}
               height={135}
               className="h-8 w-auto max-w-[min(100%,260px)] object-contain object-left md:h-9 md:max-w-[min(100%,300px)]"
-              priority
             />
           </button>
 
