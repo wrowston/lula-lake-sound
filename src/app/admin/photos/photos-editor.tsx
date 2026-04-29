@@ -23,7 +23,7 @@ import {
   type ChangeEvent,
   type DragEvent as ReactDragEvent,
 } from "react";
-import { Effect, pipe } from "effect";
+import { Effect } from "effect";
 import { toast } from "sonner";
 import {
   ArrowDown,
@@ -50,7 +50,11 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { useRegisterCmsEditor } from "@/components/admin/cms-workspace";
-import { convexMutationEffect, type CmsAppError } from "@/lib/effect-errors";
+import {
+  convexMutationEffect,
+  sequentialEffects,
+  type CmsAppError,
+} from "@/lib/effect-errors";
 import { runAdminEffect } from "@/lib/admin-run-effect";
 import { cn } from "@/lib/utils";
 
@@ -165,15 +169,6 @@ function canonicaliseCategories(
 ): GalleryCategorySlug[] {
   return GALLERY_CATEGORY_OPTIONS.filter((option) => selected.has(option.slug)).map(
     (option) => option.slug,
-  );
-}
-
-function sequentialEffects(
-  effects: Array<Effect.Effect<unknown, CmsAppError>>,
-): Effect.Effect<void, CmsAppError> {
-  return effects.reduce(
-    (acc, effect) => pipe(acc, Effect.flatMap(() => effect)),
-    Effect.succeed(undefined) as Effect.Effect<void, CmsAppError>,
   );
 }
 

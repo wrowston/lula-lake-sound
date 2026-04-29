@@ -16,7 +16,7 @@ import {
   type Dispatch,
   type SetStateAction,
 } from "react";
-import { Effect, pipe } from "effect";
+import { Effect } from "effect";
 import { toast } from "sonner";
 import {
   ArrowDown,
@@ -48,7 +48,11 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { cn } from "@/lib/utils";
-import { convexMutationEffect, type CmsAppError } from "@/lib/effect-errors";
+import {
+  convexMutationEffect,
+  sequentialEffects,
+  type CmsAppError,
+} from "@/lib/effect-errors";
 import { runAdminEffect } from "@/lib/admin-run-effect";
 import { useRegisterCmsEditor } from "@/components/admin/cms-workspace";
 
@@ -174,15 +178,6 @@ export function sortItems(items: GearItemPayload[]): GearItemPayload[] {
 export function nextAppendSort(sorts: readonly number[]): number {
   if (sorts.length === 0) return 0;
   return Math.max(...sorts) + 1;
-}
-
-function sequentialEffects(
-  effects: Array<Effect.Effect<unknown, CmsAppError>>,
-): Effect.Effect<void, CmsAppError> {
-  return effects.reduce(
-    (acc, e) => pipe(acc, Effect.flatMap(() => e)),
-    Effect.succeed(undefined) as Effect.Effect<void, CmsAppError>,
-  );
 }
 
 export function GearEditor() {
