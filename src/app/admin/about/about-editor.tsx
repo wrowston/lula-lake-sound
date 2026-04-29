@@ -45,7 +45,7 @@ import { api } from "../../../../convex/_generated/api";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
-import { Switch } from "@/components/ui/switch";
+import { SiteVisibilityRow } from "@/components/admin/site-visibility-row";
 import { cn } from "@/lib/utils";
 import { convexMutationEffect } from "@/lib/effect-errors";
 import { runAdminEffect } from "@/lib/admin-run-effect";
@@ -810,29 +810,22 @@ function AboutForm() {
   return (
     <div className="space-y-8 pb-24" ref={handleEditorRef}>
         <div className="space-y-8">
-          <fieldset className="space-y-4">
-            <legend className="label-text text-muted-foreground">
-              Site visibility
-            </legend>
-            <div className="flex items-start gap-3">
-              <Switch
-                id="ff-about-embedded"
-                checked={featureFlagsSource?.aboutPage ?? false}
-                onCheckedChange={setAboutPage}
-              />
-              <div className="space-y-1">
-                <label
-                  htmlFor="ff-about-embedded"
-                  className="body-text-small cursor-pointer text-foreground"
-                >
-                  About page (<code className="text-xs">/about</code>)
-                </label>
-                <p className="body-text-small text-muted-foreground">
-                  When off, the route returns 404 and the header link is hidden.
-                </p>
-              </div>
-            </div>
-          </fieldset>
+          <div className="space-y-4">
+            <p className="label-text text-muted-foreground">Site visibility</p>
+            <SiteVisibilityRow
+              id="ff-about-embedded"
+              title="About page visibility"
+              description={
+                <>
+                  When off, <code>/about</code> returns 404 and the About nav
+                  link is hidden. Publish to apply.
+                </>
+              }
+              checked={featureFlagsSource?.aboutPage ?? false}
+              onCheckedChange={setAboutPage}
+              disabled={busy !== null}
+            />
+          </div>
 
           <fieldset className="space-y-3">
             <legend className="label-text text-muted-foreground">Hero</legend>
@@ -928,7 +921,7 @@ function AboutForm() {
             <legend className="label-text text-muted-foreground">Team</legend>
             <p className="body-text-small text-muted-foreground">
               Add people with a headshot, name, and title. Images are stored in
-              Convex file storage (same limits as the gallery).
+              file storage (same limits as the gallery).
             </p>
             <TeamMembersEditor
               members={base.teamMembers}

@@ -36,7 +36,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Card } from "@/components/ui/card";
-import { Switch } from "@/components/ui/switch";
+import { SiteVisibilityRow } from "@/components/admin/site-visibility-row";
 import {
   AlertDialog,
   AlertDialogCancel,
@@ -1364,29 +1364,22 @@ function AudioEditorForm() {
       onDragOver={handleDragOver}
       onDrop={(event) => void handleDrop(event)}
     >
-      <fieldset className="space-y-4">
-        <legend className="label-text text-muted-foreground">
-          Site visibility
-        </legend>
-        <div className="flex items-start gap-3">
-          <Switch
-            id="ff-recordings-embedded"
-            checked={featureFlagsSource?.recordingsPage ?? false}
-            onCheckedChange={setRecordingsPage}
-          />
-          <div className="space-y-1">
-            <label
-              htmlFor="ff-recordings-embedded"
-              className="body-text-small cursor-pointer text-foreground"
-            >
-              Recordings page (<code className="text-xs">/recordings</code>)
-            </label>
-            <p className="body-text-small text-muted-foreground">
-              When off, the route returns 404 and the header link is hidden.
-            </p>
-          </div>
-        </div>
-      </fieldset>
+      <div className="space-y-4">
+        <p className="label-text text-muted-foreground">Site visibility</p>
+        <SiteVisibilityRow
+          id="ff-recordings-embedded"
+          title="Recordings page visibility"
+          description={
+            <>
+              When off, <code>/recordings</code> returns 404 and the Recordings
+              nav link is hidden. Publish to apply.
+            </>
+          }
+          checked={featureFlagsSource?.recordingsPage ?? false}
+          onCheckedChange={setRecordingsPage}
+          disabled={busy !== null}
+        />
+      </div>
 
       {isDraggingOver && (
         <div
@@ -1415,7 +1408,7 @@ function AudioEditorForm() {
             <p className="body-text-small max-w-2xl text-foreground/85">
               Upload MP3 or WAV samples for the homepage “Studio portfolio”
               section. Add optional album art with an HTTPS image URL or upload,
-              plus Spotify and Apple Music links per track. Playback uses Convex
+              plus Spotify and Apple Music links per track. Playback uses
               signed URLs (
               <code className="rounded bg-muted px-1 py-0.5 text-xs">
                 &lt;audio src&gt;

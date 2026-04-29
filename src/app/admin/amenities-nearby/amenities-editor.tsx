@@ -14,7 +14,7 @@ import { ArrowDown, ArrowUp, Plus, Trash2 } from "lucide-react";
 import { api } from "../../../../convex/_generated/api";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Switch } from "@/components/ui/switch";
+import { SiteVisibilityRow } from "@/components/admin/site-visibility-row";
 import { Textarea } from "@/components/ui/textarea";
 import { cn } from "@/lib/utils";
 import { convexMutationEffect } from "@/lib/effect-errors";
@@ -307,28 +307,23 @@ function AmenitiesForm() {
     <div className="space-y-10 pb-24" ref={handleEditorRef}>
       {toolbarPortal}
 
-      <fieldset className="space-y-4">
-        <legend className="label-text text-muted-foreground">Site visibility</legend>
-        <div className="flex items-start gap-3">
-          <Switch
-            id="amenities-section-visible"
-            checked={sectionVisible}
-            onCheckedChange={setSectionVisible}
-          />
-          <div className="space-y-1">
-            <label
-              htmlFor="amenities-section-visible"
-              className="body-text-small cursor-pointer text-foreground"
-            >
-              Show “Local favorites” block on homepage
-            </label>
-            <p className="body-text-small text-muted-foreground">
-              When off, the block is hidden from the public site (preview still
-              respects draft visibility for owners).
-            </p>
-          </div>
-        </div>
-      </fieldset>
+      <div className="space-y-4">
+        <p className="label-text text-muted-foreground">Site visibility</p>
+        <SiteVisibilityRow
+          id="amenities-section-visible"
+          title="Local favorites visibility"
+          description={
+            <>
+              When off, the “Local favorites” block is hidden on the public
+              homepage. Preview still reflects draft visibility for owners.
+              Publish to apply.
+            </>
+          }
+          checked={sectionVisible}
+          onCheckedChange={setSectionVisible}
+          disabled={busy !== null}
+        />
+      </div>
 
       <section className="space-y-4">
         <h2 className="text-lg font-semibold">Section labels (optional)</h2>
