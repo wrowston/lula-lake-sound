@@ -776,7 +776,7 @@ function VideosEditorForm() {
     busy,
     autosaveStatus: "idle",
     inlineError,
-    previewHref: "/preview",
+    previewHref: "/preview/gallery#videos",
     onPublish: handleToolbarPublish,
     onDiscardConfirm: handleDiscardConfirm,
   });
@@ -809,7 +809,7 @@ function VideosEditorForm() {
           </h2>
           <p className="body-text-small max-w-2xl text-foreground/85">
             Embed videos from YouTube, Vimeo, or Mux, or upload short clips
-            directly to Convex storage. Order, edits, and additions live on
+            directly to storage. Order, edits, and additions live on
             the draft until you publish — preview each panel inline before
             it goes live.
           </p>
@@ -1404,11 +1404,7 @@ function VideoCard({
           >
             {headingTitle}
           </h3>
-          {video.provider === "upload" && video.videoUrl ? (
-            <p className="truncate text-[11px] text-muted-foreground">
-              Convex storage · {video.videoStorageId}
-            </p>
-          ) : video.externalId ? (
+          {video.provider !== "upload" && video.externalId ? (
             <p className="truncate text-[11px] text-muted-foreground">
               {providerLabel} id · {video.externalId}
             </p>

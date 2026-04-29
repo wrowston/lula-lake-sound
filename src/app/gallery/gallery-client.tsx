@@ -19,6 +19,10 @@ import { Header } from "@/components/header";
 import { PageHeader } from "@/components/page-header";
 import { SiteFooter } from "@/components/site-footer";
 import type { GalleryPhoto } from "@/components/the-space";
+import {
+  VideoShowcase,
+  type PublishedVideo,
+} from "@/components/video-showcase";
 import { useScrollAndReveal } from "@/hooks/use-scroll-and-reveal";
 import { revealDelay } from "@/lib/reveal-delay";
 import {
@@ -119,6 +123,8 @@ function filterItems(
 
 interface GalleryClientProps {
   readonly photos: readonly GalleryPhoto[];
+  /** CMS video portfolio (INF-94); empty hides the block. */
+  readonly videos?: readonly PublishedVideo[] | null | undefined;
   readonly marketing: MarketingFeatureFlags;
   /** Optional banner slot (preview routes), aligned with `HomepageShell`. */
   readonly banner?: React.ReactNode;
@@ -126,6 +132,7 @@ interface GalleryClientProps {
 
 export function GalleryClient({
   photos,
+  videos,
   marketing,
   banner,
 }: GalleryClientProps) {
@@ -139,7 +146,10 @@ export function GalleryClient({
   const showPricing = isHomepagePricingSectionEnabled(marketing);
   const showAbout = marketing.aboutPage === true;
   const showRecordings = marketing.recordingsPage === true;
-  const showGallery = isGalleryPageEnabled(marketing);
+  /** Owners previewing `/preview/gallery` keep a Gallery tab even when public visibility is off. */
+  const showGallery =
+    isGalleryPageEnabled(marketing) ||
+    pathname.startsWith("/preview/gallery");
 
   const items = useMemo(() => toGalleryItems(photos), [photos]);
   const [filter, setFilter] = useState<FilterId>("all");
@@ -273,7 +283,6 @@ export function GalleryClient({
       ref={containerRef}
       className="dark relative min-h-screen bg-deep-forest text-ivory grain-overlay"
     >
-      {banner}
       <Header
         scrollY={scrollY}
         showPricing={showPricing}
@@ -284,6 +293,7 @@ export function GalleryClient({
         homeSectionBase={homeSectionBase}
         recordingsHref={recordingsNavHref}
       />
+      {banner}
 
       <main>
         <PageHeader
@@ -316,6 +326,8 @@ export function GalleryClient({
             )}
           </div>
         </section>
+
+        <VideoShowcase variant="gallery" videos={videos} />
 
         <section
           className="bg-deep-forest px-6 py-24 md:px-16 md:py-32"

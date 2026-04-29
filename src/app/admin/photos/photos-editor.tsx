@@ -35,6 +35,7 @@ import {
   Trash2,
   Upload,
 } from "lucide-react";
+import { SiteVisibilityRow } from "@/components/admin/site-visibility-row";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Switch } from "@/components/ui/switch";
@@ -1148,31 +1149,19 @@ function PhotosEditorForm() {
               </div>
             </div>
             {surfaceTab !== "carousel" ? (
-              <div className="flex flex-col gap-2 rounded-lg border border-border bg-muted/20 px-3 py-2 sm:flex-row sm:items-center sm:justify-between">
-                <div>
-                  <p className="text-sm font-medium text-foreground">
-                    Gallery page visibility
-                  </p>
-                  <p className="text-xs text-muted-foreground">
-                    When off, <code className="font-mono">/gallery</code> 404s
-                    and the Gallery nav link is hidden. Publish to apply.
-                  </p>
-                </div>
-                <div className="flex items-center gap-2">
-                  <Switch
-                    id="gallery-page-visible"
-                    checked={galleryPageEffective}
-                    onCheckedChange={setGalleryPageVisible}
-                    disabled={busy !== null}
-                  />
-                  <label
-                    htmlFor="gallery-page-visible"
-                    className="text-sm text-foreground/90"
-                  >
-                    {galleryPageEffective ? "Visible" : "Hidden"}
-                  </label>
-                </div>
-              </div>
+              <SiteVisibilityRow
+                id="gallery-page-visible"
+                title="Gallery page visibility"
+                description={
+                  <>
+                    When off, <code>/gallery</code> 404s and the Gallery nav link
+                    is hidden. Publish to apply.
+                  </>
+                }
+                checked={galleryPageEffective}
+                onCheckedChange={setGalleryPageVisible}
+                disabled={busy !== null}
+              />
             ) : null}
           </div>
 

@@ -15,6 +15,10 @@ const preloadPublishedGallery = cache(() =>
   preloadQuery(api.public.getPublishedGalleryPhotos),
 );
 
+const preloadPublishedVideosForGallery = cache(() =>
+  preloadQuery(api.public.getPublishedVideos),
+);
+
 const preloadMarketingForGallery = cache(() =>
   preloadQuery(api.public.getPublishedMarketingFeatureFlags),
 );
@@ -42,10 +46,12 @@ export async function generateMetadata(): Promise<Metadata> {
 }
 
 export default async function GalleryPage() {
-  const [photosPreloaded, marketingPreloaded] = await Promise.all([
-    preloadPublishedGallery(),
-    preloadMarketingForGallery(),
-  ]);
+  const [photosPreloaded, videosPreloaded, marketingPreloaded] =
+    await Promise.all([
+      preloadPublishedGallery(),
+      preloadPublishedVideosForGallery(),
+      preloadMarketingForGallery(),
+    ]);
   const marketing = preloadedQueryResult(marketingPreloaded);
   if (!isGalleryPageEnabled(marketing)) {
     notFound();
@@ -53,6 +59,7 @@ export default async function GalleryPage() {
   return (
     <GalleryPageClient
       photosPreloaded={photosPreloaded}
+      videosPreloaded={videosPreloaded}
       marketingPreloaded={marketingPreloaded}
     />
   );
