@@ -85,6 +85,7 @@ function publicVideo(video: MaterializedVideo) {
     externalId: video.externalId,
     playbackUrl: video.playbackUrl,
     videoUrl: video.videoUrl,
+    thumbnailUrl: video.thumbnailUrl,
     resolvedThumbnailUrl: video.resolvedThumbnailUrl,
     durationSec: video.durationSec,
   };
