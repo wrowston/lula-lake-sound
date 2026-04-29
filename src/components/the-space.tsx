@@ -108,8 +108,7 @@ function StudioGallery({
                         ? "z-[2] opacity-100"
                         : "pointer-events-none z-[1] opacity-0"
                     }`}
-                    priority={index === 0}
-                    loading={index === 0 ? undefined : "lazy"}
+                    loading={index === 0 ? "eager" : "lazy"}
                     quality={82}
                     aria-hidden={index !== safeIndex}
                   />
