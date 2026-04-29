@@ -13,6 +13,7 @@ function PreviewContent() {
   );
   const gearPreview = useQuery(api.gearPreviewDraft.getPreviewGear);
   const photoPreview = useQuery(api.photosPreviewDraft.getPreviewCarouselPhotos);
+  const videoPreview = useQuery(api.videosPreviewDraft.getPreviewVideos);
   const audioPreview = useQuery(api.audioPreviewDraft.getPreviewAudioTracks);
   // Tracks whether the About section has unpublished draft content so the
   // preview banner can reflect it. Owner-only — returns `null` for non-owners.
@@ -27,6 +28,7 @@ function PreviewContent() {
     pricingFlags === undefined ||
     gearPreview === undefined ||
     photoPreview === undefined ||
+    videoPreview === undefined ||
     audioPreview === undefined ||
     aboutPreview === undefined ||
     faqPreview === undefined ||
@@ -44,6 +46,7 @@ function PreviewContent() {
     pricingFlags === null ||
     gearPreview === null ||
     photoPreview === null ||
+    videoPreview === null ||
     audioPreview === null ||
     aboutPreview === null ||
     faqPreview === null ||
@@ -63,6 +66,7 @@ function PreviewContent() {
     pricingFlags.hasDraftChanges ||
     gearPreview.hasDraftChanges ||
     photoPreview.hasDraftChanges ||
+    videoPreview.hasDraftChanges ||
     audioPreview.hasDraftChanges ||
     aboutPreview.hasDraftChanges ||
     faqPreview.hasDraftChanges ||
@@ -91,6 +95,7 @@ function PreviewContent() {
       }}
       gear={{ categories: gearPreview.categories }}
       photos={photoPreview.photos}
+      videos={videoPreview.videos}
       faqCategories={faqPreview.categories}
       amenities={amenitiesPayload}
       banner={<PreviewBanner hasDraftChanges={hasDraftChanges} />}
