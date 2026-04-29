@@ -540,7 +540,7 @@ html.light {
 
 .bg-texture-stone {
   background-image:
-    url("/Textures/News%20Pulp%20Texture.optimized.jpg"),
+    url("/Textures/News%20Pulp%20Texture.optimized.png"),
     radial-gradient(circle at 18% 78%, rgba(85, 101, 106, 0.1) 0%, transparent 55%),
     radial-gradient(circle at 82% 22%, rgba(163, 130, 46, 0.07) 0%, transparent 55%),
     radial-gradient(circle at 50% 50%, rgba(31, 30, 28, 0.04) 0%, transparent 65%);
@@ -561,7 +561,7 @@ html.light {
 
 .bg-texture-canvas {
   background-image:
-    url("/Textures/Canvas%20Texture.optimized.jpg"),
+    url("/Textures/Canvas%20Texture.optimized.png"),
     radial-gradient(circle at 50% 0%, rgba(198, 189, 160, 0.05) 0%, transparent 45%),
     radial-gradient(circle at 50% 100%, rgba(28, 30, 21, 0.15) 0%, transparent 55%);
   background-size:
