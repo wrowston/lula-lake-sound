@@ -9,10 +9,7 @@ import {
   mapPublishedAudioToRecordings,
   type Recording,
 } from "./recordings-data";
-import {
-  type MarketingFeatureFlags,
-  DEFAULT_MARKETING_FEATURE_FLAGS,
-} from "@/lib/site-settings";
+import { type MarketingFeatureFlags } from "@/lib/site-settings";
 import { useSafePreloadedQuery } from "@/lib/use-public-convex-query";
 
 type PreloadedAudio = Preloaded<typeof api.public.getPublishedAudioTracks>;
@@ -36,13 +33,10 @@ export function RecordingsPageClient({
     return mapPublishedAudioToRecordings(raw);
   }, [raw]);
 
-  const resolvedMarketing: MarketingFeatureFlags =
-    raw === null ? DEFAULT_MARKETING_FEATURE_FLAGS : marketing;
-
   return (
     <RecordingsClient
       recordings={recordings}
-      marketing={resolvedMarketing}
+      marketing={marketing}
       convexUnavailable={raw === null}
     />
   );

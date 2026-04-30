@@ -43,7 +43,7 @@ export function MarketingPricingSection({
       : (pricingFlags != null &&
           pricingFlags.flags.priceTabEnabled === true) ||
           previewCatalogOn;
-  const visible = loading || (pricingFlags !== null && sectionOn);
+  const visible = loading || (sectionOn && pricingFlags !== undefined);
 
   if (!visible) {
     return null;
