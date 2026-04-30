@@ -1,11 +1,7 @@
 "use client";
 
 import { usePathname } from "next/navigation";
-import { api } from "../../convex/_generated/api";
-import {
-  PUBLIC_CONVEX_QUERY_FAILED,
-  usePublicConvexQuery,
-} from "@/lib/use-public-convex-query";
+import { PUBLIC_CONVEX_QUERY_FAILED } from "@/lib/use-public-convex-query";
 import { AmenitiesNearby } from "@/components/amenities-nearby";
 import { ArtistInquiries } from "@/components/artist-inquiries";
 import { MarketingPricingSection } from "@/components/dynamic-pricing";
@@ -86,7 +82,8 @@ export function HomepageShell({
 }: HomepageShellProps) {
   const { scrollY, containerRef } = useScrollAndReveal();
   const pathname = usePathname();
-  const marketingFromPropsResolved =
+  const marketingResolved =
+    marketingFromProps === undefined ||
     marketingFromProps === PUBLIC_CONVEX_QUERY_FAILED
       ? undefined
       : marketingFromProps;
@@ -96,20 +93,7 @@ export function HomepageShell({
   const homeSectionBase = isPreview ? "/preview" : "/";
   const recordingsNavHref = isPreview ? "/preview/recordings" : "/recordings";
 
-  const liveMarketing = usePublicConvexQuery(
-    api.public.getPublishedMarketingFeatureFlags,
-    {},
-    {
-      section: "home_marketing_flags",
-      skip: marketingFromPropsResolved !== undefined,
-    },
-  );
-  const marketing =
-    marketingFromPropsResolved === undefined
-      ? liveMarketing
-      : marketingFromPropsResolved;
-  const marketingForUi =
-    marketing === PUBLIC_CONVEX_QUERY_FAILED ? undefined : marketing;
+  const marketingForUi = marketingResolved;
 
   const logoScale = calculateLogoScale(scrollY);
   // Nav-link visibility intentionally defaults to OFF while the marketing
