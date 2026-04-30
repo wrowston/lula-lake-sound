@@ -62,11 +62,15 @@ export function usePublicConvexQuery<Query extends FunctionReference<"query">>(
     const fingerprint = `${options.section}:${raw.message}`;
     if (lastLogged.current !== fingerprint) {
       lastLogged.current = fingerprint;
-      Sentry.captureException(raw, {
-        tags: {
-          section: options.section,
-          preview: computePreviewTag(pathname),
-        },
+      const err = raw;
+      const previewTag = computePreviewTag(pathname);
+      queueMicrotask(() => {
+        Sentry.captureException(err, {
+          tags: {
+            section: options.section,
+            preview: previewTag,
+          },
+        });
       });
     }
     return PUBLIC_CONVEX_QUERY_FAILED;
