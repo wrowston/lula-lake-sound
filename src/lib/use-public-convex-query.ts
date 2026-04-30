@@ -5,6 +5,7 @@ import * as Sentry from "@sentry/nextjs";
 import { useQueries, type Preloaded, type RequestForQueries } from "convex/react";
 import { convexToJson, jsonToConvex, type Value } from "convex/values";
 import {
+  getFunctionName,
   makeFunctionReference,
   type FunctionArgs,
   type FunctionReference,
@@ -41,6 +42,19 @@ export function usePublicConvexQuery<Query extends FunctionReference<"query">>(
   const argsValue = args as Value;
   const argsForQuery = args as Record<string, Value>;
   const skip = options.skip === true;
+  /**
+   * INF-109 — `api.foo.bar` from Convex's generated `api` is a Proxy whose
+   * property accessors return a fresh Proxy on every access (see
+   * `convex/server/api.ts#createApi`). That makes `query` an unstable
+   * reference across renders, which would invalidate `useMemo` deps,
+   * recreate `subscription` inside `useQueries`, and force a setState
+   * during render in `useSubscription` — manifesting as React error #301
+   * ("Too many re-renders"). Keying on the function's stable name keeps
+   * the memo identity stable across renders even when callers pass
+   * `api.foo.bar` directly.
+   */
+  const queryName = getFunctionName(query);
+  const argsJson = JSON.stringify(convexToJson(argsValue));
   const queries = useMemo((): RequestForQueries => {
     if (skip) {
       return {} as RequestForQueries;
@@ -51,8 +65,8 @@ export function usePublicConvexQuery<Query extends FunctionReference<"query">>(
         args: argsForQuery,
       },
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- Convex pattern: args JSON identity
-  }, [JSON.stringify(convexToJson(argsValue)), query, skip]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- Convex pattern: queryName + args JSON identity (`query` is intentionally excluded; see comment above).
+  }, [argsJson, queryName, skip]);
 
   const results = useQueries(queries);
   const raw = results[QUERY_KEY];
