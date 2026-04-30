@@ -16,18 +16,27 @@ import { computePreviewTag } from "@/lib/sentry";
 
 const QUERY_KEY = "q" as const;
 
+/** Subscription or transport failure; distinct from a Convex handler returning `null`. */
+export const PUBLIC_CONVEX_QUERY_FAILED = Symbol("PublicConvexQueryFailed");
+
+export type PublicConvexQueryResult<T> =
+  | T
+  | undefined
+  | typeof PUBLIC_CONVEX_QUERY_FAILED;
+
 /**
  * Subscribes to a public Convex query without throwing on transport or query
  * errors (unlike {@link useQuery}, which throws when the subscription yields an
- * `Error`). Returns `undefined` while loading, `null` on failure, and the result
- * otherwise. Reports the first occurrence of each distinct error to Sentry with
+ * `Error`). Returns `undefined` while loading, {@link PUBLIC_CONVEX_QUERY_FAILED}
+ * on failure, and the query result otherwise (including `null` if the handler
+ * returns `null`). Reports the first occurrence of each distinct error to Sentry with
  * a coarse `section` tag for triage (INF-108 / INF-81).
  */
 export function usePublicConvexQuery<Query extends FunctionReference<"query">>(
   query: Query,
   args: FunctionArgs<Query>,
   options: { readonly section: string; readonly skip?: boolean },
-): FunctionReturnType<Query> | undefined | null {
+): PublicConvexQueryResult<FunctionReturnType<Query>> {
   const pathname = usePathname();
   const argsValue = args as Value;
   const argsForQuery = args as Record<string, Value>;
@@ -60,7 +69,7 @@ export function usePublicConvexQuery<Query extends FunctionReference<"query">>(
         },
       });
     }
-    return null;
+    return PUBLIC_CONVEX_QUERY_FAILED;
   }
 
   if (raw !== undefined) {
@@ -72,13 +81,13 @@ export function usePublicConvexQuery<Query extends FunctionReference<"query">>(
 
 /**
  * Like {@link usePreloadedQuery}, but when the live subscription fails the hook
- * returns `null` instead of throwing. While the live result is still `undefined`,
+ * returns {@link PUBLIC_CONVEX_QUERY_FAILED} instead of throwing. While the live result is still `undefined`,
  * the preloaded snapshot is returned (same hydration behavior as Convex).
  */
 export function useSafePreloadedQuery<Query extends FunctionReference<"query">>(
   preloaded: Preloaded<Query>,
   options: { readonly section: string },
-): FunctionReturnType<Query> | undefined | null {
+): PublicConvexQueryResult<FunctionReturnType<Query>> {
   const args = useMemo(
     () => jsonToConvex(preloaded._argsJSON) as FunctionArgs<Query>,
     [preloaded._argsJSON],

@@ -10,7 +10,11 @@ import {
   type MarketingFeatureFlags,
   DEFAULT_MARKETING_FEATURE_FLAGS,
 } from "@/lib/site-settings";
-import { useSafePreloadedQuery } from "@/lib/use-public-convex-query";
+import {
+  PUBLIC_CONVEX_QUERY_FAILED,
+  useSafePreloadedQuery,
+  type PublicConvexQueryResult,
+} from "@/lib/use-public-convex-query";
 
 type PreloadedPhotos = Preloaded<typeof api.public.getPublishedGalleryPhotos>;
 type PreloadedVideos = Preloaded<typeof api.public.getPublishedVideos>;
@@ -34,28 +38,41 @@ export function GalleryPageClient({
 }) {
   const photos = useSafePreloadedQuery(photosPreloaded, {
     section: "gallery_photos",
-  }) as GalleryPhoto[] | null | undefined;
+  }) as PublicConvexQueryResult<GalleryPhoto[]>;
   const videos = useSafePreloadedQuery(videosPreloaded, {
     section: "gallery_videos",
-  }) as PublishedVideo[] | null | undefined;
+  }) as PublicConvexQueryResult<PublishedVideo[]>;
   const marketingLive = useSafePreloadedQuery(marketingPreloaded, {
     section: "gallery_marketing_flags",
-  }) as MarketingFeatureFlags | null | undefined;
+  }) as PublicConvexQueryResult<MarketingFeatureFlags | null>;
 
   const marketing: MarketingFeatureFlags =
-    marketingLive ?? DEFAULT_MARKETING_FEATURE_FLAGS;
+    marketingLive === PUBLIC_CONVEX_QUERY_FAILED ||
+    marketingLive === null ||
+    marketingLive === undefined
+      ? DEFAULT_MARKETING_FEATURE_FLAGS
+      : marketingLive;
 
   const photosResolved: readonly GalleryPhoto[] =
-    photos === null || photos === undefined ? [] : photos;
+    photos === PUBLIC_CONVEX_QUERY_FAILED ||
+    photos === null ||
+    photos === undefined
+      ? []
+      : photos;
   const videosResolved: readonly PublishedVideo[] | undefined =
-    videos === null ? undefined : videos;
+    videos === PUBLIC_CONVEX_QUERY_FAILED || videos === null
+      ? undefined
+      : videos;
 
   return (
     <GalleryClient
       photos={photosResolved}
       videos={videosResolved}
       marketing={marketing}
-      convexUnavailable={photos === null || videos === null}
+      convexUnavailable={
+        photos === PUBLIC_CONVEX_QUERY_FAILED ||
+        videos === PUBLIC_CONVEX_QUERY_FAILED
+      }
     />
   );
 }

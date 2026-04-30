@@ -2,6 +2,7 @@
 
 import { AmenityCard } from "./ui/amenity-card";
 import { PublicSectionNotice } from "@/components/public-section-notice";
+import { PUBLIC_CONVEX_QUERY_FAILED } from "@/lib/use-public-convex-query";
 
 const STATIC_EYEBROW = "Local Favorites";
 const STATIC_HEADING = "Amenities Nearby";
@@ -22,7 +23,11 @@ export type PublishedAmenitiesNearby = {
 
 type AmenitiesNearbyProps = {
   /** Published (or owner preview) amenities payload from Convex. */
-  readonly amenities?: PublishedAmenitiesNearby | null | undefined;
+  readonly amenities?:
+    | PublishedAmenitiesNearby
+    | null
+    | undefined
+    | typeof PUBLIC_CONVEX_QUERY_FAILED;
 };
 
 export function AmenitiesNearby({ amenities }: AmenitiesNearbyProps) {
@@ -41,6 +46,10 @@ export function AmenitiesNearby({ amenities }: AmenitiesNearbyProps) {
   }
 
   if (amenities === null) {
+    return null;
+  }
+
+  if (amenities === PUBLIC_CONVEX_QUERY_FAILED) {
     return (
       <section
         id="local-favorites"

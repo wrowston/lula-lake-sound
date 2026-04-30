@@ -9,13 +9,19 @@ import {
   isHomepagePricingSectionEnabled,
   previewHasActivePricingPackages,
 } from "@/lib/site-settings";
+import { PUBLIC_CONVEX_QUERY_FAILED } from "@/lib/use-public-convex-query";
 
 interface MarketingPricingSectionProps {
   /**
    * Published or preview pricing payload. `undefined` means still loading (show
    * skeleton). `null` means unavailable (hide section).
+   * {@link PUBLIC_CONVEX_QUERY_FAILED} means the live subscription failed.
    */
-  readonly pricingFlags: PricingFlags | null | undefined;
+  readonly pricingFlags:
+    | PricingFlags
+    | null
+    | undefined
+    | typeof PUBLIC_CONVEX_QUERY_FAILED;
   /**
    * When set, gates the block (from `getPublishedMarketingFeatureFlags` or preview).
    * If omitted, falls back to `flags.priceTabEnabled` for back-compat.
@@ -35,15 +41,25 @@ export function MarketingPricingSection({
   isPreviewRoute = false,
 }: MarketingPricingSectionProps) {
   const loading = pricingFlags === undefined;
+  const subscriptionFailed = pricingFlags === PUBLIC_CONVEX_QUERY_FAILED;
+  const pricingPayload =
+    loading || subscriptionFailed
+      ? undefined
+      : pricingFlags === null
+        ? null
+        : pricingFlags;
   const previewCatalogOn =
-    isPreviewRoute && previewHasActivePricingPackages(pricingFlags);
+    isPreviewRoute && previewHasActivePricingPackages(pricingPayload);
   const sectionOn =
     marketingFeatureFlags != null
       ? isHomepagePricingSectionEnabled(marketingFeatureFlags)
-      : (pricingFlags != null &&
-          pricingFlags.flags.priceTabEnabled === true) ||
+      : (pricingPayload != null &&
+          pricingPayload.flags.priceTabEnabled === true) ||
           previewCatalogOn;
-  const visible = loading || (sectionOn && pricingFlags !== undefined);
+  const visible =
+    loading ||
+    (sectionOn &&
+      (subscriptionFailed || pricingFlags !== undefined));
 
   if (!visible) {
     return null;
@@ -53,7 +69,7 @@ export function MarketingPricingSection({
     return <ServicesAndPricingSkeleton />;
   }
 
-  if (pricingFlags === null) {
+  if (subscriptionFailed) {
     return (
       <section
         id="services-pricing"
@@ -72,7 +88,11 @@ export function MarketingPricingSection({
     );
   }
 
-  const packages = pricingFlags.packages ?? [];
+  if (pricingPayload == null) {
+    return null;
+  }
+
+  const packages = pricingPayload.packages ?? [];
 
   return <ServicesAndPricing packages={packages} />;
 }

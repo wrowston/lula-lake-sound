@@ -11,6 +11,7 @@ import {
 } from "@/components/ui/accordion";
 import { Button, buttonVariants } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
+import { PUBLIC_CONVEX_QUERY_FAILED } from "@/lib/use-public-convex-query";
 
 export type FaqQuestionProps = {
   stableId: string;
@@ -25,14 +26,24 @@ export type FaqCategoryProps = {
 };
 
 export type FaqProps = {
-  categories?: readonly FaqCategoryProps[] | null | undefined;
+  categories?:
+    | readonly FaqCategoryProps[]
+    | null
+    | undefined
+    | typeof PUBLIC_CONVEX_QUERY_FAILED;
 };
 
 export function FAQ({ categories }: FaqProps) {
   const isLoading = categories === undefined;
-  const isUnavailable = categories === null;
+  const isUnavailable = categories === PUBLIC_CONVEX_QUERY_FAILED;
+  const categoriesResolved =
+    categories === undefined ||
+    categories === PUBLIC_CONVEX_QUERY_FAILED ||
+    categories === null
+      ? []
+      : categories;
   const isEmptyPublished =
-    !isLoading && !isUnavailable && categories.length === 0;
+    !isLoading && !isUnavailable && categoriesResolved.length === 0;
 
   return (
     <section
@@ -89,7 +100,7 @@ export function FAQ({ categories }: FaqProps) {
           </div>
         ) : (
           <div className="reveal reveal-delay-2 space-y-16">
-            {categories.map((category) => (
+            {categoriesResolved.map((category) => (
               <div key={category.stableId}>
                 <h3 className="eyebrow mb-8 border-b border-sand/22 pb-4 text-sand">
                   {category.title}

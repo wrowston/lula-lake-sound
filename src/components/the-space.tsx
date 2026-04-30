@@ -4,6 +4,7 @@ import Image from "next/image";
 import { useState } from "react";
 
 import { Button } from "@/components/ui/button";
+import { PUBLIC_CONVEX_QUERY_FAILED } from "@/lib/use-public-convex-query";
 
 export type GalleryPhoto = {
   stableId: string;
@@ -55,13 +56,22 @@ function GallerySkeleton() {
 function StudioGallery({
   photos,
 }: {
-  photos: GalleryPhoto[] | null | undefined;
+  photos:
+    | GalleryPhoto[]
+    | null
+    | undefined
+    | typeof PUBLIC_CONVEX_QUERY_FAILED;
 }) {
   const [currentIndex, setCurrentIndex] = useState(0);
 
   const isLoading = photos === undefined;
-  const isError = photos === null;
-  const availablePhotos = photos ?? [];
+  const isError = photos === PUBLIC_CONVEX_QUERY_FAILED;
+  const availablePhotos =
+    photos === undefined ||
+    photos === null ||
+    photos === PUBLIC_CONVEX_QUERY_FAILED
+      ? []
+      : photos;
 
   if (isLoading) {
     return <GallerySkeleton />;
@@ -209,7 +219,11 @@ function StudioGallery({
 export function TheSpace({
   photos,
 }: {
-  photos: GalleryPhoto[] | null | undefined;
+  photos:
+    | GalleryPhoto[]
+    | null
+    | undefined
+    | typeof PUBLIC_CONVEX_QUERY_FAILED;
 }) {
   return (
     <section
@@ -248,7 +262,11 @@ export function TheSpace({
           key={
             photos === undefined
               ? "__pending__"
-              : (photos ?? []).map((photo) => photo.stableId).join("|")
+              : photos === PUBLIC_CONVEX_QUERY_FAILED
+                ? "__failed__"
+                : photos === null
+                  ? "__empty__"
+                  : photos.map((photo) => photo.stableId).join("|")
           }
           photos={photos}
         />

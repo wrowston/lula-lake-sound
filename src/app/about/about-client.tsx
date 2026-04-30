@@ -8,7 +8,10 @@ import {
   isHomepagePricingSectionEnabled,
   type MarketingFeatureFlags,
 } from "@/lib/site-settings";
-import { useSafePreloadedQuery } from "@/lib/use-public-convex-query";
+import {
+  PUBLIC_CONVEX_QUERY_FAILED,
+  useSafePreloadedQuery,
+} from "@/lib/use-public-convex-query";
 
 type PreloadedAbout = Preloaded<typeof api.public.getPublishedAbout>;
 type PreloadedMarketing = Preloaded<
@@ -32,18 +35,22 @@ export function AboutClient({
     section: "about_marketing_flags",
   });
   const marketing: MarketingFeatureFlags =
-    marketingLive ?? DEFAULT_MARKETING_FEATURE_FLAGS;
+    marketingLive === PUBLIC_CONVEX_QUERY_FAILED ||
+    marketingLive === null ||
+    marketingLive === undefined
+      ? DEFAULT_MARKETING_FEATURE_FLAGS
+      : marketingLive;
   const showPricing =
-    marketingLive === null
+    marketingLive === PUBLIC_CONVEX_QUERY_FAILED
       ? true
       : isHomepagePricingSectionEnabled(marketingLive);
 
   return (
     <AboutLayout
-      data={data}
+      data={data === PUBLIC_CONVEX_QUERY_FAILED ? undefined : data}
       showPricing={showPricing}
       marketing={marketing}
-      convexUnavailable={data === null}
+      convexUnavailable={data === PUBLIC_CONVEX_QUERY_FAILED}
     />
   );
 }

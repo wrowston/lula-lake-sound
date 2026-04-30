@@ -10,7 +10,10 @@ import {
   type Recording,
 } from "./recordings-data";
 import { type MarketingFeatureFlags } from "@/lib/site-settings";
-import { useSafePreloadedQuery } from "@/lib/use-public-convex-query";
+import {
+  PUBLIC_CONVEX_QUERY_FAILED,
+  useSafePreloadedQuery,
+} from "@/lib/use-public-convex-query";
 
 type PreloadedAudio = Preloaded<typeof api.public.getPublishedAudioTracks>;
 
@@ -29,7 +32,13 @@ export function RecordingsPageClient({
     section: "recordings_audio",
   });
   const recordings = useMemo((): Recording[] => {
-    if (raw === null || raw === undefined) return [];
+    if (
+      raw === PUBLIC_CONVEX_QUERY_FAILED ||
+      raw === null ||
+      raw === undefined
+    ) {
+      return [];
+    }
     return mapPublishedAudioToRecordings(raw);
   }, [raw]);
 
@@ -37,7 +46,7 @@ export function RecordingsPageClient({
     <RecordingsClient
       recordings={recordings}
       marketing={marketing}
-      convexUnavailable={raw === null}
+      convexUnavailable={raw === PUBLIC_CONVEX_QUERY_FAILED}
     />
   );
 }
