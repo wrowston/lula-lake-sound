@@ -3,6 +3,7 @@
 import Image from "next/image";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import posthog from "posthog-js";
 import {
   useCallback,
   useLayoutEffect,
@@ -272,15 +273,28 @@ export function GalleryClient({
   );
 
   const handleSelectFilter = useCallback((next: FilterId) => {
+    posthog.capture("gallery_filter_selected", { filter: next });
     setFilter(next);
     // Filter changes invalidate the active index — close the lightbox so we
     // never end up displaying an item that's no longer visible.
     setActiveIndex(null);
   }, []);
 
-  const handleOpenAt = useCallback((index: number) => {
-    setActiveIndex(index);
-  }, []);
+  const handleOpenAt = useCallback(
+    (index: number) => {
+      const item = visibleItems[index];
+      if (item) {
+        posthog.capture("gallery_item_opened", {
+          item_kind: item.kind,
+          item_alt: item.alt,
+          item_index: index,
+          active_filter: filter,
+        });
+      }
+      setActiveIndex(index);
+    },
+    [visibleItems, filter],
+  );
 
   return (
     <div

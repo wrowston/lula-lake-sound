@@ -4,6 +4,7 @@ import { Music } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import posthog from "posthog-js";
 import { useRef, useState, type ReactNode } from "react";
 
 import { Header } from "@/components/header";
@@ -213,6 +214,13 @@ function StreamingLinks({
           rel="noopener noreferrer"
           className={linkClass}
           aria-label={`${track.title} — listen on Spotify`}
+          onClick={() =>
+            posthog.capture("streaming_link_clicked", {
+              platform: "spotify",
+              track_title: track.title,
+              track_artist: track.artist,
+            })
+          }
         >
           <SpotifyGlyph className="h-4 w-4" />
         </a>
@@ -224,6 +232,13 @@ function StreamingLinks({
           rel="noopener noreferrer"
           className={linkClass}
           aria-label={`${track.title} — listen on Apple Music`}
+          onClick={() =>
+            posthog.capture("streaming_link_clicked", {
+              platform: "apple_music",
+              track_title: track.title,
+              track_artist: track.artist,
+            })
+          }
         >
           <Music className="h-4 w-4" strokeWidth={1.75} aria-hidden />
         </a>
@@ -583,6 +598,12 @@ export function RecordingsClient({
     // Switch tracks — stop the current one, point `<audio>` at the new URL,
     // then call play(). Browsers fire `loadedmetadata` when duration is
     // available; we sync state from that event.
+    posthog.capture("recording_played", {
+      track_title: track.title,
+      track_artist: track.artist,
+      track_genre: track.genre ?? null,
+      track_year: track.year ?? null,
+    });
     audioEl.pause();
     audioEl.src = track.audioUrl;
     audioEl.currentTime = 0;

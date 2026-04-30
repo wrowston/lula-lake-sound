@@ -1,6 +1,7 @@
 "use client"
 
 import { zodResolver } from "@hookform/resolvers/zod"
+import posthog from "posthog-js"
 import { useState } from "react"
 import { useForm } from "react-hook-form"
 
@@ -87,15 +88,22 @@ export function ContactInquiryForm() {
       }
 
       if (data?.success) {
+        posthog.capture("contact_inquiry_submitted", {
+          has_phone: Boolean(values.phone.trim()),
+        })
         form.reset()
         setShowSuccess(true)
       } else {
+        posthog.capture("contact_inquiry_failed", {
+          reason: data?.message ?? "unknown",
+        })
         form.setError("root", {
           type: "server",
           message: data?.message ?? "Something went wrong. Please try again.",
         })
       }
     } catch (error) {
+      posthog.captureException(error)
       console.error("Submission error:", error)
       form.setError("root", {
         type: "server",

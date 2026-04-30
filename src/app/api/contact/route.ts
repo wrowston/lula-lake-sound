@@ -1,6 +1,7 @@
 import { ConvexHttpClient } from "convex/browser";
 import { Resend } from "resend";
 import { api } from "@convex/_generated/api";
+import { getPostHogClient } from "@/lib/posthog-server";
 
 export const runtime = "nodejs";
 
@@ -173,6 +174,16 @@ export async function POST(request: Request) {
       { status: 500 }
     );
   }
+
+  const posthog = getPostHogClient();
+  posthog.capture({
+    distinctId: email,
+    event: "inquiry_saved",
+    properties: {
+      artist_name: artistName,
+      has_phone: Boolean(phone),
+    },
+  });
 
   return Response.json({ success: true });
 }
