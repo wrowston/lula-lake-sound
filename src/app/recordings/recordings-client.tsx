@@ -682,7 +682,7 @@ export function RecordingsClient({
               </div>
             ) : null}
 
-            {recordings.length === 0 ? (
+            {recordings.length === 0 && !convexUnavailable ? (
               <div
                 className={cn(
                   revealDelay(1),

@@ -40,10 +40,7 @@ export function AboutClient({
     marketingLive === undefined
       ? DEFAULT_MARKETING_FEATURE_FLAGS
       : marketingLive;
-  const showPricing =
-    marketingLive === PUBLIC_CONVEX_QUERY_FAILED
-      ? true
-      : isHomepagePricingSectionEnabled(marketingLive);
+  const showPricing = isHomepagePricingSectionEnabled(marketing);
 
   return (
     <AboutLayout
