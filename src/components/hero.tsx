@@ -21,6 +21,12 @@ export function Hero({ logoScale }: HeroProps) {
       className="relative flex min-h-[88vh] flex-col items-center justify-center overflow-hidden md:min-h-screen"
     >
       <div className="absolute inset-0 z-0">
+        {/*
+         * `unoptimized` keeps the served URL identical to the one preloaded
+         * from `app/page.tsx` via `ReactDOM.preload`, so the browser reuses
+         * those bytes instead of waiting on a fresh `/_next/image` request.
+         * The asset is already pre-optimized (`.optimized.jpg`).
+         */}
         <Image
           src="/Textured Backgrounds/LLS_Texture_Emerald.optimized.jpg"
           alt=""
@@ -28,7 +34,8 @@ export function Hero({ logoScale }: HeroProps) {
           sizes="100vw"
           className="object-cover object-center"
           priority
-          quality={85}
+          fetchPriority="high"
+          unoptimized
         />
         {/* Single, earthy wash — keeps type legible without flashy gradients. */}
         <div className="absolute inset-0 bg-washed-black/55" />
@@ -50,6 +57,9 @@ export function Hero({ logoScale }: HeroProps) {
             height={260}
             className="h-auto max-w-[78%] transition-transform duration-[1200ms] ease-[cubic-bezier(0.16,1,0.3,1)]"
             style={{ transform: `scale(${logoScale})` }}
+            priority
+            fetchPriority="high"
+            unoptimized
           />
         </div>
 
