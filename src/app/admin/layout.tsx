@@ -13,6 +13,7 @@ import {
   SIDEBAR_COOKIE_NAME,
 } from "@/lib/sidebar-cookie";
 import { Toaster } from "sonner";
+import { ConvexAuthenticatedProvider } from "@/components/convex-authenticated-provider";
 
 export const metadata: Metadata = {
   title: {
@@ -33,22 +34,24 @@ export default async function AdminLayout({
   );
 
   return (
-    <TooltipProvider>
-      <Toaster richColors closeButton position="top-right" />
-      <SidebarProvider
-        className="admin-dashboard-tokens"
-        defaultOpen={defaultOpen}
-        resizableWidth
-        sidebarWidthStorageKey="admin_sidebar_width_px"
-      >
-        <CmsWorkspaceProvider>
-          <AdminSidebar />
-          <SidebarInset className="text-foreground">
-            <CmsAdminPageSlot>{children}</CmsAdminPageSlot>
-            <CmsPersistentToolbarHost />
-          </SidebarInset>
-        </CmsWorkspaceProvider>
-      </SidebarProvider>
-    </TooltipProvider>
+    <ConvexAuthenticatedProvider>
+      <TooltipProvider>
+        <Toaster richColors closeButton position="top-right" />
+        <SidebarProvider
+          className="admin-dashboard-tokens"
+          defaultOpen={defaultOpen}
+          resizableWidth
+          sidebarWidthStorageKey="admin_sidebar_width_px"
+        >
+          <CmsWorkspaceProvider>
+            <AdminSidebar />
+            <SidebarInset className="text-foreground">
+              <CmsAdminPageSlot>{children}</CmsAdminPageSlot>
+              <CmsPersistentToolbarHost />
+            </SidebarInset>
+          </CmsWorkspaceProvider>
+        </SidebarProvider>
+      </TooltipProvider>
+    </ConvexAuthenticatedProvider>
   );
 }

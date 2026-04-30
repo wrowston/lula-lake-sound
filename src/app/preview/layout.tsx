@@ -1,5 +1,7 @@
 import type { Metadata } from "next";
 
+import { ConvexAuthenticatedProvider } from "@/components/convex-authenticated-provider";
+
 export const dynamic = "force-dynamic";
 
 export const metadata: Metadata = {
@@ -12,5 +14,7 @@ export default function PreviewLayout({
 }: Readonly<{
   children: React.ReactNode;
 }>) {
-  return <>{children}</>;
+  return (
+    <ConvexAuthenticatedProvider>{children}</ConvexAuthenticatedProvider>
+  );
 }
