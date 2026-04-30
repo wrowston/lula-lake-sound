@@ -2,6 +2,7 @@
 
 import Image from "next/image";
 
+import { PublicSectionNotice } from "@/components/public-section-notice";
 import {
   Accordion,
   AccordionItem,
@@ -10,6 +11,7 @@ import {
 } from "@/components/ui/accordion";
 import { Button, buttonVariants } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
+import { PUBLIC_CONVEX_QUERY_FAILED } from "@/lib/use-public-convex-query";
 
 export type FaqQuestionProps = {
   stableId: string;
@@ -24,13 +26,24 @@ export type FaqCategoryProps = {
 };
 
 export type FaqProps = {
-  categories?: readonly FaqCategoryProps[] | null;
+  categories?:
+    | readonly FaqCategoryProps[]
+    | null
+    | undefined
+    | typeof PUBLIC_CONVEX_QUERY_FAILED;
 };
 
 export function FAQ({ categories }: FaqProps) {
-  if (categories === null || categories?.length === 0) {
-    return null;
-  }
+  const isLoading = categories === undefined;
+  const isUnavailable = categories === PUBLIC_CONVEX_QUERY_FAILED;
+  const categoriesResolved =
+    categories === undefined ||
+    categories === PUBLIC_CONVEX_QUERY_FAILED ||
+    categories === null
+      ? []
+      : categories;
+  const isEmptyPublished =
+    !isLoading && !isUnavailable && categoriesResolved.length === 0;
 
   return (
     <section
@@ -65,15 +78,29 @@ export function FAQ({ categories }: FaqProps) {
           </p>
         </div>
 
-        {categories === undefined ? (
+        {isLoading ? (
           <div className="reveal reveal-delay-2 space-y-10">
             <div className="h-12 animate-pulse rounded-md bg-warm-white/5" />
             <div className="h-12 animate-pulse rounded-md bg-warm-white/5" />
             <div className="h-12 animate-pulse rounded-md bg-warm-white/5" />
           </div>
+        ) : isUnavailable ? (
+          <div className="reveal reveal-delay-2">
+            <PublicSectionNotice title="Unable to load FAQs">
+              We couldn&rsquo;t load questions and answers right now. Try again
+              in a moment, or reach out using the links below.
+            </PublicSectionNotice>
+          </div>
+        ) : isEmptyPublished ? (
+          <div className="reveal reveal-delay-2">
+            <PublicSectionNotice title="Questions coming soon">
+              Answers for booking, sessions, and the studio will appear here
+              when they are published.
+            </PublicSectionNotice>
+          </div>
         ) : (
           <div className="reveal reveal-delay-2 space-y-16">
-            {categories.map((category) => (
+            {categoriesResolved.map((category) => (
               <div key={category.stableId}>
                 <h3 className="eyebrow mb-8 border-b border-sand/22 pb-4 text-sand">
                   {category.title}

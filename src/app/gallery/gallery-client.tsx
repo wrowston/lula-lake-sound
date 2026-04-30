@@ -17,6 +17,7 @@ import {
 } from "@convex/galleryPhotos";
 import { Header } from "@/components/header";
 import { PageHeader } from "@/components/page-header";
+import { PublicSectionNotice } from "@/components/public-section-notice";
 import { SiteFooter } from "@/components/site-footer";
 import type { GalleryPhoto } from "@/components/the-space";
 import {
@@ -128,6 +129,8 @@ interface GalleryClientProps {
   readonly marketing: MarketingFeatureFlags;
   /** Optional banner slot (preview routes), aligned with `HomepageShell`. */
   readonly banner?: React.ReactNode;
+  /** Live Convex subscription failed; grid may be stale or empty. */
+  readonly convexUnavailable?: boolean;
 }
 
 export function GalleryClient({
@@ -135,6 +138,7 @@ export function GalleryClient({
   videos,
   marketing,
   banner,
+  convexUnavailable = false,
 }: GalleryClientProps) {
   const { scrollY, containerRef } = useScrollAndReveal();
   const pathname = usePathname();
@@ -315,9 +319,18 @@ export function GalleryClient({
         >
           <div className="mx-auto max-w-7xl">
             <GalleryCount count={visibleItems.length} />
+            {convexUnavailable && items.length > 0 ? (
+              <div className="mt-6">
+                <PublicSectionNotice title="Unable to refresh gallery">
+                  You may be seeing cached photos. If images fail to open, try
+                  again when you are back online.
+                </PublicSectionNotice>
+              </div>
+            ) : null}
             {visibleItems.length === 0 ? (
               <EmptyState
                 hasAnyPhotos={items.length > 0}
+                convexUnavailable={convexUnavailable}
                 filterLabel={
                   FILTER_PILLS.find((pill) => pill.id === filter)?.label ?? null
                 }
@@ -761,16 +774,31 @@ function LightboxMedia({ item }: { readonly item: GalleryItem }) {
 
 interface EmptyStateProps {
   readonly hasAnyPhotos: boolean;
+  readonly convexUnavailable?: boolean;
   readonly filterLabel: string | null;
   readonly onClearFilter: () => void;
 }
 
 function EmptyState({
   hasAnyPhotos,
+  convexUnavailable = false,
   filterLabel,
   onClearFilter,
 }: EmptyStateProps) {
   if (!hasAnyPhotos) {
+    if (convexUnavailable) {
+      return (
+        <div className="mt-16 border border-dashed border-sand/15 px-8 py-20 text-center">
+          <p className="label-text text-[11px] tracking-[0.2em] text-sand/50">
+            Unable to load gallery
+          </p>
+          <p className="body-text-small mx-auto mt-4 max-w-md text-ivory/55">
+            We couldn&rsquo;t reach the server to show photos. Try refreshing
+            the page in a little while.
+          </p>
+        </div>
+      );
+    }
     return (
       <div className="mt-16 border border-dashed border-sand/15 px-8 py-20 text-center">
         <p className="label-text text-[11px] tracking-[0.2em] text-sand/50">

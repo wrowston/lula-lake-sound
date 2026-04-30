@@ -9,6 +9,8 @@ import {
   AccordionPanel,
   AccordionTrigger,
 } from "@/components/ui/accordion";
+import { PublicSectionNotice } from "@/components/public-section-notice";
+import { PUBLIC_CONVEX_QUERY_FAILED } from "@/lib/use-public-convex-query";
 
 /**
  * Published (or preview) gear payload surfaced to the marketing site.
@@ -142,10 +144,15 @@ function EquipmentSpecsEmpty() {
 interface EquipmentSpecsProps {
   /**
    * `undefined` → still loading (render skeleton).
-   * `null` → query unavailable or caller not permitted (render empty state).
-   * Payload → render accordion.
+   * {@link PUBLIC_CONVEX_QUERY_FAILED} → subscription failed (friendly notice).
+   * `null` → no published gear payload (empty / coming soon).
+   * Empty categories → published empty state ("coming soon").
    */
-  readonly gear: GearPayload | null | undefined;
+  readonly gear:
+    | GearPayload
+    | null
+    | undefined
+    | typeof PUBLIC_CONVEX_QUERY_FAILED;
 }
 
 export function EquipmentSpecs({ gear }: EquipmentSpecsProps) {
@@ -153,7 +160,28 @@ export function EquipmentSpecs({ gear }: EquipmentSpecsProps) {
     return <EquipmentSpecsSkeleton />;
   }
 
-  const categories = gear?.categories ?? [];
+  if (gear === PUBLIC_CONVEX_QUERY_FAILED) {
+    return (
+      <SectionShell>
+        <div className="reveal reveal-delay-2">
+          <PublicSectionNotice title="Unable to load equipment list">
+            We couldn&rsquo;t load the detailed gear list. Studio specifications
+            above are still accurate; try again shortly for the full inventory.
+          </PublicSectionNotice>
+        </div>
+      </SectionShell>
+    );
+  }
+
+  if (gear === null) {
+    return (
+      <SectionShell>
+        <EquipmentSpecsEmpty />
+      </SectionShell>
+    );
+  }
+
+  const categories = gear.categories ?? [];
 
   if (categories.length === 0) {
     return (

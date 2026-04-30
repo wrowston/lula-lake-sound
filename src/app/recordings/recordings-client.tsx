@@ -8,6 +8,7 @@ import { useRef, useState, type ReactNode } from "react";
 
 import { Header } from "@/components/header";
 import { PageHeader } from "@/components/page-header";
+import { PublicSectionNotice } from "@/components/public-section-notice";
 import { SiteFooter } from "@/components/site-footer";
 import { useScrollAndReveal } from "@/hooks/use-scroll-and-reveal";
 import { MAX_REVEAL_DELAY, revealDelay } from "@/lib/reveal-delay";
@@ -535,12 +536,15 @@ interface RecordingsClientProps {
   readonly marketing: MarketingFeatureFlags;
   /** Preview banner, aligned with `HomepageShell` / `AboutLayout`. */
   readonly banner?: ReactNode;
+  /** True when live Convex subscription failed; page stays usable with nav. */
+  readonly convexUnavailable?: boolean;
 }
 
 export function RecordingsClient({
   recordings,
   marketing,
   banner,
+  convexUnavailable = false,
 }: RecordingsClientProps) {
   const pathname = usePathname();
   const isPreview =
@@ -668,7 +672,17 @@ export function RecordingsClient({
               mountain — press play to hear the room.
             </p>
 
-            {recordings.length === 0 ? (
+            {convexUnavailable ? (
+              <div className={cn(revealDelay(1), "mt-10")}>
+                <PublicSectionNotice title="Unable to refresh recordings">
+                  You may be seeing a cached list. Playback links might be out
+                  of date until the connection is restored. Try refreshing the
+                  page in a little while.
+                </PublicSectionNotice>
+              </div>
+            ) : null}
+
+            {recordings.length === 0 && !convexUnavailable ? (
               <div
                 className={cn(
                   revealDelay(1),
