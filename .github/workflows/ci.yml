@@ -14,8 +14,10 @@ on:
         type: boolean
         default: false
 
+# Separate groups per event so a PR synchronize does not cancel the push run
+# (and vice versa), which previously showed "cancelled" and a red commit status.
 concurrency:
-  group: ${{ github.workflow }}-${{ github.head_ref || github.ref_name }}
+  group: ${{ github.workflow }}-${{ github.event_name }}-${{ github.head_ref || github.ref_name }}
   cancel-in-progress: true
 
 jobs:
@@ -56,27 +58,13 @@ jobs:
       - name: Build
         run: bun run build
 
+  # Always run after test-and-build so the check is green when we skip the agent.
+  # A skipped job fails required status checks; a successful no-op does not.
   cursor-autofix:
     name: Cursor autofix
     runs-on: ubuntu-latest
     needs: test-and-build
-    if: >-
-      ${{
-        failure() &&
-        needs.test-and-build.result == 'failure' &&
-        !startsWith(github.head_ref || github.ref_name, 'cursor/') &&
-        (
-          github.event_name == 'push' ||
-          (
-            github.event_name == 'workflow_dispatch' &&
-            inputs.cursor_autofix
-          ) ||
-          (
-            github.event_name == 'pull_request' &&
-            github.event.pull_request.head.repo.full_name == github.repository
-          )
-        )
-      }}
+    if: always()
     permissions:
       contents: read
       pull-requests: read
@@ -85,12 +73,63 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
+      - name: Skip autofix (not applicable)
+        if: >-
+          always() &&
+          (
+            needs.test-and-build.result != 'failure' ||
+            startsWith(github.head_ref || github.ref_name, 'cursor/') ||
+            !(
+              github.event_name == 'push' ||
+              (
+                github.event_name == 'workflow_dispatch' &&
+                inputs.cursor_autofix
+              ) ||
+              (
+                github.event_name == 'pull_request' &&
+                github.event.pull_request.head.repo.full_name == github.repository
+              )
+            )
+          )
+        run: |
+          echo "Cursor autofix skipped (tests passed, job was not a failure, or this event/branch is not eligible)."
+
       - name: Setup Bun
+        if: >-
+          always() &&
+          needs.test-and-build.result == 'failure' &&
+          !startsWith(github.head_ref || github.ref_name, 'cursor/') &&
+          (
+            github.event_name == 'push' ||
+            (
+              github.event_name == 'workflow_dispatch' &&
+              inputs.cursor_autofix
+            ) ||
+            (
+              github.event_name == 'pull_request' &&
+              github.event.pull_request.head.repo.full_name == github.repository
+            )
+          )
         uses: oven-sh/setup-bun@v2
         with:
           bun-version: latest
 
       - name: Cache Bun install
+        if: >-
+          always() &&
+          needs.test-and-build.result == 'failure' &&
+          !startsWith(github.head_ref || github.ref_name, 'cursor/') &&
+          (
+            github.event_name == 'push' ||
+            (
+              github.event_name == 'workflow_dispatch' &&
+              inputs.cursor_autofix
+            ) ||
+            (
+              github.event_name == 'pull_request' &&
+              github.event.pull_request.head.repo.full_name == github.repository
+            )
+          )
         uses: actions/cache@v4
         with:
           path: ~/.bun/install/cache
@@ -99,9 +138,39 @@ jobs:
             ${{ runner.os }}-bun-
 
       - name: Install dependencies
+        if: >-
+          always() &&
+          needs.test-and-build.result == 'failure' &&
+          !startsWith(github.head_ref || github.ref_name, 'cursor/') &&
+          (
+            github.event_name == 'push' ||
+            (
+              github.event_name == 'workflow_dispatch' &&
+              inputs.cursor_autofix
+            ) ||
+            (
+              github.event_name == 'pull_request' &&
+              github.event.pull_request.head.repo.full_name == github.repository
+            )
+          )
         run: bun install --frozen-lockfile
 
       - name: Start Cursor Cloud Agent
+        if: >-
+          always() &&
+          needs.test-and-build.result == 'failure' &&
+          !startsWith(github.head_ref || github.ref_name, 'cursor/') &&
+          (
+            github.event_name == 'push' ||
+            (
+              github.event_name == 'workflow_dispatch' &&
+              inputs.cursor_autofix
+            ) ||
+            (
+              github.event_name == 'pull_request' &&
+              github.event.pull_request.head.repo.full_name == github.repository
+            )
+          )
         run: bun .github/scripts/cursor-autofix.ts
         env:
           CURSOR_API_KEY: ${{ secrets.CURSOR_API_KEY }}
