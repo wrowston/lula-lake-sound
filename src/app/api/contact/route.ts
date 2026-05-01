@@ -175,9 +175,17 @@ export async function POST(request: Request) {
     );
   }
 
+  const headerDistinctId = request.headers
+    .get("x-posthog-distinct-id")
+    ?.trim();
+  const distinctId =
+    headerDistinctId && headerDistinctId.length > 0
+      ? headerDistinctId
+      : email;
+
   const posthog = getPostHogClient();
   posthog.capture({
-    distinctId: email,
+    distinctId,
     event: "inquiry_saved",
     properties: {
       artist_name: artistName,
