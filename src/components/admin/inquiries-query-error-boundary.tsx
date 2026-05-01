@@ -2,18 +2,7 @@
 
 import { Component, type ErrorInfo, type ReactNode } from "react";
 import { ConvexError } from "convex/values";
-import type { CmsConvexErrorPayload } from "@/lib/effect-errors";
-
-function isCmsConvexErrorPayload(value: unknown): value is CmsConvexErrorPayload {
-  return (
-    typeof value === "object" &&
-    value !== null &&
-    "code" in value &&
-    typeof (value as { code: unknown }).code === "string" &&
-    "message" in value &&
-    typeof (value as { message: unknown }).message === "string"
-  );
-}
+import { isCmsConvexErrorPayload } from "@/lib/effect-errors";
 
 function convexErrorMessage(error: unknown): string {
   if (error instanceof ConvexError) {
