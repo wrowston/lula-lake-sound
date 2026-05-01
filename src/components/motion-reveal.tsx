@@ -27,7 +27,7 @@ type RevealVariant =
 const REVEAL_CLASS_BY_VARIANT: Record<RevealVariant, string> = {
   rise: "reveal",
   "rise-blur": "reveal-blur",
-  fade: "reveal",
+  fade: "reveal-fade",
   rule: "reveal-rule",
   "scale-in": "reveal-blur",
   letter: "reveal-axis",

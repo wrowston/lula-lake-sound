@@ -4,12 +4,12 @@ import { useCallback } from "react";
  * Selector for nodes the page-level `IntersectionObserver` should toggle
  * `.in-view` on. Covers the original `.reveal` (translate-up) plus the
  * extended editorial vocabulary defined in `src/app/globals.css`:
- * `.reveal-clip`, `.reveal-blur`, `.reveal-rule`, `.reveal-axis`,
+ * `.reveal-fade`, `.reveal-clip`, `.reveal-blur`, `.reveal-rule`, `.reveal-axis`,
  * `.reveal-image`. Each variant has its own keyframes but shares the
  * `.in-view` trigger so a single observer covers them all.
  */
 const REVEAL_SELECTOR =
-  ".reveal, .reveal-clip, .reveal-blur, .reveal-rule, .reveal-axis, .reveal-image";
+  ".reveal, .reveal-fade, .reveal-clip, .reveal-blur, .reveal-rule, .reveal-axis, .reveal-image";
 
 const REVEAL_GROUP_SELECTOR = "[data-reveal-stagger]";
 
