@@ -221,13 +221,7 @@ function topPageviewPathsQuery({
 }
 
 function numericResult(response: PostHogQueryResponse): number {
-  const value = response.results?.[0]?.[0];
-  if (typeof value === "number" && Number.isFinite(value)) return value;
-  if (typeof value === "string") {
-    const parsed = Number(value);
-    if (Number.isFinite(parsed)) return parsed;
-  }
-  return 0;
+  return numericValue(response.results?.[0]?.[0]);
 }
 
 function numericValue(value: unknown): number {
@@ -252,9 +246,9 @@ function recentDateKeys(days: number): string[] {
     Date.UTC(today.getUTCFullYear(), today.getUTCMonth(), today.getUTCDate()),
   );
 
-  return Array.from({ length: days }, (_, index) => {
+  return Array.from({ length: days + 1 }, (_, index) => {
     const date = new Date(utcDate);
-    date.setUTCDate(date.getUTCDate() - (days - index - 1));
+    date.setUTCDate(date.getUTCDate() - (days - index));
     return date.toISOString().slice(0, 10);
   });
 }
