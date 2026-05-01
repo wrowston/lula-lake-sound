@@ -1,6 +1,7 @@
 import {
   getPostHogAdminAnalytics,
   type PostHogAnalyticsState,
+  type PostHogPathTrafficRow,
 } from "@/lib/posthog-server";
 import { PostHogAreaChart } from "./posthog-area-chart";
 
@@ -30,6 +31,63 @@ function AnalyticsSetupInstructions({
         https://eu.posthog.com.
       </p>
     </section>
+  );
+}
+
+function PathTrafficByPath({
+  rows,
+}: {
+  readonly rows: readonly PostHogPathTrafficRow[];
+}) {
+  return (
+    <div className="rounded-lg border border-border bg-card p-5">
+      <h3 className="headline-secondary mb-1 text-sm text-foreground">
+        Traffic by path
+      </h3>
+      <p className="body-text-small text-muted-foreground">
+        Pageviews by URL path (PostHog{" "}
+        <span className="font-mono text-xs">properties.$pathname</span>), last
+        30 days. Up to 15 paths.
+      </p>
+      {rows.length === 0 ? (
+        <p className="body-text-small mt-4 text-muted-foreground">
+          No pageview data in this period.
+        </p>
+      ) : (
+        <div className="mt-4 overflow-x-auto">
+          <table className="w-full min-w-[20rem] text-sm">
+            <thead>
+              <tr className="border-b border-border text-left text-muted-foreground">
+                <th className="py-2 pr-4 font-medium" scope="col">
+                  Path
+                </th>
+                <th
+                  className="py-2 text-right font-medium tabular-nums"
+                  scope="col"
+                >
+                  Pageviews
+                </th>
+              </tr>
+            </thead>
+            <tbody>
+              {rows.map((row, index) => (
+                <tr
+                  key={`${index}-${row.path}`}
+                  className="border-b border-border/60 last:border-0"
+                >
+                  <td className="max-w-[min(28rem,55vw)] truncate py-2 pr-4 font-mono text-foreground">
+                    {row.path}
+                  </td>
+                  <td className="py-2 text-right tabular-nums text-foreground">
+                    {formatter.format(row.views)}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
+    </div>
   );
 }
 
@@ -101,6 +159,7 @@ export async function PostHogAnalyticsSection() {
           />
         ))}
       </div>
+      <PathTrafficByPath rows={analytics.pathTraffic} />
     </section>
   );
 }
