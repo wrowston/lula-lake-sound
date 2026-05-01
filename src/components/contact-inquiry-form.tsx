@@ -54,9 +54,19 @@ export function ContactInquiryForm() {
     }
 
     try {
+      const headers: Record<string, string> = {
+        "Content-Type": "application/json",
+      };
+      try {
+        const distinctId = posthog.get_distinct_id();
+        if (distinctId) headers["X-POSTHOG-DISTINCT-ID"] = distinctId;
+      } catch {
+        /* PostHog not initialized */
+      }
+
       const response = await fetch("/api/contact", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers,
         body: JSON.stringify({
           artistName: values.artistName,
           contactName: values.contactName,
