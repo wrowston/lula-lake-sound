@@ -1,5 +1,4 @@
 import { AdminHeader } from "@/components/admin/admin-header";
-import { AdminDashboardNavCards } from "@/components/admin/admin-dashboard-nav-cards";
 import { InquiriesDashboardPreview } from "@/components/admin/inquiries-dashboard-preview";
 import { PostHogAnalyticsSection } from "@/components/admin/posthog-analytics-section";
 import {
@@ -27,8 +26,6 @@ export default async function DashboardPage() {
           <PostHogAnalyticsSection />
 
           <InquiriesDashboardPreview />
-
-          <AdminDashboardNavCards />
         </div>
       </div>
     </>
