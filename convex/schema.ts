@@ -41,7 +41,7 @@ export default defineSchema({
     phone: v.optional(v.string()),
     message: v.string(),
     createdAt: v.number(),
-  }),
+  }).index("by_createdAt", ["createdAt"]),
 
   cmsSections: defineTable({
     section: cmsSectionRowValidator,
