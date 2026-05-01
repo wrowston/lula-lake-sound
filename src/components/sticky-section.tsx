@@ -73,7 +73,11 @@ export function StickySection({
     <section
       ref={sectionRef}
       id={id}
-      className={cn("relative overflow-hidden", sectionClassName)}
+      // `overflow-clip` (not `overflow-hidden`) — it clips overflowing
+      // backgrounds the same way visually, but does NOT establish a
+      // scroll container. `overflow-hidden` would rebind the inner
+      // sticky aside to this section, defeating the sticky behavior.
+      className={cn("relative overflow-clip", sectionClassName)}
     >
       {background}
 
