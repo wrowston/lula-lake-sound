@@ -1,8 +1,8 @@
 "use client";
 
 import posthog from "posthog-js";
-import { Button } from "@/components/ui/button";
 import { POSTHOG_EVENTS } from "@/lib/analytics-events";
+import { Button } from "@/components/ui/button";
 import {
   billingCadenceLabel,
   formatPrice,

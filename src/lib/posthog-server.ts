@@ -16,10 +16,22 @@ export type PostHogAnalyticsMetric = {
   readonly description: string;
 };
 
+export type PostHogAnalyticsSeriesPoint = {
+  readonly date: string;
+  readonly value: number;
+};
+
+export type PostHogAnalyticsSeries = {
+  readonly label: string;
+  readonly description: string;
+  readonly data: readonly PostHogAnalyticsSeriesPoint[];
+};
+
 export type PostHogAnalyticsState =
   | {
       readonly status: "ready";
       readonly metrics: readonly PostHogAnalyticsMetric[];
+      readonly chartSeries: readonly PostHogAnalyticsSeries[];
     }
   | {
       readonly status: "unconfigured";
@@ -60,6 +72,30 @@ const ADMIN_ANALYTICS_QUERIES = [
     label: "Pricing — Book session clicks",
     description: "Last 30 days",
     query: eventCountQuery({
+      eventName: POSTHOG_EVENTS.PRICING_BOOK_SESSION_CLICK,
+      days: 30,
+    }),
+  },
+] as const;
+
+const ADMIN_ANALYTICS_SERIES_QUERIES = [
+  {
+    label: "Site pageviews",
+    description: "Last 30 days",
+    days: 30,
+    query: pageviewSeriesQuery({ days: 30 }),
+  },
+  {
+    label: "Home pageviews",
+    description: "Last 30 days",
+    days: 30,
+    query: pageviewSeriesQuery({ days: 30, path: "/" }),
+  },
+  {
+    label: "Pricing — Book session clicks",
+    description: "Last 30 days",
+    days: 30,
+    query: eventSeriesQuery({
       eventName: POSTHOG_EVENTS.PRICING_BOOK_SESSION_CLICK,
       days: 30,
     }),
@@ -134,6 +170,36 @@ function eventCountQuery({
   )} and timestamp >= now() - interval ${days} day`;
 }
 
+function pageviewSeriesQuery({
+  days,
+  path,
+}: {
+  readonly days: number;
+  readonly path?: string;
+}): string {
+  const filters = [
+    "event = '$pageview'",
+    `timestamp >= now() - interval ${days} day`,
+    path ? `properties.$pathname = ${hogqlString(path)}` : null,
+  ].filter(Boolean);
+
+  return `select toDate(timestamp) as date, count() from events where ${filters.join(
+    " and ",
+  )} group by date order by date asc`;
+}
+
+function eventSeriesQuery({
+  eventName,
+  days,
+}: {
+  readonly eventName: string;
+  readonly days: number;
+}): string {
+  return `select toDate(timestamp) as date, count() from events where event = ${hogqlString(
+    eventName,
+  )} and timestamp >= now() - interval ${days} day group by date order by date asc`;
+}
+
 function numericResult(response: PostHogQueryResponse): number {
   const value = response.results?.[0]?.[0];
   if (typeof value === "number" && Number.isFinite(value)) return value;
@@ -142,6 +208,53 @@ function numericResult(response: PostHogQueryResponse): number {
     if (Number.isFinite(parsed)) return parsed;
   }
   return 0;
+}
+
+function numericValue(value: unknown): number {
+  if (typeof value === "number" && Number.isFinite(value)) return value;
+  if (typeof value === "string") {
+    const parsed = Number(value);
+    if (Number.isFinite(parsed)) return parsed;
+  }
+  return 0;
+}
+
+function dateKey(value: unknown): string | null {
+  if (typeof value !== "string") return null;
+
+  const key = value.slice(0, 10);
+  return /^\d{4}-\d{2}-\d{2}$/.test(key) ? key : null;
+}
+
+function recentDateKeys(days: number): string[] {
+  const today = new Date();
+  const utcDate = new Date(
+    Date.UTC(today.getUTCFullYear(), today.getUTCMonth(), today.getUTCDate()),
+  );
+
+  return Array.from({ length: days }, (_, index) => {
+    const date = new Date(utcDate);
+    date.setUTCDate(date.getUTCDate() - (days - index - 1));
+    return date.toISOString().slice(0, 10);
+  });
+}
+
+function seriesResult(
+  response: PostHogQueryResponse,
+  days: number,
+): PostHogAnalyticsSeriesPoint[] {
+  const valuesByDate = new Map<string, number>();
+
+  for (const row of response.results ?? []) {
+    const key = dateKey(row[0]);
+    if (!key) continue;
+    valuesByDate.set(key, numericValue(row[1]));
+  }
+
+  return recentDateKeys(days).map((date) => ({
+    date,
+    value: valuesByDate.get(date) ?? 0,
+  }));
 }
 
 async function queryPostHogMetric({
@@ -176,6 +289,40 @@ async function queryPostHogMetric({
   return numericResult((await response.json()) as PostHogQueryResponse);
 }
 
+async function queryPostHogSeries({
+  host,
+  personalApiKey,
+  projectId,
+  query,
+  days,
+}: {
+  readonly host: string;
+  readonly personalApiKey: string;
+  readonly projectId: string;
+  readonly query: string;
+  readonly days: number;
+}): Promise<PostHogAnalyticsSeriesPoint[]> {
+  const response = await fetch(`${host}/api/projects/${projectId}/query/`, {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${personalApiKey}`,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({
+      query: {
+        kind: "HogQLQuery",
+        query,
+      },
+    }),
+  });
+
+  if (!response.ok) {
+    throw new Error(`PostHog query failed: ${response.status}`);
+  }
+
+  return seriesResult((await response.json()) as PostHogQueryResponse, days);
+}
+
 async function loadPostHogAdminAnalytics(): Promise<PostHogAnalyticsState> {
   const apiKey = firstEnv("POSTHOG_API_KEY");
   const projectId = firstEnv("POSTHOG_PROJECT_ID");
@@ -190,7 +337,7 @@ async function loadPostHogAdminAnalytics(): Promise<PostHogAnalyticsState> {
   }
 
   try {
-    const values = await Promise.all(
+    const valuesPromise = Promise.all(
       ADMIN_ANALYTICS_QUERIES.map((metric) =>
         queryPostHogMetric({
           host,
@@ -200,6 +347,22 @@ async function loadPostHogAdminAnalytics(): Promise<PostHogAnalyticsState> {
         }),
       ),
     );
+    const seriesValuesPromise = Promise.all(
+      ADMIN_ANALYTICS_SERIES_QUERIES.map((series) =>
+        queryPostHogSeries({
+          host,
+          personalApiKey: apiKey,
+          projectId,
+          query: series.query,
+          days: series.days,
+        }),
+      ),
+    );
+
+    const [values, seriesValues] = await Promise.all([
+      valuesPromise,
+      seriesValuesPromise,
+    ]);
 
     return {
       status: "ready",
@@ -207,6 +370,11 @@ async function loadPostHogAdminAnalytics(): Promise<PostHogAnalyticsState> {
         label: metric.label,
         description: metric.description,
         value: values[index] ?? 0,
+      })),
+      chartSeries: ADMIN_ANALYTICS_SERIES_QUERIES.map((series, index) => ({
+        label: series.label,
+        description: series.description,
+        data: seriesValues[index] ?? [],
       })),
     };
   } catch (error) {

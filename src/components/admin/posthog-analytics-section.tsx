@@ -2,8 +2,14 @@ import {
   getPostHogAdminAnalytics,
   type PostHogAnalyticsState,
 } from "@/lib/posthog-server";
+import { PostHogAreaChart } from "./posthog-area-chart";
 
 const formatter = new Intl.NumberFormat("en-US");
+const chartColors = [
+  "var(--chart-1)",
+  "var(--chart-2)",
+  "var(--chart-3)",
+] as const;
 
 function AnalyticsSetupInstructions({
   analytics,
@@ -81,6 +87,18 @@ export async function PostHogAnalyticsSection() {
               {metric.description}
             </p>
           </article>
+        ))}
+      </div>
+      <div
+        aria-label="Analytics trend charts"
+        className="grid gap-4 lg:grid-cols-3"
+      >
+        {analytics.chartSeries.map((series, index) => (
+          <PostHogAreaChart
+            key={`${series.label}-${series.description}`}
+            color={chartColors[index] ?? "var(--chart-1)"}
+            series={series}
+          />
         ))}
       </div>
     </section>
