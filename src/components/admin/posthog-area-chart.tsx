@@ -132,7 +132,7 @@ export function PostHogAreaChart({
               name={series.label}
               stroke="var(--color-value)"
               strokeWidth={2}
-              type="natural"
+              type="linear"
             />
           </AreaChart>
         </ChartContainer>
