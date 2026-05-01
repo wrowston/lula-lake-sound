@@ -8,7 +8,6 @@ import {
 import { getAdminAnalytics } from "@/lib/posthog-analytics";
 
 export const dynamic = "force-dynamic";
-export const revalidate = 300;
 
 export default async function DashboardPage() {
   const analytics = await getAdminAnalytics();
