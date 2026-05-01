@@ -18,7 +18,7 @@ The wizard has completed a deep integration of PostHog analytics into the Lula L
 | `contact_inquiry_submitted` | User successfully submitted the artist contact inquiry form | `src/components/contact-inquiry-form.tsx` |
 | `contact_inquiry_failed` | Contact inquiry form submission encountered a server or network error | `src/components/contact-inquiry-form.tsx` |
 | `inquiry_saved` | Artist inquiry was successfully saved to the database and email sent (server-side) | `src/app/api/contact/route.ts` |
-| `pricing_book_session_clicked` | User clicked Book Your Session CTA on a pricing package card | `src/components/services-pricing.tsx` |
+| `studio_pricing_book_session_click` | User clicked Book Your Session CTA on a pricing package card | `src/components/services-pricing.tsx` |
 | `pricing_custom_quote_clicked` | User clicked the Get Custom Quote CTA in the pricing section | `src/components/services-pricing.tsx` |
 | `recording_played` | User started playing a recording track | `src/app/recordings/recordings-client.tsx` |
 | `streaming_link_clicked` | User clicked a Spotify or Apple Music streaming link on a recording | `src/app/recordings/recordings-client.tsx` |
