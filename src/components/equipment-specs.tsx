@@ -10,6 +10,7 @@ import {
   AccordionTrigger,
 } from "@/components/ui/accordion";
 import { PublicSectionNotice } from "@/components/public-section-notice";
+import { revealDelay } from "@/lib/reveal-delay";
 import { PUBLIC_CONVEX_QUERY_FAILED } from "@/lib/use-public-convex-query";
 
 /**
@@ -61,21 +62,21 @@ function formatSpecs(specs: GearSpecs): string {
 
 function SectionHeader() {
   return (
-    <div className="reveal mb-20 flex w-full flex-col items-center text-center">
+    <div className="mb-20 flex w-full flex-col items-center text-center">
       <Image
         src="/Logos/Graphic/LLS_Logo_Graphic_Sand.png"
         alt=""
         width={200}
         height={200}
         aria-hidden
-        className="mb-10 h-12 w-auto opacity-80 md:h-14"
+        className="reveal mb-10 h-12 w-auto opacity-80 md:h-14"
       />
-      <p className="eyebrow mb-6 text-sand/82">Equipment</p>
-      <h2 className="headline-primary mb-8 text-[2.25rem] text-warm-white md:text-[3rem] lg:text-[3.5rem]">
+      <p className="eyebrow reveal reveal-delay-1 mb-6 text-sand/82">Equipment</p>
+      <h2 className="headline-primary reveal-axis reveal-delay-2 mb-8 text-[2.25rem] text-warm-white md:text-[3rem] lg:text-[3.5rem]">
         Studio Specifications
       </h2>
-      <div className="section-rule mx-auto mb-10 max-w-[9rem]" />
-      <p className="editorial-lede mx-auto max-w-2xl font-normal text-ivory/92">
+      <div className="section-rule reveal-rule reveal-delay-3 mx-auto mb-10 max-w-[9rem]" />
+      <p className="editorial-lede reveal reveal-delay-4 mx-auto max-w-2xl font-normal text-ivory/92">
         World-class equipment and acoustically designed spaces ensure your
         recordings capture every nuance with pristine clarity and character.
       </p>
@@ -85,9 +86,12 @@ function SectionHeader() {
 
 function StudioSpecsGrid() {
   return (
-    <div className="reveal reveal-delay-1 mb-20 grid grid-cols-1 divide-y divide-sand/14 border-y border-sand/14 md:grid-cols-3 md:divide-x md:divide-y-0">
-      {STUDIO_SPECS.map((spec) => (
-        <div key={spec.label} className="px-6 py-10 text-center md:px-10">
+    <div className="mb-20 grid grid-cols-1 divide-y divide-sand/14 border-y border-sand/14 md:grid-cols-3 md:divide-x md:divide-y-0">
+      {STUDIO_SPECS.map((spec, index) => (
+        <div
+          key={spec.label}
+          className={`${revealDelay(index + 1)} px-6 py-10 text-center md:px-10`}
+        >
           <div className="eyebrow mb-4 text-sand">{spec.label}</div>
           <div className="body-text-small text-ivory/86">{spec.value}</div>
         </div>
@@ -108,6 +112,8 @@ function SectionShell({ children }: { children: React.ReactNode }) {
         <StudioSpecsGrid />
         {children}
       </div>
+      {/* Cinematic seam into the washed-black pricing section. */}
+      <div aria-hidden className="section-fade-bottom" />
     </section>
   );
 }
@@ -209,10 +215,14 @@ function EquipmentCategoriesAccordion({
   );
 
   return (
-    <div className="reveal reveal-delay-2 mx-auto max-w-4xl border-b border-sand/14">
+    <div className="mx-auto max-w-4xl border-b border-sand/14">
       <Accordion multiple defaultValue={initialExpanded}>
-        {categories.map((category) => (
-          <AccordionItem key={category.stableId} value={category.stableId}>
+        {categories.map((category, index) => (
+          <AccordionItem
+            key={category.stableId}
+            value={category.stableId}
+            className={revealDelay(index + 1)}
+          >
             <AccordionTrigger>
               <span className="headline-secondary text-lg text-warm-white md:text-xl">
                 {category.name}

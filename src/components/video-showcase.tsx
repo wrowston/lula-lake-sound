@@ -295,7 +295,7 @@ export function VideoShowcase({
           <p className="eyebrow mb-6 text-[0.6875rem] tracking-[var(--letter-spacing-wide)] text-sand/82">
             Watch
           </p>
-          <h2 className="headline-primary text-[2.35rem] leading-[1.02] text-warm-white md:text-[3.1rem] lg:text-[3.65rem]">
+          <h2 className="headline-primary reveal-axis text-[2.35rem] leading-[1.02] text-warm-white md:text-[3.1rem] lg:text-[3.65rem]">
             Sessions in Motion
           </h2>
         </header>

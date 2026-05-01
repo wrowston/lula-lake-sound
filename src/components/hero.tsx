@@ -26,23 +26,31 @@ export function Hero({ logoScale }: HeroProps) {
          * from `app/page.tsx` via `ReactDOM.preload`, so the browser reuses
          * those bytes instead of waiting on a fresh `/_next/image` request.
          * The asset is already pre-optimized (`.optimized.jpg`).
+         *
+         * `.parallax-soft` uses `animation-timeline: view()` so the
+         * background drifts upward as the hero exits — no JS, no scroll
+         * listener. Browsers without scroll-driven animation get the
+         * static layout.
          */}
-        <Image
-          src="/Textured Backgrounds/LLS_Texture_Emerald.optimized.jpg"
-          alt=""
-          fill
-          sizes="100vw"
-          className="object-cover object-center"
-          priority
-          fetchPriority="high"
-          unoptimized
-        />
+        <div className="parallax-soft absolute inset-0">
+          <Image
+            src="/Textured Backgrounds/LLS_Texture_Emerald.optimized.jpg"
+            alt=""
+            fill
+            sizes="100vw"
+            className="object-cover object-center"
+            priority
+            fetchPriority="high"
+            unoptimized
+          />
+        </div>
         {/* Single, earthy wash — keeps type legible without flashy gradients. */}
         <div className="absolute inset-0 bg-washed-black/55" />
-        {/* Atmospheric Chladni pattern — barely-there sinusoidal rings. */}
+        {/* Atmospheric Chladni pattern — barely-there sinusoidal rings.
+         * Drifts opposite to the photo for parallax depth. */}
         <div
           aria-hidden
-          className="absolute inset-0 bg-chladni-1 opacity-45 mix-blend-overlay"
+          className="parallax-soft absolute inset-0 bg-chladni-1 opacity-45 mix-blend-overlay"
         />
         {/* Vertical fade toward the footer boundary so the next section lands softly. */}
         <div className="absolute inset-x-0 bottom-0 h-40 bg-gradient-to-b from-transparent to-washed-black" />
@@ -65,24 +73,24 @@ export function Hero({ logoScale }: HeroProps) {
 
         <div className="order-1 mb-16 w-full min-w-0 text-center md:order-1 md:mb-0 md:w-1/2 md:pr-16 md:text-left">
           <div className="mx-auto w-full max-w-lg space-y-10 md:mx-0 md:max-w-none md:space-y-12">
-            <p className="eyebrow justify-center text-sand/70 md:justify-start">
+            <p className="eyebrow reveal justify-center text-sand/70 md:justify-start">
               Chattanooga, Tennessee
             </p>
 
-            <h1 className="headline-primary text-[2.75rem] leading-[1.05] text-warm-white md:text-[3.75rem] lg:text-[4.25rem]">
+            <h1 className="headline-primary reveal-axis reveal-delay-1 text-[2.75rem] leading-[1.05] text-warm-white md:text-[3.75rem] lg:text-[4.25rem]">
               A Natural
               <br />
               <span className="text-sand">Creative Refuge</span>
             </h1>
 
-            <p className="editorial-lede mx-auto max-w-lg md:mx-0">
+            <p className="editorial-lede reveal reveal-delay-2 mx-auto max-w-lg md:mx-0">
               Nestled in serene mountains just outside of Chattanooga, TN, Lula
               Lake Sound recording studio offers artists a space where
               state-of-the-art equipment, comfortable accommodations, and
               breathtaking surroundings converge to fuel your sonic vision.
             </p>
 
-            <div className="flex justify-center pt-4 md:justify-start">
+            <div className="reveal reveal-delay-3 flex justify-center pt-4 md:justify-start">
               <Button
                 variant="default"
                 size="xl"
@@ -99,8 +107,9 @@ export function Hero({ logoScale }: HeroProps) {
         </div>
       </div>
 
-      {/* Scroll cue — a single thin rule, no glyphs. */}
-      <div className="absolute bottom-10 left-1/2 z-10 flex -translate-x-1/2 flex-col items-center gap-3 opacity-60">
+      {/* Scroll cue — a single thin rule, no glyphs. Self-erases as the
+       * hero exits via `.scroll-cue-fade` (CSS scroll-driven). */}
+      <div className="scroll-cue-fade absolute bottom-10 left-1/2 z-10 flex -translate-x-1/2 flex-col items-center gap-3 opacity-60">
         <span className="eyebrow text-[10px] text-sand/60">Scroll</span>
         <span className="h-10 w-px bg-gradient-to-b from-sand/45 to-transparent" />
       </div>

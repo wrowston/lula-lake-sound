@@ -4,6 +4,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { useState } from "react";
 
+import { ScrollProgress } from "@/components/scroll-progress";
 import { cn } from "@/lib/utils";
 
 interface HeaderProps {
@@ -202,12 +203,16 @@ export function Header({
           </button>
         </div>
 
-        {/* Editorial rule — fades in as the header becomes opaque. */}
+        {/* Editorial rule — fades in as the header becomes opaque. The
+         * `<ScrollProgress>` hairline overlays the same baseline so the
+         * sand line both sets the editorial bottom edge and reads as
+         * progress as the user scrolls. */}
         <div
-          className="mx-auto h-px max-w-7xl px-6 transition-opacity duration-700 md:px-12"
+          className="relative mx-auto h-px max-w-7xl px-6 transition-opacity duration-700 md:px-12"
           style={{ opacity: progress }}
         >
           <div className="h-px w-full bg-sand/15" />
+          <ScrollProgress />
         </div>
       </header>
 

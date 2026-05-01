@@ -126,7 +126,15 @@ function StudioGallery({
       <div className="relative">
         <div className="relative mx-auto w-full max-w-5xl">
           <div className="relative">
-            <div className="relative flex h-[60vh] w-full items-center justify-center overflow-hidden md:h-[72vh]">
+            {/*
+             * `.reveal-image` runs a magazine-style curtain reveal once
+             * the carousel scrolls into view: the inner photo zooms from
+             * 1.06 → 1 while a `washed-black` overlay slides off
+             * upward. Sibling photos crossfade through the existing
+             * opacity transitions; only the first paint feels
+             * cinematic.
+             */}
+            <div className="reveal-image relative flex h-[60vh] w-full items-center justify-center overflow-hidden md:h-[72vh]">
               {availablePhotos.map((photo, index) =>
                 photo.url ? (
                   <Image
@@ -135,7 +143,7 @@ function StudioGallery({
                     alt={galleryImageAlt(photo.alt)}
                     fill
                     sizes="(max-width: 768px) 100vw, (max-width: 1200px) 90vw, 1200px"
-                    className={`absolute inset-0 object-contain transition-opacity duration-1000 ease-[cubic-bezier(0.16,1,0.3,1)] ${
+                    className={`reveal-image-target absolute inset-0 object-contain transition-opacity duration-1000 ease-[cubic-bezier(0.16,1,0.3,1)] ${
                       index === safeIndex
                         ? "z-[2] opacity-100"
                         : "pointer-events-none z-[1] opacity-0"
@@ -172,7 +180,8 @@ function StudioGallery({
                   type="button"
                   onClick={() => goToImage(index)}
                   aria-label={`View image ${index + 1}`}
-                  className={`h-px transition-all duration-500 ease-[cubic-bezier(0.16,1,0.3,1)] ${
+                  style={{ animationDelay: `${0.32 + index * 0.04}s` }}
+                  className={`reveal h-px transition-all duration-500 ease-[cubic-bezier(0.16,1,0.3,1)] ${
                     index === safeIndex
                       ? "w-8 bg-sand"
                       : "w-4 bg-ivory/22 hover:bg-ivory/40"
@@ -234,25 +243,29 @@ export function TheSpace({
     >
       <div className="absolute inset-0 bg-texture-canvas opacity-14" />
       {/* Chladni 1.2 resonance plate anchored to the bottom-right. Brand
-       * guide pg 26: "Chladni 1.2 Overlayed on Washed Black Canvas." */}
-      <div aria-hidden className="absolute inset-0 bg-chladni-1-2" />
+       * guide pg 26: "Chladni 1.2 Overlayed on Washed Black Canvas."
+       * `.parallax-soft` drifts the plate as the section scrolls — pure
+       * CSS, falls back to static on unsupported browsers. */}
+      <div aria-hidden className="parallax-soft absolute inset-0 bg-chladni-1-2" />
+      {/* Cinematic seam into the forest-grounded EquipmentSpecs section. */}
+      <div aria-hidden className="section-fade-bottom section-fade-bottom--forest" />
 
       <div className="relative z-10 mx-auto max-w-6xl">
-        <div className="reveal mb-20 flex w-full flex-col items-center text-center">
+        <div className="mb-20 flex w-full flex-col items-center text-center">
           <Image
             src="/Logos/Graphic/LLS_Logo_Graphic_Sand.png"
             alt=""
             width={200}
             height={200}
             aria-hidden
-            className="mb-10 h-12 w-auto opacity-80 md:h-14"
+            className="reveal mb-10 h-12 w-auto opacity-80 md:h-14"
           />
-          <p className="eyebrow mb-6 text-sand/82">Explore</p>
-          <h2 className="headline-primary mb-8 text-[2.25rem] text-warm-white md:text-[3rem] lg:text-[3.5rem]">
+          <p className="eyebrow reveal reveal-delay-1 mb-6 text-sand/82">Explore</p>
+          <h2 className="headline-primary reveal-axis reveal-delay-2 mb-8 text-[2.25rem] text-warm-white md:text-[3rem] lg:text-[3.5rem]">
             The Space
           </h2>
-          <div className="section-rule mb-10 w-full max-w-[9rem]" />
-          <p className="editorial-lede w-full max-w-2xl font-normal text-ivory/92">
+          <div className="section-rule reveal-rule reveal-delay-3 mb-10 w-full max-w-[9rem]" />
+          <p className="editorial-lede reveal reveal-delay-4 w-full max-w-2xl font-normal text-ivory/92">
             Step inside our carefully designed recording facility where
             world-class equipment meets natural inspiration. Every room is
             optimized for capturing the perfect sound while maintaining the
@@ -275,7 +288,7 @@ export function TheSpace({
 
         <div className="reveal reveal-delay-3 mt-24 flex w-full flex-col items-center border-y border-sand/15 py-16 text-center">
           <p className="eyebrow mb-5 text-sand/78">Visit</p>
-          <h3 className="headline-secondary mb-6 text-2xl text-warm-white md:text-[1.75rem]">
+          <h3 className="headline-secondary reveal-axis mb-6 text-2xl text-warm-white md:text-[1.75rem]">
             Experience the Studio
           </h3>
           <p className="body-text mx-auto mb-10 w-full max-w-xl text-ivory/84">
