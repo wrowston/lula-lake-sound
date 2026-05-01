@@ -1,6 +1,7 @@
 "use client";
 
 import posthog from "posthog-js";
+import { POSTHOG_EVENTS } from "@/lib/analytics-events";
 import { Button } from "@/components/ui/button";
 import {
   billingCadenceLabel,
@@ -162,7 +163,7 @@ export function ServicesAndPricing({ packages }: ServicesAndPricingProps) {
                     size="lg"
                     className="w-full"
                     onClick={() => {
-                      posthog.capture("pricing_book_session_clicked", {
+                      posthog.capture(POSTHOG_EVENTS.PRICING_BOOK_SESSION_CLICK, {
                         package_name: pkg.name,
                         price_cents: pkg.priceCents,
                         highlighted: pkg.highlight,
