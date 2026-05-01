@@ -6,6 +6,16 @@ import { motion, useScroll, useTransform } from "motion/react";
 import { cn } from "@/lib/utils";
 
 /**
+ * NOTE: do not wrap the sticky column in a `motion.*` element with a
+ * `transform` style — `transform` on an ancestor breaks
+ * `position: sticky` because the transformed element becomes the
+ * containing block (the sticky child can no longer overflow it).
+ *
+ * If you want parallax on the aside, apply it to the aside's *content*
+ * inside the sticky container instead.
+ */
+
+/**
  * Sticky two-column scroll section.
  *
  * On `lg+` the left column pins to the top of the viewport while the
@@ -57,9 +67,6 @@ export function StickySection({
     offset: ["start end", "end start"],
   });
 
-  // Pinned column drifts a touch against scroll for parallax depth.
-  const asideY = useTransform(scrollYProgress, [0, 1], ["-3%", "3%"]);
-  // Progress rail on the section edge.
   const railScale = useTransform(scrollYProgress, [0, 1], [0, 1]);
 
   return (
@@ -85,12 +92,11 @@ export function StickySection({
           className,
         )}
       >
-        <motion.div
+        <div
           className={cn(
             "lg:col-span-5",
             asideOnRight ? "lg:order-2" : "lg:order-1",
           )}
-          style={{ y: asideY }}
         >
           <div
             className="lg:sticky"
@@ -98,7 +104,7 @@ export function StickySection({
           >
             {aside}
           </div>
-        </motion.div>
+        </div>
 
         <div
           className={cn(
