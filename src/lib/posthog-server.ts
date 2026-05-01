@@ -277,17 +277,17 @@ function seriesResult(
   }));
 }
 
-async function queryPostHogMetric({
-  host,
-  personalApiKey,
-  projectId,
-  query,
-}: {
+type PostHogHogQLQueryParams = {
   readonly host: string;
   readonly personalApiKey: string;
   readonly projectId: string;
   readonly query: string;
-}): Promise<number> {
+};
+
+async function runPostHogHogQLQuery<T>(
+  { host, personalApiKey, projectId, query }: PostHogHogQLQueryParams,
+  parseResult: (response: PostHogQueryResponse) => T,
+): Promise<T> {
   const response = await fetch(`${host}/api/projects/${projectId}/query/`, {
     method: "POST",
     headers: {
@@ -306,41 +306,22 @@ async function queryPostHogMetric({
     throw new Error(`PostHog query failed: ${response.status}`);
   }
 
-  return numericResult((await response.json()) as PostHogQueryResponse);
+  return parseResult((await response.json()) as PostHogQueryResponse);
+}
+
+async function queryPostHogMetric(
+  params: PostHogHogQLQueryParams,
+): Promise<number> {
+  return runPostHogHogQLQuery(params, numericResult);
 }
 
 async function queryPostHogSeries({
-  host,
-  personalApiKey,
-  projectId,
-  query,
   days,
-}: {
-  readonly host: string;
-  readonly personalApiKey: string;
-  readonly projectId: string;
-  readonly query: string;
+  ...params
+}: PostHogHogQLQueryParams & {
   readonly days: number;
 }): Promise<PostHogAnalyticsSeriesPoint[]> {
-  const response = await fetch(`${host}/api/projects/${projectId}/query/`, {
-    method: "POST",
-    headers: {
-      Authorization: `Bearer ${personalApiKey}`,
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify({
-      query: {
-        kind: "HogQLQuery",
-        query,
-      },
-    }),
-  });
-
-  if (!response.ok) {
-    throw new Error(`PostHog query failed: ${response.status}`);
-  }
-
-  return seriesResult((await response.json()) as PostHogQueryResponse, days);
+  return runPostHogHogQLQuery(params, (resp) => seriesResult(resp, days));
 }
 
 function pathTrafficResult(
@@ -363,36 +344,10 @@ function pathTrafficResult(
   return rows;
 }
 
-async function queryPostHogPathTraffic({
-  host,
-  personalApiKey,
-  projectId,
-  query,
-}: {
-  readonly host: string;
-  readonly personalApiKey: string;
-  readonly projectId: string;
-  readonly query: string;
-}): Promise<PostHogPathTrafficRow[]> {
-  const response = await fetch(`${host}/api/projects/${projectId}/query/`, {
-    method: "POST",
-    headers: {
-      Authorization: `Bearer ${personalApiKey}`,
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify({
-      query: {
-        kind: "HogQLQuery",
-        query,
-      },
-    }),
-  });
-
-  if (!response.ok) {
-    throw new Error(`PostHog query failed: ${response.status}`);
-  }
-
-  return pathTrafficResult((await response.json()) as PostHogQueryResponse);
+async function queryPostHogPathTraffic(
+  params: PostHogHogQLQueryParams,
+): Promise<PostHogPathTrafficRow[]> {
+  return runPostHogHogQLQuery(params, pathTrafficResult);
 }
 
 async function loadPostHogAdminAnalytics(): Promise<PostHogAnalyticsState> {
