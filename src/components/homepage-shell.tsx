@@ -80,7 +80,7 @@ export function HomepageShell({
   amenities,
   banner,
 }: HomepageShellProps) {
-  const { scrollY, containerRef } = useScrollAndReveal();
+  const { containerRef } = useScrollAndReveal();
   const pathname = usePathname();
   const marketingFromPropsResolved =
     marketingFromProps === PUBLIC_CONVEX_QUERY_FAILED
@@ -135,7 +135,6 @@ export function HomepageShell({
     >
       {banner}
       <Header
-        scrollY={scrollY}
         showPricing={showPricing}
         showAbout={showAbout}
         aboutHref={aboutHref}

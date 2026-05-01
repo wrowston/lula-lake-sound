@@ -5,6 +5,7 @@ import { cache } from "react";
 import { api } from "../../../convex/_generated/api";
 import { GalleryPageClient } from "./gallery-page-client";
 import { isGalleryPageEnabled } from "@/lib/site-settings";
+import { PublicConvexProvider } from "@/components/public-convex-provider";
 
 /**
  * Public `/gallery` route (INF-47). When `cmsSections.photos.isEnabled` is
@@ -57,10 +58,12 @@ export default async function GalleryPage() {
     notFound();
   }
   return (
-    <GalleryPageClient
-      photosPreloaded={photosPreloaded}
-      videosPreloaded={videosPreloaded}
-      marketingPreloaded={marketingPreloaded}
-    />
+    <PublicConvexProvider>
+      <GalleryPageClient
+        photosPreloaded={photosPreloaded}
+        videosPreloaded={videosPreloaded}
+        marketingPreloaded={marketingPreloaded}
+      />
+    </PublicConvexProvider>
   );
 }

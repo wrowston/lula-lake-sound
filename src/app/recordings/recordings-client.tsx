@@ -573,7 +573,7 @@ export function RecordingsClient({
   const showRecordings = marketing.recordingsPage === true;
   const showGallery = isGalleryPageEnabled(marketing);
 
-  const { scrollY, containerRef } = useScrollAndReveal();
+  const { containerRef } = useScrollAndReveal();
   const [active, setActive] = useState<ActiveTrackState | null>(null);
   const [audioEl, setAudioEl] = useState<HTMLAudioElement | null>(null);
 
@@ -657,7 +657,6 @@ export function RecordingsClient({
     >
       {banner}
       <Header
-        scrollY={scrollY}
         showPricing={showPricing}
         showAbout={showAbout}
         aboutHref={aboutHref}

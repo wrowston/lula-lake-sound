@@ -1,4 +1,4 @@
-import { useCallback, useState } from "react";
+import { useCallback } from "react";
 
 /**
  * Selector for nodes the page-level `IntersectionObserver` should toggle
@@ -12,27 +12,28 @@ const REVEAL_SELECTOR =
   ".reveal, .reveal-clip, .reveal-blur, .reveal-rule, .reveal-axis, .reveal-image";
 
 /**
- * Ref callback for the page shell: rAF-throttled `scrollY` for the header
- * plus an `IntersectionObserver` that adds `.in-view` to reveal nodes.
+ * Ref callback for the page shell: an `IntersectionObserver` that adds
+ * `.in-view` to reveal nodes.
  * Implemented as a ref callback (not `useEffect`) per project convention.
  */
 export function useScrollAndReveal() {
-  const [scrollY, setScrollY] = useState(0);
-
   const containerRef = useCallback((node: HTMLDivElement | null) => {
     if (!node) return;
 
-    let ticking = false;
-    function onScroll() {
-      if (ticking) return;
-      ticking = true;
-      requestAnimationFrame(() => {
-        setScrollY(window.scrollY);
-        ticking = false;
-      });
+    const observed = new WeakSet<Element>();
+    function observeRevealElement(el: Element) {
+      if (observed.has(el) || el.classList.contains("in-view")) return;
+      observed.add(el);
+      observer.observe(el);
     }
-    window.addEventListener("scroll", onScroll, { passive: true });
-    setScrollY(window.scrollY);
+    function observeRevealElementsIn(root: ParentNode) {
+      if (root instanceof Element && root.matches(REVEAL_SELECTOR)) {
+        observeRevealElement(root);
+      }
+      root
+        .querySelectorAll(REVEAL_SELECTOR)
+        .forEach((el) => observeRevealElement(el));
+    }
 
     const observer = new IntersectionObserver(
       (entries) => {
@@ -45,13 +46,23 @@ export function useScrollAndReveal() {
       },
       { threshold: 0.15, rootMargin: "0px 0px -60px 0px" },
     );
-    node.querySelectorAll(REVEAL_SELECTOR).forEach((el) => observer.observe(el));
+    observeRevealElementsIn(node);
+
+    const mutationObserver = new MutationObserver((mutations) => {
+      for (const mutation of mutations) {
+        for (const addedNode of mutation.addedNodes) {
+          if (!(addedNode instanceof Element)) continue;
+          observeRevealElementsIn(addedNode);
+        }
+      }
+    });
+    mutationObserver.observe(node, { childList: true, subtree: true });
 
     return () => {
-      window.removeEventListener("scroll", onScroll);
+      mutationObserver.disconnect();
       observer.disconnect();
     };
   }, []);
 
-  return { scrollY, containerRef };
+  return { containerRef };
 }

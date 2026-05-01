@@ -141,7 +141,7 @@ export function GalleryClient({
   banner,
   convexUnavailable = false,
 }: GalleryClientProps) {
-  const { scrollY, containerRef } = useScrollAndReveal();
+  const { containerRef } = useScrollAndReveal();
   const pathname = usePathname();
   const isPreview =
     pathname === "/preview" || pathname.startsWith("/preview/");
@@ -302,7 +302,6 @@ export function GalleryClient({
       className="dark relative min-h-screen bg-deep-forest text-ivory grain-overlay"
     >
       <Header
-        scrollY={scrollY}
         showPricing={showPricing}
         showAbout={showAbout}
         aboutHref={aboutHref}

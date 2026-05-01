@@ -142,6 +142,36 @@ export function prewarmAdminNavigation(
   }
 }
 
+/**
+ * Prewarm published public-route data on navigation intent. Route-specific
+ * links still use Next.js prefetch for code/RSC; this mirrors Lawn's Convex
+ * query prewarm so the destination can reuse hot subscriptions.
+ */
+export function prewarmPublicNavigation(
+  convex: ConvexReactClient,
+  href: string,
+) {
+  if (href === "/about") {
+    prewarmSpecs(convex, [
+      makeRouteQuerySpec(api.public.getPublishedAbout, {}),
+      makeRouteQuerySpec(api.public.getPublishedMarketingFeatureFlags, {}),
+    ]);
+  }
+  if (href === "/gallery") {
+    prewarmSpecs(convex, [
+      makeRouteQuerySpec(api.public.getPublishedGalleryPhotos, {}),
+      makeRouteQuerySpec(api.public.getPublishedVideos, {}),
+      makeRouteQuerySpec(api.public.getPublishedMarketingFeatureFlags, {}),
+    ]);
+  }
+  if (href === "/recordings") {
+    prewarmSpecs(convex, [
+      makeRouteQuerySpec(api.public.getPublishedAudioTracks, {}),
+      makeRouteQuerySpec(api.public.getPublishedMarketingFeatureFlags, {}),
+    ]);
+  }
+}
+
 type PrewarmFn = () => void | Promise<void>;
 
 type UseRoutePrewarmIntentOptions = {

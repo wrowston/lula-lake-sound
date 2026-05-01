@@ -3,9 +3,6 @@ import localFont from "next/font/local";
 import "./globals.css";
 import { Analytics } from "@vercel/analytics/next";
 import { SpeedInsights } from "@vercel/speed-insights/next";
-import { ClerkProvider } from "@clerk/nextjs";
-import { ConvexClientProvider } from "@/components/convex-client-provider";
-import { ThemeProvider } from "@/components/theme-provider";
 import { cn } from "@/lib/utils";
 
 /**
@@ -108,6 +105,7 @@ export default function RootLayout({
     <html
       lang="en"
       className={cn(
+        "dark",
         "font-sans",
         acuminVariableConcept.variable,
         titillium.variable,
@@ -115,11 +113,7 @@ export default function RootLayout({
       suppressHydrationWarning
     >
       <body className="antialiased">
-        <ThemeProvider attribute="class" defaultTheme="dark" enableSystem={false}>
-          <ClerkProvider>
-            <ConvexClientProvider>{children}</ConvexClientProvider>
-          </ClerkProvider>
-        </ThemeProvider>
+        {children}
         <Analytics />
         <SpeedInsights />
       </body>

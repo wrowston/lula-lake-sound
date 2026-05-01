@@ -1,7 +1,6 @@
 "use client";
 
-import { useRef, type ReactNode } from "react";
-import { motion, useScroll, useTransform } from "motion/react";
+import { type ReactNode } from "react";
 
 import { cn } from "@/lib/utils";
 
@@ -24,9 +23,7 @@ import { cn } from "@/lib/utils";
  * collapses to a normal stacked section so mobile readers don't get a
  * forced scroll-jacked experience.
  *
- * The pinned column also receives a parallax `y` offset that scrubs
- * against the section's scroll progress, plus a sand progress rail on
- * the left edge that fills as the user advances through the section.
+ * The pinned column is paired with a sand rail on the left edge.
  */
 interface StickySectionProps {
   readonly id?: string;
@@ -61,17 +58,8 @@ export function StickySection({
   stickyTop = 96,
   asideOnRight = false,
 }: StickySectionProps) {
-  const sectionRef = useRef<HTMLElement | null>(null);
-  const { scrollYProgress } = useScroll({
-    target: sectionRef,
-    offset: ["start end", "end start"],
-  });
-
-  const railScale = useTransform(scrollYProgress, [0, 1], [0, 1]);
-
   return (
     <section
-      ref={sectionRef}
       id={id}
       // `overflow-clip` (not `overflow-hidden`) — it clips overflowing
       // backgrounds the same way visually, but does NOT establish a
@@ -84,10 +72,9 @@ export function StickySection({
       {/* Sand progress rail — pinned to the left edge of the section,
        * fills as the section scrolls past. Hidden on mobile so it
        * doesn't crowd the narrow viewport. */}
-      <motion.div
+      <div
         aria-hidden
-        className="pointer-events-none absolute left-0 top-0 z-[3] hidden h-full w-px origin-top bg-sand/35 lg:block"
-        style={{ scaleY: railScale }}
+        className="pointer-events-none absolute left-0 top-0 z-[3] hidden h-full w-px bg-sand/20 lg:block"
       />
 
       <div

@@ -4,6 +4,7 @@ import { notFound } from "next/navigation";
 import { cache } from "react";
 import { api } from "../../../convex/_generated/api";
 import { RecordingsPageClient } from "./recordings-page-client";
+import { PublicConvexProvider } from "@/components/public-convex-provider";
 
 /** One preload per request for metadata + page (same render pass). */
 const preloadMarketingForRecordings = cache(() =>
@@ -53,9 +54,11 @@ export default async function RecordingsPage() {
   }
 
   return (
-    <RecordingsPageClient
-      preloadedAudio={preloadedAudio}
-      marketing={data}
-    />
+    <PublicConvexProvider>
+      <RecordingsPageClient
+        preloadedAudio={preloadedAudio}
+        marketing={data}
+      />
+    </PublicConvexProvider>
   );
 }

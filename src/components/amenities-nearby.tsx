@@ -1,7 +1,5 @@
 "use client";
 
-import { motion } from "motion/react";
-
 import { AmenityCard } from "./ui/amenity-card";
 import { MotionReveal, MotionRevealGroup } from "@/components/motion-reveal";
 import { PublicSectionNotice } from "@/components/public-section-notice";
@@ -111,13 +109,10 @@ export function AmenitiesNearby({ amenities }: AmenitiesNearbyProps) {
           className="grid grid-cols-1 divide-y divide-sand/14 border-y border-sand/14 md:grid-cols-2 md:divide-x md:divide-y-0 lg:grid-cols-4 [&>*:nth-child(n+3)]:border-t [&>*:nth-child(n+3)]:border-sand/14 lg:[&>*:nth-child(n+3)]:border-t-0"
         >
           {amenities.rows.map((amenity) => (
-            <motion.div
+            <div
               key={amenity.stableId}
-              variants={{
-                hidden: { opacity: 0, y: 32, filter: "blur(8px)" },
-                visible: { opacity: 1, y: 0, filter: "blur(0px)" },
-              }}
-              transition={{ duration: 0.95, ease: [0.16, 1, 0.3, 1] }}
+              className="reveal-blur"
+              style={{ animationDuration: "0.95s" }}
             >
               <AmenityCard
                 name={amenity.name}
@@ -125,7 +120,7 @@ export function AmenitiesNearby({ amenities }: AmenitiesNearbyProps) {
                 description={amenity.description}
                 website={amenity.website}
               />
-            </motion.div>
+            </div>
           ))}
         </MotionRevealGroup>
       </div>
