@@ -13,7 +13,6 @@ import { EquipmentSpecs, type GearPayload } from "@/components/equipment-specs";
 import { FAQ, type FaqCategoryProps } from "@/components/faq";
 import { Header } from "@/components/header";
 import { Hero } from "@/components/hero";
-import { SectionRail } from "@/components/section-rail";
 import { SiteFooter } from "@/components/site-footer";
 import type { PublishedAmenitiesNearby } from "@/components/amenities-nearby";
 import { TheSpace, type GalleryPhoto } from "@/components/the-space";
@@ -146,7 +145,6 @@ export function HomepageShell({
         recordingsHref={recordingsNavHref}
       />
       <Hero />
-      <SectionRail />
 
       <main className="relative z-10">
         <TheSpace photos={photos} />
