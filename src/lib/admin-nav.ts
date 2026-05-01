@@ -9,6 +9,7 @@ import {
   Settings,
   MapPin,
   CircleHelp,
+  Inbox,
 } from "lucide-react";
 
 /** Shared routes for admin sidebar and dashboard cards (excludes /admin root). */
@@ -18,6 +19,12 @@ export const ADMIN_MANAGE_NAV_ITEMS: {
   icon: LucideIcon;
   description: string;
 }[] = [
+  {
+    title: "Contact submissions",
+    href: "/admin/inquiries",
+    icon: Inbox,
+    description: "Inquiries from the site form",
+  },
   {
     title: "About",
     href: "/admin/about",

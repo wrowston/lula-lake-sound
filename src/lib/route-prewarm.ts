@@ -88,6 +88,11 @@ export function prewarmAdminNavigation(
       makeRouteQuerySpec(api.cms.getSection, { section: "settings" }),
     ]);
   }
+  if (href === "/admin/inquiries") {
+    prewarmSpecs(convex, [
+      makeRouteQuerySpec(api.admin.inquiries.listForAdmin, {}),
+    ]);
+  }
   if (href === "/admin/pricing") {
     prewarmSpecs(convex, [
       makeRouteQuerySpec(api.admin.pricing.listDraft, {}),

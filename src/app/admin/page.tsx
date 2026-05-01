@@ -1,6 +1,7 @@
 import { AdminHeader } from "@/components/admin/admin-header";
 import { AdminAnalyticsTiles } from "@/components/admin/admin-analytics-tiles";
 import { AdminDashboardNavCards } from "@/components/admin/admin-dashboard-nav-cards";
+import { InquiriesDashboardPreview } from "@/components/admin/inquiries-dashboard-preview";
 import {
   ADMIN_DASHBOARD_INNER_CLASS,
   ADMIN_PAGE_OUTER_CLASS,
@@ -27,6 +28,8 @@ export default async function DashboardPage() {
           </div>
 
           <AdminAnalyticsTiles analytics={analytics} />
+
+          <InquiriesDashboardPreview />
 
           <AdminDashboardNavCards />
         </div>

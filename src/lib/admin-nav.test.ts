@@ -10,6 +10,7 @@ describe("ADMIN_MANAGE_NAV_ITEMS", () => {
   test("includes every CMS admin destination expected by the sidebar", () => {
     const hrefs = ADMIN_MANAGE_NAV_ITEMS.map((i) => i.href);
     expect(hrefs).toEqual([
+      "/admin/inquiries",
       "/admin/about",
       "/admin/photos",
       "/admin/gear",

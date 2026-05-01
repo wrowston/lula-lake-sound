@@ -79,7 +79,7 @@ function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null;
 }
 
-function isCmsConvexErrorPayload(
+export function isCmsConvexErrorPayload(
   value: unknown,
 ): value is CmsConvexErrorPayload {
   if (!isRecord(value)) return false;

@@ -9,6 +9,7 @@ import { AmenitiesEditorSkeleton } from "@/app/admin/amenities-nearby/amenities-
 import { FaqEditorSkeleton } from "@/app/admin/faq/faq-editor-skeleton";
 import { VideosEditorSkeleton } from "@/app/admin/videos/videos-editor-skeleton";
 import { SettingsEditorSkeleton } from "@/app/admin/settings/settings-editor-skeleton";
+import { InquiriesEditorSkeleton } from "@/app/admin/inquiries/inquiries-editor-skeleton";
 
 /** Shared layout shell classes for admin CMS pages and their loading states. */
 export const ADMIN_PAGE_OUTER_CLASS = "flex-1 px-5 py-8 pb-12 sm:px-8";
@@ -32,6 +33,12 @@ const ROUTES = {
     outerClassName: ADMIN_PAGE_OUTER_CLASS,
     innerClassName: ADMIN_DASHBOARD_INNER_CLASS,
     Body: AdminDashboardLoadingSkeleton,
+  },
+  "/admin/inquiries": {
+    title: "Contact submissions",
+    outerClassName: ADMIN_PAGE_OUTER_CLASS,
+    innerClassName: ADMIN_PAGE_INNER_CLASS,
+    Body: InquiriesEditorSkeleton,
   },
   "/admin/about": {
     title: "About",

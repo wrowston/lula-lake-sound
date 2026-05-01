@@ -135,6 +135,15 @@ describe("prewarmAdminNavigation", () => {
     expect(prewarmQuery.mock.calls.length).toBe(1);
   });
 
+  test("prewarms contact submissions list", () => {
+    const { client, prewarmQuery } = makeFakeClient();
+    prewarmAdminNavigation(client, "/admin/inquiries");
+    expect(prewarmQuery.mock.calls.length).toBe(1);
+    expect(prewarmQuery.mock.calls[0][0].query).toEqual(
+      api.admin.inquiries.listForAdmin,
+    );
+  });
+
   test("prewarms about (section + marketing flags only)", () => {
     const { client, prewarmQuery } = makeFakeClient();
     prewarmAdminNavigation(client, "/admin/about");
