@@ -201,13 +201,7 @@ function eventSeriesQuery({
 }
 
 function numericResult(response: PostHogQueryResponse): number {
-  const value = response.results?.[0]?.[0];
-  if (typeof value === "number" && Number.isFinite(value)) return value;
-  if (typeof value === "string") {
-    const parsed = Number(value);
-    if (Number.isFinite(parsed)) return parsed;
-  }
-  return 0;
+  return numericValue(response.results?.[0]?.[0]);
 }
 
 function numericValue(value: unknown): number {
@@ -232,9 +226,9 @@ function recentDateKeys(days: number): string[] {
     Date.UTC(today.getUTCFullYear(), today.getUTCMonth(), today.getUTCDate()),
   );
 
-  return Array.from({ length: days }, (_, index) => {
+  return Array.from({ length: days + 1 }, (_, index) => {
     const date = new Date(utcDate);
-    date.setUTCDate(date.getUTCDate() - (days - index - 1));
+    date.setUTCDate(date.getUTCDate() - (days - index));
     return date.toISOString().slice(0, 10);
   });
 }
@@ -257,7 +251,7 @@ function seriesResult(
   }));
 }
 
-async function queryPostHogMetric({
+async function executeHogQLQuery({
   host,
   personalApiKey,
   projectId,
@@ -267,7 +261,7 @@ async function queryPostHogMetric({
   readonly personalApiKey: string;
   readonly projectId: string;
   readonly query: string;
-}): Promise<number> {
+}): Promise<PostHogQueryResponse> {
   const response = await fetch(`${host}/api/projects/${projectId}/query/`, {
     method: "POST",
     headers: {
@@ -286,7 +280,27 @@ async function queryPostHogMetric({
     throw new Error(`PostHog query failed: ${response.status}`);
   }
 
-  return numericResult((await response.json()) as PostHogQueryResponse);
+  return (await response.json()) as PostHogQueryResponse;
+}
+
+async function queryPostHogMetric({
+  host,
+  personalApiKey,
+  projectId,
+  query,
+}: {
+  readonly host: string;
+  readonly personalApiKey: string;
+  readonly projectId: string;
+  readonly query: string;
+}): Promise<number> {
+  const body = await executeHogQLQuery({
+    host,
+    personalApiKey,
+    projectId,
+    query,
+  });
+  return numericResult(body);
 }
 
 async function queryPostHogSeries({
@@ -302,25 +316,13 @@ async function queryPostHogSeries({
   readonly query: string;
   readonly days: number;
 }): Promise<PostHogAnalyticsSeriesPoint[]> {
-  const response = await fetch(`${host}/api/projects/${projectId}/query/`, {
-    method: "POST",
-    headers: {
-      Authorization: `Bearer ${personalApiKey}`,
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify({
-      query: {
-        kind: "HogQLQuery",
-        query,
-      },
-    }),
+  const body = await executeHogQLQuery({
+    host,
+    personalApiKey,
+    projectId,
+    query,
   });
-
-  if (!response.ok) {
-    throw new Error(`PostHog query failed: ${response.status}`);
-  }
-
-  return seriesResult((await response.json()) as PostHogQueryResponse, days);
+  return seriesResult(body, days);
 }
 
 async function loadPostHogAdminAnalytics(): Promise<PostHogAnalyticsState> {
