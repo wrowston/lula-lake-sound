@@ -486,6 +486,16 @@ html.light {
   animation-play-state: running;
 }
 
+.reveal-fade {
+  opacity: 0;
+  animation: reveal-fade var(--duration-slow) var(--ease-editorial) forwards;
+  animation-play-state: paused;
+}
+
+.reveal-fade.in-view {
+  animation-play-state: running;
+}
+
 .reveal-delay-1 { animation-delay: 0.08s; }
 .reveal-delay-2 { animation-delay: 0.16s; }
 .reveal-delay-3 { animation-delay: 0.24s; }
@@ -660,6 +670,7 @@ html.light {
 
 @media (prefers-reduced-motion: reduce) {
   .reveal,
+  .reveal-fade,
   .reveal-clip,
   .reveal-blur,
   .reveal-rule,

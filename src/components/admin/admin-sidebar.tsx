@@ -174,7 +174,7 @@ export function AdminSidebar() {
             className="h-6 w-auto max-w-full shrink-0 object-contain object-left group-data-[collapsible=icon]:hidden"
           />
           <Image
-            src="/Logos/Primary/LLS_Logo_Full_Concrete1.png"
+            src="/Logos/Primary/LLS_Logo_Full_Ivory.png"
             alt="Lula Lake Sound"
             width={800}
             height={260}

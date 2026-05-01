@@ -2,13 +2,17 @@
 
 import Image from "next/image";
 import Link from "next/link";
-import { useState } from "react";
+import { useConvex } from "convex/react";
+import { useCallback, useState } from "react";
 
 import { ScrollProgress } from "@/components/scroll-progress";
 import { cn } from "@/lib/utils";
+import {
+  prewarmPublicNavigation,
+  useRoutePrewarmIntent,
+} from "@/lib/route-prewarm";
 
 interface HeaderProps {
-  readonly scrollY: number;
   readonly showPricing?: boolean;
   /**
    * INF-46 — hides the primary-nav "About" link (desktop + mobile) when the
@@ -47,6 +51,35 @@ interface HeaderProps {
   readonly showGallery?: boolean;
 }
 
+function RouteNavLink({
+  href,
+  className,
+  onClick,
+  children,
+}: {
+  readonly href: string;
+  readonly className: string;
+  readonly onClick?: () => void;
+  readonly children: React.ReactNode;
+}) {
+  const convex = useConvex();
+  const { handlers, intentRootRef } = useRoutePrewarmIntent(() => {
+    prewarmPublicNavigation(convex, href);
+  });
+
+  return (
+    <Link
+      ref={intentRootRef}
+      href={href}
+      className={className}
+      onClick={onClick}
+      {...handlers}
+    >
+      {children}
+    </Link>
+  );
+}
+
 /**
  * Marketing-site header.
  *
@@ -56,7 +89,6 @@ interface HeaderProps {
  * the nav text stays legible against hero imagery.
  */
 export function Header({
-  scrollY,
   showPricing = false,
   showAbout = false,
   aboutHref = "/about",
@@ -66,9 +98,31 @@ export function Header({
   showGallery = false,
 }: HeaderProps) {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const headerRef = useCallback((node: HTMLElement | null) => {
+    if (!node) return;
 
-  const progress = Math.min(scrollY / 140, 1);
-  const baseBg = `rgba(31, 30, 28, ${Math.min(0.9, progress * 0.9)})`;
+    let ticking = false;
+    const updateScrollProgress = () => {
+      const progress = Math.min(window.scrollY / 140, 1);
+      node.style.setProperty("--header-bg-alpha", String(Math.min(0.9, progress * 0.9)));
+      node.style.setProperty("--header-rule-opacity", String(progress));
+    };
+    const onScroll = () => {
+      if (ticking) return;
+      ticking = true;
+      requestAnimationFrame(() => {
+        updateScrollProgress();
+        ticking = false;
+      });
+    };
+
+    updateScrollProgress();
+    window.addEventListener("scroll", onScroll, { passive: true });
+
+    return () => {
+      window.removeEventListener("scroll", onScroll);
+    };
+  }, []);
 
   function handleNavigation() {
     setIsMobileMenuOpen(false);
@@ -127,8 +181,11 @@ export function Header({
   return (
     <>
       <header
+        ref={headerRef}
         className="fixed top-0 left-0 right-0 z-50 transition-colors duration-700 ease-[cubic-bezier(0.16,1,0.3,1)]"
-        style={{ backgroundColor: baseBg }}
+        style={{
+          backgroundColor: "rgba(31, 30, 28, var(--header-bg-alpha, 0))",
+        }}
       >
         <div className="mx-auto flex w-full max-w-7xl items-center justify-between px-6 py-5 md:px-12 md:py-6">
           <button
@@ -151,14 +208,14 @@ export function Header({
           >
             {navigationItems.map((item) =>
               item.kind === "route" ? (
-                <Link
+                <RouteNavLink
                   key={item.key}
                   href={item.href}
                   className="label-text group relative text-[10.5px] text-ivory/55 transition-colors duration-500 hover:text-sand"
                 >
                   {item.label}
                   <span className="absolute -bottom-1 left-0 h-px w-0 bg-sand transition-[width] duration-500 ease-[cubic-bezier(0.16,1,0.3,1)] group-hover:w-full" />
-                </Link>
+                </RouteNavLink>
               ) : (
                 <a
                   key={item.id}
@@ -209,7 +266,7 @@ export function Header({
          * progress as the user scrolls. */}
         <div
           className="relative mx-auto h-px max-w-7xl px-6 transition-opacity duration-700 md:px-12"
-          style={{ opacity: progress }}
+          style={{ opacity: "var(--header-rule-opacity, 0)" }}
         >
           <div className="h-px w-full bg-sand/15" />
           <ScrollProgress />
@@ -233,14 +290,14 @@ export function Header({
             <nav className="flex flex-col divide-y divide-sand/10">
               {navigationItems.map((item) =>
                 item.kind === "route" ? (
-                  <Link
+                  <RouteNavLink
                     key={item.key}
                     href={item.href}
                     onClick={handleNavigation}
                     className="headline-secondary py-5 text-2xl text-ivory/85 transition-colors duration-500 hover:text-sand"
                   >
                     {item.label}
-                  </Link>
+                  </RouteNavLink>
                 ) : (
                   <a
                     key={item.id}

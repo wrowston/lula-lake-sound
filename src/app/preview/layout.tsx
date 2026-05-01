@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { ProtectedRouteProviders } from "@/components/protected-route-providers";
 
 export const dynamic = "force-dynamic";
 
@@ -12,5 +13,5 @@ export default function PreviewLayout({
 }: Readonly<{
   children: React.ReactNode;
 }>) {
-  return <>{children}</>;
+  return <ProtectedRouteProviders>{children}</ProtectedRouteProviders>;
 }

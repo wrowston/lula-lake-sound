@@ -1,22 +1,20 @@
-"use client";
-
-import { motion, type HTMLMotionProps, type Variants } from "motion/react";
-import { type ComponentType, type CSSProperties, type ReactNode } from "react";
+import {
+  type CSSProperties,
+  type ElementType,
+  type HTMLAttributes,
+  type ReactNode,
+} from "react";
+import { cn } from "@/lib/utils";
 
 /**
- * Editorial motion-driven reveal primitive.
+ * Editorial CSS-driven reveal primitive.
  *
- * A thin wrapper over `motion.<tag>` that ships the project's
- * editorial easing + a small set of hand-tuned reveal variants. Keep this
- * component intentionally small — for one-off scroll scrubs, use
- * `motion/react`'s `useScroll` / `useTransform` directly inside the
- * component that owns the geometry.
- *
- * Designed to be used with `whileInView` so reveals fire as users scroll
- * sections into the viewport, not just at first paint.
+ * The page-level `useScrollAndReveal` observer toggles `.in-view` for these
+ * classes, avoiding a JS animation runtime while preserving the existing API.
  */
 
-const EDITORIAL_EASE = [0.16, 1, 0.3, 1] as const;
+export const REVEAL_EASE =
+  "cubic-bezier(0.16, 1, 0.3, 1)" as const;
 
 type RevealVariant =
   | "rise"
@@ -26,31 +24,13 @@ type RevealVariant =
   | "scale-in"
   | "letter";
 
-const VARIANTS: Record<RevealVariant, Variants> = {
-  rise: {
-    hidden: { opacity: 0, y: 32 },
-    visible: { opacity: 1, y: 0 },
-  },
-  "rise-blur": {
-    hidden: { opacity: 0, y: 28, filter: "blur(10px)" },
-    visible: { opacity: 1, y: 0, filter: "blur(0px)" },
-  },
-  fade: {
-    hidden: { opacity: 0 },
-    visible: { opacity: 1 },
-  },
-  rule: {
-    hidden: { opacity: 0, scaleX: 0 },
-    visible: { opacity: 1, scaleX: 1 },
-  },
-  "scale-in": {
-    hidden: { opacity: 0, scale: 0.94, y: 24 },
-    visible: { opacity: 1, scale: 1, y: 0 },
-  },
-  letter: {
-    hidden: { opacity: 0, y: 18 },
-    visible: { opacity: 1, y: 0 },
-  },
+const REVEAL_CLASS_BY_VARIANT: Record<RevealVariant, string> = {
+  rise: "reveal",
+  "rise-blur": "reveal-blur",
+  fade: "reveal-fade",
+  rule: "reveal-rule",
+  "scale-in": "reveal-blur",
+  letter: "reveal-axis",
 };
 
 interface MotionRevealProps {
@@ -74,7 +54,7 @@ interface MotionRevealProps {
   /** Viewport amount required before triggering. Default: 0.25. */
   readonly amount?: number;
   /** Optional extra props (e.g. `id`, `role`, `aria-*`). */
-  readonly motionProps?: Omit<HTMLMotionProps<"div">, "children" | "style">;
+  readonly motionProps?: Omit<HTMLAttributes<HTMLElement>, "children" | "style">;
 }
 
 export function MotionReveal({
@@ -90,29 +70,22 @@ export function MotionReveal({
   amount = 0.25,
   motionProps,
 }: MotionRevealProps) {
-  const variants = VARIANTS[variant];
   const isRule = variant === "rule";
-  const Tag = motion[as] as ComponentType<HTMLMotionProps<"div">>;
+  const Tag = as as ElementType;
+  const revealStyle: CSSProperties = {
+    ...(isRule ? { transformOrigin: "left center" } : null),
+    ...(delay ? { animationDelay: `${delay}s` } : null),
+    ...(duration ? { animationDuration: `${duration}s` } : null),
+    ...style,
+  };
+
   return (
     <Tag
-      className={className}
-      style={{
-        ...(isRule ? { transformOrigin: "left center" } : null),
-        ...style,
-      }}
-      variants={variants}
-      {...(inheritFromParent
-        ? {}
-        : {
-            initial: "hidden" as const,
-            whileInView: "visible" as const,
-            viewport: {
-              once: !repeat,
-              amount,
-              margin: "0px 0px -10% 0px",
-            },
-          })}
-      transition={{ duration, ease: EDITORIAL_EASE, delay }}
+      className={cn(REVEAL_CLASS_BY_VARIANT[variant], className)}
+      style={revealStyle}
+      data-repeat-reveal={repeat ? "" : undefined}
+      data-inherit-reveal={inheritFromParent ? "" : undefined}
+      data-reveal-amount={amount}
       {...motionProps}
     >
       {children}
@@ -145,20 +118,14 @@ export function MotionRevealGroup({
   amount = 0.2,
   as = "div",
 }: MotionRevealGroupProps) {
-  const Tag = motion[as] as ComponentType<HTMLMotionProps<"div">>;
+  const Tag = as as ElementType;
   return (
     <Tag
       className={className}
       style={style}
-      initial="hidden"
-      whileInView="visible"
-      viewport={{ once: true, amount, margin: "0px 0px -10% 0px" }}
-      variants={{
-        hidden: {},
-        visible: {
-          transition: { staggerChildren: stagger, delayChildren: delay },
-        },
-      }}
+      data-reveal-stagger={stagger}
+      data-reveal-delay={delay}
+      data-reveal-amount={amount}
     >
       {children}
     </Tag>

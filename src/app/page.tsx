@@ -3,6 +3,7 @@ import { preloadQuery } from "convex/nextjs";
 import { api } from "../../convex/_generated/api";
 import { HomeClient } from "./home-client";
 import { HomepageShell } from "@/components/homepage-shell";
+import { PublicConvexProvider } from "@/components/public-convex-provider";
 
 // Preload the assets used in the hero section so the browser can start
 // downloading them before React even begins rendering the tree. Both files
@@ -24,12 +25,12 @@ export default async function Home() {
   });
   try {
     const [
-      pricingSettled,
-      gearSettled,
-      photosSettled,
-      faqSettled,
-      marketingSettled,
-      amenitiesSettled,
+      pricingResult,
+      gearResult,
+      photosResult,
+      faqResult,
+      marketingResult,
+      amenitiesResult,
     ] = await Promise.allSettled([
       preloadQuery(api.public.getPublishedPricingFlags),
       preloadQuery(api.public.getPublishedGear),
@@ -38,27 +39,32 @@ export default async function Home() {
       preloadQuery(api.public.getPublishedMarketingFeatureFlags),
       preloadQuery(api.public.getPublishedAmenitiesNearby),
     ]);
-    const preloadedPricing =
-      pricingSettled.status === "fulfilled" ? pricingSettled.value : null;
-    const preloadedGear =
-      gearSettled.status === "fulfilled" ? gearSettled.value : null;
-    const preloadedPhotos =
-      photosSettled.status === "fulfilled" ? photosSettled.value : null;
-    const preloadedFaq =
-      faqSettled.status === "fulfilled" ? faqSettled.value : null;
-    const preloadedMarketing =
-      marketingSettled.status === "fulfilled" ? marketingSettled.value : null;
-    const preloadedAmenities =
-      amenitiesSettled.status === "fulfilled" ? amenitiesSettled.value : null;
-    if (
-      preloadedPricing === null &&
-      preloadedGear === null &&
-      preloadedPhotos === null &&
-      preloadedFaq === null &&
-      preloadedMarketing === null &&
-      preloadedAmenities === null
-    ) {
-      return (
+
+    return (
+      <PublicConvexProvider>
+        <HomeClient
+          preloadedPricing={
+            pricingResult.status === "fulfilled" ? pricingResult.value : null
+          }
+          preloadedGear={gearResult.status === "fulfilled" ? gearResult.value : null}
+          preloadedPhotos={
+            photosResult.status === "fulfilled" ? photosResult.value : null
+          }
+          preloadedFaq={faqResult.status === "fulfilled" ? faqResult.value : null}
+          preloadedMarketing={
+            marketingResult.status === "fulfilled" ? marketingResult.value : null
+          }
+          preloadedAmenities={
+            amenitiesResult.status === "fulfilled"
+              ? amenitiesResult.value
+              : null
+          }
+        />
+      </PublicConvexProvider>
+    );
+  } catch {
+    return (
+      <PublicConvexProvider>
         <HomepageShell
           pricingFlags={null}
           marketingFeatureFlags={null}
@@ -67,28 +73,7 @@ export default async function Home() {
           faqCategories={null}
           amenities={null}
         />
-      );
-    }
-    return (
-      <HomeClient
-        preloadedPricing={preloadedPricing}
-        preloadedGear={preloadedGear}
-        preloadedPhotos={preloadedPhotos}
-        preloadedFaq={preloadedFaq}
-        preloadedMarketing={preloadedMarketing}
-        preloadedAmenities={preloadedAmenities}
-      />
-    );
-  } catch {
-    return (
-      <HomepageShell
-        pricingFlags={null}
-        marketingFeatureFlags={null}
-        gear={null}
-        photos={null}
-        faqCategories={null}
-        amenities={null}
-      />
+      </PublicConvexProvider>
     );
   }
 }

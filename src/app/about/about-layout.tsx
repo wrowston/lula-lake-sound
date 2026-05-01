@@ -150,7 +150,7 @@ export function AboutLayout({
       heroImageUrl: null,
       teamMembers: [],
     } as PublicAboutSnapshot);
-  const { scrollY, containerRef } = useScrollAndReveal();
+  const { containerRef } = useScrollAndReveal();
   const pathname = usePathname();
   const showRecordings = marketing.recordingsPage === true;
   const isPreview =
@@ -187,7 +187,6 @@ export function AboutLayout({
     >
       {banner}
       <Header
-        scrollY={scrollY}
         showPricing={showPricing}
         showAbout={showAboutNav}
         aboutHref={aboutHref}
