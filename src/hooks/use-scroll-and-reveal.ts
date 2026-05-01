@@ -13,6 +13,21 @@ const REVEAL_SELECTOR =
 
 const REVEAL_GROUP_SELECTOR = "[data-reveal-stagger]";
 
+/** Dense thresholds so `intersectionRatio` vs per-element `data-reveal-amount` is accurate. */
+const REVEAL_IO_THRESHOLDS = Array.from({ length: 21 }, (_, i) => i / 20);
+
+function shouldRepeatReveal(el: Element): boolean {
+  return el.hasAttribute("data-repeat-reveal");
+}
+
+function parseRevealAmount(el: Element): number {
+  const raw = el.getAttribute("data-reveal-amount");
+  if (raw == null || raw === "") return 0.15;
+  const n = Number.parseFloat(raw);
+  if (!Number.isFinite(n)) return 0.15;
+  return Math.min(1, Math.max(0, n));
+}
+
 function parseRevealSeconds(value: string | null | undefined): number {
   if (value == null || value === "") return 0;
   const t = value.trim();
@@ -81,7 +96,8 @@ export function useScrollAndReveal() {
 
     const observed = new WeakSet<Element>();
     function observeRevealElement(el: Element) {
-      if (observed.has(el) || el.classList.contains("in-view")) return;
+      if (observed.has(el)) return;
+      if (!shouldRepeatReveal(el) && el.classList.contains("in-view")) return;
       observed.add(el);
       observer.observe(el);
     }
@@ -98,13 +114,20 @@ export function useScrollAndReveal() {
     const observer = new IntersectionObserver(
       (entries) => {
         for (const entry of entries) {
-          if (entry.isIntersecting) {
-            entry.target.classList.add("in-view");
-            observer.unobserve(entry.target);
+          const target = entry.target;
+          const amount = parseRevealAmount(target);
+          const repeat = shouldRepeatReveal(target);
+          const pastAmount = entry.intersectionRatio >= amount;
+
+          if (pastAmount) {
+            target.classList.add("in-view");
+            if (!repeat) observer.unobserve(target);
+          } else if (repeat) {
+            target.classList.remove("in-view");
           }
         }
       },
-      { threshold: 0.15, rootMargin: "0px 0px -60px 0px" },
+      { threshold: REVEAL_IO_THRESHOLDS, rootMargin: "0px 0px -60px 0px" },
     );
     observeRevealElementsIn(node);
 
