@@ -73,63 +73,82 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
+      - name: Evaluate autofix eligibility
+        id: autofix
+        if: always()
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TEST_RESULT: ${{ needs.test-and-build.result }}
+          REF_NAME: ${{ github.head_ref || github.ref_name }}
+          EVENT_NAME: ${{ github.event_name }}
+          REPOSITORY: ${{ github.repository }}
+          PR_HTML_URL: ${{ github.event.pull_request.html_url || '' }}
+          PR_HEAD_REPO: ${{ github.event.pull_request.head.repo.full_name || '' }}
+          CURSOR_AUTOFIX_INPUT: ${{ inputs.cursor_autofix }}
+        run: |
+          set -euo pipefail
+          pr_url="${PR_HTML_URL}"
+
+          if [ "$TEST_RESULT" != "failure" ]; then
+            echo "run_autofix=false" >> "$GITHUB_OUTPUT"
+            echo "pr_url<<EOF" >> "$GITHUB_OUTPUT"
+            echo "$pr_url" >> "$GITHUB_OUTPUT"
+            echo "EOF" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          if [[ "$REF_NAME" == cursor/* ]]; then
+            echo "run_autofix=false" >> "$GITHUB_OUTPUT"
+            echo "pr_url<<EOF" >> "$GITHUB_OUTPUT"
+            echo "$pr_url" >> "$GITHUB_OUTPUT"
+            echo "EOF" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          run_autofix=false
+          case "$EVENT_NAME" in
+            pull_request)
+              if [ "$PR_HEAD_REPO" = "$REPOSITORY" ]; then
+                run_autofix=true
+              fi
+              ;;
+            workflow_dispatch)
+              if [ "$CURSOR_AUTOFIX_INPUT" = "true" ]; then
+                run_autofix=true
+              fi
+              ;;
+            push)
+              owner="${REPOSITORY%%/*}"
+              head_filter="${owner}:${REF_NAME}"
+              open_count=$(gh pr list --repo "$REPOSITORY" --head "$head_filter" --state open --json number --jq 'length')
+              if [ "$open_count" != "0" ]; then
+                # pull_request workflow for the same branch will run autofix with a real PR_URL
+                run_autofix=false
+              else
+                run_autofix=true
+                pr_url=""
+              fi
+              ;;
+          esac
+
+          echo "run_autofix=$run_autofix" >> "$GITHUB_OUTPUT"
+          echo "pr_url<<EOF" >> "$GITHUB_OUTPUT"
+          echo "$pr_url" >> "$GITHUB_OUTPUT"
+          echo "EOF" >> "$GITHUB_OUTPUT"
+
       - name: Skip autofix (not applicable)
-        if: >-
-          always() &&
-          (
-            needs.test-and-build.result != 'failure' ||
-            startsWith(github.head_ref || github.ref_name, 'cursor/') ||
-            !(
-              github.event_name == 'push' ||
-              (
-                github.event_name == 'workflow_dispatch' &&
-                inputs.cursor_autofix
-              ) ||
-              (
-                github.event_name == 'pull_request' &&
-                github.event.pull_request.head.repo.full_name == github.repository
-              )
-            )
-          )
+        if: always() && steps.autofix.outputs.run_autofix != 'true'
         run: |
           echo "Cursor autofix skipped (tests passed, job was not a failure, or this event/branch is not eligible)."
 
       - name: Setup Bun
-        if: >-
-          always() &&
-          needs.test-and-build.result == 'failure' &&
-          !startsWith(github.head_ref || github.ref_name, 'cursor/') &&
-          (
-            github.event_name == 'push' ||
-            (
-              github.event_name == 'workflow_dispatch' &&
-              inputs.cursor_autofix
-            ) ||
-            (
-              github.event_name == 'pull_request' &&
-              github.event.pull_request.head.repo.full_name == github.repository
-            )
-          )
+        if: always() && steps.autofix.outputs.run_autofix == 'true'
         uses: oven-sh/setup-bun@v2
         with:
           bun-version: latest
 
       - name: Cache Bun install
-        if: >-
-          always() &&
-          needs.test-and-build.result == 'failure' &&
-          !startsWith(github.head_ref || github.ref_name, 'cursor/') &&
-          (
-            github.event_name == 'push' ||
-            (
-              github.event_name == 'workflow_dispatch' &&
-              inputs.cursor_autofix
-            ) ||
-            (
-              github.event_name == 'pull_request' &&
-              github.event.pull_request.head.repo.full_name == github.repository
-            )
-          )
+        if: always() && steps.autofix.outputs.run_autofix == 'true'
         uses: actions/cache@v4
         with:
           path: ~/.bun/install/cache
@@ -138,41 +157,13 @@ jobs:
             ${{ runner.os }}-bun-
 
       - name: Install dependencies
-        if: >-
-          always() &&
-          needs.test-and-build.result == 'failure' &&
-          !startsWith(github.head_ref || github.ref_name, 'cursor/') &&
-          (
-            github.event_name == 'push' ||
-            (
-              github.event_name == 'workflow_dispatch' &&
-              inputs.cursor_autofix
-            ) ||
-            (
-              github.event_name == 'pull_request' &&
-              github.event.pull_request.head.repo.full_name == github.repository
-            )
-          )
+        if: always() && steps.autofix.outputs.run_autofix == 'true'
         run: bun install --frozen-lockfile
 
       - name: Start Cursor Cloud Agent
-        if: >-
-          always() &&
-          needs.test-and-build.result == 'failure' &&
-          !startsWith(github.head_ref || github.ref_name, 'cursor/') &&
-          (
-            github.event_name == 'push' ||
-            (
-              github.event_name == 'workflow_dispatch' &&
-              inputs.cursor_autofix
-            ) ||
-            (
-              github.event_name == 'pull_request' &&
-              github.event.pull_request.head.repo.full_name == github.repository
-            )
-          )
+        if: always() && steps.autofix.outputs.run_autofix == 'true'
         run: bun .github/scripts/cursor-autofix.ts
         env:
           CURSOR_API_KEY: ${{ secrets.CURSOR_API_KEY }}
           CURSOR_MODEL: ${{ vars.CURSOR_MODEL || 'composer-2' }}
-          PR_URL: ${{ github.event.pull_request.html_url || '' }}
+          PR_URL: ${{ steps.autofix.outputs.pr_url }}
