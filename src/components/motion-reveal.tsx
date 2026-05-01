@@ -13,7 +13,8 @@ import { cn } from "@/lib/utils";
  * classes, avoiding a JS animation runtime while preserving the existing API.
  */
 
-const EDITORIAL_EASE = "cubic-bezier(0.16, 1, 0.3, 1)" as const;
+export const REVEAL_EASE =
+  "cubic-bezier(0.16, 1, 0.3, 1)" as const;
 
 type RevealVariant =
   | "rise"
@@ -130,5 +131,3 @@ export function MotionRevealGroup({
     </Tag>
   );
 }
-
-export const REVEAL_EASE = EDITORIAL_EASE;
