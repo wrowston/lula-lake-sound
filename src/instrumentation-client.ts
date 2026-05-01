@@ -12,7 +12,7 @@ import {
   scrubSentryEvent,
 } from "@/lib/sentry";
 
-const posthogKey = process.env.NEXT_PUBLIC_POSTHOG_KEY;
+const posthogKey = process.env.NEXT_PUBLIC_POSTHOG_PROJECT_TOKEN;
 
 if (posthogKey) {
   posthog.init(posthogKey, {

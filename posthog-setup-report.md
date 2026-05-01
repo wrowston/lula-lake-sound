@@ -9,7 +9,7 @@ The wizard has completed a deep integration of PostHog analytics into the Lula L
 
 **Reverse proxy rewrites** were added to `next.config.ts` so PostHog JS and ingestion traffic routes through `/ingest` on the app's own domain.
 
-**Environment variables** `NEXT_PUBLIC_POSTHOG_KEY` and `NEXT_PUBLIC_POSTHOG_HOST` were written to `.env.local`.
+**Environment variables** `NEXT_PUBLIC_POSTHOG_PROJECT_TOKEN` and `NEXT_PUBLIC_POSTHOG_HOST` were written to `.env.local`.
 
 **New file** `src/lib/posthog-server.ts` provides a singleton `getPostHogClient()` for server-side event capture using `posthog-node`.
 
