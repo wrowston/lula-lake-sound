@@ -24,19 +24,41 @@ export default async function Home() {
     fetchPriority: "high",
   });
   try {
-    const preloadedMarketing = await preloadQuery(
-      api.public.getPublishedMarketingFeatureFlags,
-    );
+    const [
+      pricingResult,
+      gearResult,
+      photosResult,
+      faqResult,
+      marketingResult,
+      amenitiesResult,
+    ] = await Promise.allSettled([
+      preloadQuery(api.public.getPublishedPricingFlags),
+      preloadQuery(api.public.getPublishedGear),
+      preloadQuery(api.public.getPublishedCarouselPhotos),
+      preloadQuery(api.public.getPublishedFaq),
+      preloadQuery(api.public.getPublishedMarketingFeatureFlags),
+      preloadQuery(api.public.getPublishedAmenitiesNearby),
+    ]);
 
     return (
       <PublicConvexProvider>
         <HomeClient
-          preloadedPricing={null}
-          preloadedGear={null}
-          preloadedPhotos={null}
-          preloadedFaq={null}
-          preloadedMarketing={preloadedMarketing}
-          preloadedAmenities={null}
+          preloadedPricing={
+            pricingResult.status === "fulfilled" ? pricingResult.value : null
+          }
+          preloadedGear={gearResult.status === "fulfilled" ? gearResult.value : null}
+          preloadedPhotos={
+            photosResult.status === "fulfilled" ? photosResult.value : null
+          }
+          preloadedFaq={faqResult.status === "fulfilled" ? faqResult.value : null}
+          preloadedMarketing={
+            marketingResult.status === "fulfilled" ? marketingResult.value : null
+          }
+          preloadedAmenities={
+            amenitiesResult.status === "fulfilled"
+              ? amenitiesResult.value
+              : null
+          }
         />
       </PublicConvexProvider>
     );

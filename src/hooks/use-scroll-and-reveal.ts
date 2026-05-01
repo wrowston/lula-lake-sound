@@ -11,6 +11,64 @@ import { useCallback } from "react";
 const REVEAL_SELECTOR =
   ".reveal, .reveal-clip, .reveal-blur, .reveal-rule, .reveal-axis, .reveal-image";
 
+const REVEAL_GROUP_SELECTOR = "[data-reveal-stagger]";
+
+function parseRevealSeconds(value: string | null | undefined): number {
+  if (value == null || value === "") return 0;
+  const t = value.trim();
+  if (t === "0" || t === "0s" || t === "0ms") return 0;
+  if (t.endsWith("ms")) {
+    const n = Number.parseFloat(t.slice(0, -2));
+    return Number.isFinite(n) ? n / 1000 : 0;
+  }
+  if (t.endsWith("s")) {
+    const n = Number.parseFloat(t.slice(0, -1));
+    return Number.isFinite(n) ? n : 0;
+  }
+  const n = Number.parseFloat(t);
+  return Number.isFinite(n) ? n : 0;
+}
+
+/**
+ * Direct `MotionReveal` / reveal rows under `MotionRevealGroup`, or — when the
+ * group wraps a single subtree (e.g. accordion) — descendants with
+ * `data-inherit-reveal` owned by this group.
+ */
+function staggerTargetsForGroup(group: Element): Element[] {
+  const children = [...group.children];
+  const direct = children.filter(
+    (el) => el.matches(REVEAL_SELECTOR) || el.hasAttribute("data-inherit-reveal"),
+  );
+  if (direct.length > 0) return direct;
+  return [...group.querySelectorAll("[data-inherit-reveal]")].filter(
+    (el) => el.closest(REVEAL_GROUP_SELECTOR) === group,
+  );
+}
+
+function applyMotionRevealGroupStagger(root: ParentNode) {
+  if (!(root instanceof Element || root instanceof DocumentFragment)) return;
+  const groups: Element[] =
+    root instanceof Element
+      ? root.matches(REVEAL_GROUP_SELECTOR)
+        ? [root, ...root.querySelectorAll(REVEAL_GROUP_SELECTOR)]
+        : [...root.querySelectorAll(REVEAL_GROUP_SELECTOR)]
+      : [...root.querySelectorAll(REVEAL_GROUP_SELECTOR)];
+
+  for (const group of groups) {
+    const stagger = parseRevealSeconds(group.getAttribute("data-reveal-stagger"));
+    const baseDelay = parseRevealSeconds(group.getAttribute("data-reveal-delay"));
+    const targets = staggerTargetsForGroup(group);
+    targets.forEach((el, index) => {
+      if (!el.dataset.revealStaggerUserDelayCaptured) {
+        el.dataset.revealStaggerUserDelayCaptured = "1";
+        el.dataset.revealStaggerUserDelay = el.style.animationDelay || "";
+      }
+      const userDelay = parseRevealSeconds(el.dataset.revealStaggerUserDelay);
+      el.style.animationDelay = `${baseDelay + index * stagger + userDelay}s`;
+    });
+  }
+}
+
 /**
  * Ref callback for the page shell: an `IntersectionObserver` that adds
  * `.in-view` to reveal nodes.
@@ -27,6 +85,7 @@ export function useScrollAndReveal() {
       observer.observe(el);
     }
     function observeRevealElementsIn(root: ParentNode) {
+      applyMotionRevealGroupStagger(root);
       if (root instanceof Element && root.matches(REVEAL_SELECTOR)) {
         observeRevealElement(root);
       }
@@ -51,6 +110,10 @@ export function useScrollAndReveal() {
     const mutationObserver = new MutationObserver((mutations) => {
       for (const mutation of mutations) {
         for (const addedNode of mutation.addedNodes) {
+          if (addedNode instanceof DocumentFragment) {
+            observeRevealElementsIn(addedNode);
+            continue;
+          }
           if (!(addedNode instanceof Element)) continue;
           observeRevealElementsIn(addedNode);
         }
