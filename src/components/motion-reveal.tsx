@@ -164,5 +164,3 @@ export function MotionRevealGroup({
     </Tag>
   );
 }
-
-export const REVEAL_EASE = EDITORIAL_EASE;
