@@ -59,6 +59,7 @@ function applyMotionRevealGroupStagger(root: ParentNode) {
     const baseDelay = parseRevealSeconds(group.getAttribute("data-reveal-delay"));
     const targets = staggerTargetsForGroup(group);
     targets.forEach((el, index) => {
+      if (!(el instanceof HTMLElement)) return;
       if (!el.dataset.revealStaggerUserDelayCaptured) {
         el.dataset.revealStaggerUserDelayCaptured = "1";
         el.dataset.revealStaggerUserDelay = el.style.animationDelay || "";
