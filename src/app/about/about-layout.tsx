@@ -239,17 +239,22 @@ export function AboutLayout({
           className="relative bg-deep-forest"
           aria-label="Studio image"
         >
-          <div className="relative h-[55vh] overflow-hidden md:h-[70vh]">
-            <Image
-              src={heroImageSrc}
-              alt=""
-              role="presentation"
-              fill
-              className="object-cover"
-              quality={85}
-              priority
-              sizes="100vw"
-            />
+          {/* Magazine-style reveal: the cinematic hero zooms slightly
+           * while a washed-black curtain slides off upward, then drifts
+           * through a gentle parallax as the user keeps scrolling. */}
+          <div className="reveal-image relative h-[55vh] overflow-hidden md:h-[70vh]">
+            <div className="parallax-soft absolute inset-0">
+              <Image
+                src={heroImageSrc}
+                alt=""
+                role="presentation"
+                fill
+                className="reveal-image-target object-cover"
+                quality={85}
+                priority
+                sizes="100vw"
+              />
+            </div>
             <div
               aria-hidden
               className="absolute inset-x-0 bottom-0 h-32 bg-gradient-to-b from-transparent to-deep-forest"
@@ -341,8 +346,7 @@ export function AboutLayout({
             </p>
             <h2
               className={cn(
-                revealDelay(1),
-                "headline-primary text-warm-white leading-[1.1] text-balance text-3xl md:text-5xl",
+                "headline-primary reveal-axis reveal-delay-1 text-warm-white leading-[1.1] text-balance text-3xl md:text-5xl",
               )}
             >
               Ready to make something with us?

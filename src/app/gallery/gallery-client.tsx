@@ -373,8 +373,7 @@ export function GalleryClient({
             </p>
             <h2
               className={cn(
-                revealDelay(1),
-                "headline-primary text-balance text-3xl leading-[1.1] text-warm-white md:text-5xl",
+                "headline-primary reveal-axis reveal-delay-1 text-balance text-3xl leading-[1.1] text-warm-white md:text-5xl",
               )}
             >
               See it in person

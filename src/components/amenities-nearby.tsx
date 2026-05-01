@@ -1,6 +1,9 @@
 "use client";
 
+import { motion } from "motion/react";
+
 import { AmenityCard } from "./ui/amenity-card";
+import { MotionReveal, MotionRevealGroup } from "@/components/motion-reveal";
 import { PublicSectionNotice } from "@/components/public-section-notice";
 import { PUBLIC_CONVEX_QUERY_FAILED } from "@/lib/use-public-convex-query";
 
@@ -79,34 +82,55 @@ export function AmenitiesNearby({ amenities }: AmenitiesNearbyProps) {
       id="local-favorites"
       className="relative overflow-hidden bg-forest px-6 py-28 md:py-40"
     >
-      <div className="absolute inset-0 bg-texture-canvas opacity-14" />
+      <div className="parallax-soft absolute inset-0 bg-texture-canvas opacity-14" />
 
       <div className="relative z-10 mx-auto max-w-6xl">
-        <div className="reveal mb-20 text-center">
-          <p className="eyebrow mb-6 text-sand/82">{eyebrow}</p>
-          <h2 className="headline-primary mb-8 text-[2.25rem] text-warm-white md:text-[3rem] lg:text-[3.5rem]">
-            {heading}
-          </h2>
+        <div className="mb-20 text-center">
+          <MotionReveal variant="rise">
+            <p className="eyebrow mb-6 text-sand/82">{eyebrow}</p>
+          </MotionReveal>
+          <MotionReveal variant="rise-blur" duration={1.1} delay={0.1}>
+            <h2 className="headline-primary mb-8 text-[2.25rem] text-warm-white md:text-[3rem] lg:text-[3.5rem]">
+              {heading}
+            </h2>
+          </MotionReveal>
           {intro ? (
-            <p className="body-text-small mx-auto mb-8 max-w-2xl text-ivory/78">
-              {intro}
-            </p>
+            <MotionReveal variant="rise" delay={0.3}>
+              <p className="body-text-small mx-auto mb-8 max-w-2xl text-ivory/78">
+                {intro}
+              </p>
+            </MotionReveal>
           ) : null}
-          <div className="section-rule mx-auto max-w-[9rem]" />
+          <MotionReveal variant="rule" duration={1} delay={0.4}>
+            <span className="section-rule mx-auto block max-w-[9rem]" />
+          </MotionReveal>
         </div>
 
-        <div className="reveal reveal-delay-2 grid grid-cols-1 divide-y divide-sand/14 border-y border-sand/14 md:grid-cols-2 md:divide-x md:divide-y-0 lg:grid-cols-4 [&>*:nth-child(n+3)]:border-t [&>*:nth-child(n+3)]:border-sand/14 lg:[&>*:nth-child(n+3)]:border-t-0">
+        <MotionRevealGroup
+          stagger={0.12}
+          className="grid grid-cols-1 divide-y divide-sand/14 border-y border-sand/14 md:grid-cols-2 md:divide-x md:divide-y-0 lg:grid-cols-4 [&>*:nth-child(n+3)]:border-t [&>*:nth-child(n+3)]:border-sand/14 lg:[&>*:nth-child(n+3)]:border-t-0"
+        >
           {amenities.rows.map((amenity) => (
-            <AmenityCard
+            <motion.div
               key={amenity.stableId}
-              name={amenity.name}
-              type={amenity.type}
-              description={amenity.description}
-              website={amenity.website}
-            />
+              variants={{
+                hidden: { opacity: 0, y: 32, filter: "blur(8px)" },
+                visible: { opacity: 1, y: 0, filter: "blur(0px)" },
+              }}
+              transition={{ duration: 0.95, ease: [0.16, 1, 0.3, 1] }}
+            >
+              <AmenityCard
+                name={amenity.name}
+                type={amenity.type}
+                description={amenity.description}
+                website={amenity.website}
+              />
+            </motion.div>
           ))}
-        </div>
+        </MotionRevealGroup>
       </div>
+      {/* Cinematic seam into the washed-black FAQ section. */}
+      <div aria-hidden className="section-fade-bottom" />
     </section>
   );
 }

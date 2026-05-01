@@ -111,8 +111,7 @@ export function PageHeader({
         <h1
           id={titleId}
           className={cn(
-            revealDelay(2),
-            "headline-primary text-balance leading-[0.95] text-warm-white",
+            "headline-primary reveal-axis reveal-delay-2 text-balance leading-[0.95] text-warm-white",
             compact ? "mt-5 md:mt-7" : "mt-8 md:mt-10",
           )}
           style={{ fontSize: TITLE_FONT_SIZE[titleSize] }}
@@ -123,7 +122,6 @@ export function PageHeader({
         {meta || aside ? (
           <div
             className={cn(
-              revealDelay(3),
               "flex flex-col md:flex-row md:items-end md:justify-between",
               compact
                 ? "mt-8 gap-6 md:mt-10 md:gap-10"
@@ -134,7 +132,7 @@ export function PageHeader({
               <div className="flex items-center gap-6">
                 <span
                   aria-hidden
-                  className="block h-px w-16 bg-sand/35 md:w-24"
+                  className="reveal-rule reveal-delay-3 block h-px w-16 bg-sand/35 md:w-24"
                 />
                 <p className="label-text text-[11px] tracking-[0.25em] text-sand/55">
                   {meta}

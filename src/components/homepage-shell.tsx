@@ -25,10 +25,6 @@ import {
   previewHasActivePricingPackages,
 } from "@/lib/site-settings";
 
-function calculateLogoScale(scrollY: number): number {
-  return Math.max(0.7, 1 - scrollY * 0.0006);
-}
-
 interface HomepageShellProps {
   /** `undefined` while the client is still subscribing (preview only if not preloaded). */
   readonly pricingFlags:
@@ -111,7 +107,6 @@ export function HomepageShell({
   const marketingForUi =
     marketing === PUBLIC_CONVEX_QUERY_FAILED ? undefined : marketing;
 
-  const logoScale = calculateLogoScale(scrollY);
   // Nav-link visibility intentionally defaults to OFF while the marketing
   // flags are still loading. Otherwise a fresh page load briefly renders the
   // "Pricing" / "Recordings" / "About" tabs before Convex resolves and any
@@ -149,7 +144,7 @@ export function HomepageShell({
         homeSectionBase={homeSectionBase}
         recordingsHref={recordingsNavHref}
       />
-      <Hero logoScale={logoScale} />
+      <Hero />
 
       <main className="relative z-10">
         <TheSpace photos={photos} />
