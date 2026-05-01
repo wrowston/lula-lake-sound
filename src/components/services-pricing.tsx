@@ -2,8 +2,8 @@
 
 import posthog from "posthog-js";
 import { POSTHOG_EVENTS } from "@/lib/analytics-events";
+import { MotionReveal, MotionRevealGroup } from "@/components/motion-reveal";
 import { Button } from "@/components/ui/button";
-import { revealDelay } from "@/lib/reveal-delay";
 import {
   billingCadenceLabel,
   formatPrice,
@@ -30,16 +30,24 @@ function sortedActivePackages(
 function SectionHeader() {
   return (
     <div className="mb-20 text-center">
-      <p className="eyebrow reveal mb-6 text-sand/60">Rates</p>
-      <h2 className="headline-primary reveal-axis reveal-delay-1 mb-8 text-[2.25rem] text-warm-white md:text-[3rem] lg:text-[3.5rem]">
-        Services &amp; Pricing
-      </h2>
-      <div className="section-rule reveal-rule reveal-delay-2 mx-auto mb-10 max-w-[9rem]" />
-      <p className="editorial-lede reveal reveal-delay-3 mx-auto max-w-2xl">
-        Transparent pricing for professional recording services. Every package
-        includes our full attention to your artistic vision and access to our
-        complete facility.
-      </p>
+      <MotionReveal variant="rise" duration={0.85}>
+        <p className="eyebrow mb-6 text-sand/60">Rates</p>
+      </MotionReveal>
+      <MotionReveal variant="rise-blur" duration={1.1} delay={0.1}>
+        <h2 className="headline-primary mb-8 text-[2.25rem] text-warm-white md:text-[3rem] lg:text-[3.5rem]">
+          Services &amp; Pricing
+        </h2>
+      </MotionReveal>
+      <MotionReveal variant="rule" duration={1} delay={0.3}>
+        <span className="section-rule mx-auto mb-10 block max-w-[9rem]" />
+      </MotionReveal>
+      <MotionReveal variant="rise" duration={0.95} delay={0.4}>
+        <p className="editorial-lede mx-auto max-w-2xl">
+          Transparent pricing for professional recording services. Every
+          package includes our full attention to your artistic vision and
+          access to our complete facility.
+        </p>
+      </MotionReveal>
     </div>
   );
 }
@@ -52,8 +60,7 @@ function SectionShell({ children }: { children: React.ReactNode }) {
     >
       {/* News-pulp ink-wash ground — echoes the brand guide's "Sunset Ink
        * Wash" treatment (§5.1) without competing with the pricing table. */}
-      <div className="absolute inset-0 bg-texture-ink-wash opacity-55" />
-      <div className="absolute inset-0 bg-texture-stone opacity-20 parallax-soft" />
+      <ParallaxLayer />
       <div className="relative z-10 mx-auto max-w-6xl">
         <SectionHeader />
         {children}
@@ -61,6 +68,15 @@ function SectionShell({ children }: { children: React.ReactNode }) {
       {/* Cinematic seam into the forest-grounded amenities section. */}
       <div aria-hidden className="section-fade-bottom section-fade-bottom--forest" />
     </section>
+  );
+}
+
+function ParallaxLayer() {
+  return (
+    <>
+      <div className="absolute inset-0 bg-texture-ink-wash opacity-55" />
+      <div className="parallax-soft absolute inset-0 bg-texture-stone opacity-20" />
+    </>
   );
 }
 
@@ -95,7 +111,9 @@ export function ServicesAndPricing({ packages }: ServicesAndPricingProps) {
           Pricing is being updated &mdash; please reach out for a custom quote.
         </p>
       ) : (
-        <div
+        <MotionRevealGroup
+          stagger={0.14}
+          delay={0.05}
           className={cn(
             "grid grid-cols-1 border-y border-sand/10",
             rows.length >= 3
@@ -105,14 +123,15 @@ export function ServicesAndPricing({ packages }: ServicesAndPricingProps) {
                 : "mx-auto max-w-xl",
           )}
         >
-          {rows.map((pkg, index) => {
+          {rows.map((pkg) => {
             const unit =
               pkg.unitLabel ?? billingCadenceLabel(pkg.billingCadence);
             return (
-              <div
+              <MotionReveal
                 key={pkg.id}
+                variant="scale-in"
+                duration={1}
                 className={cn(
-                  revealDelay(index + 1),
                   "relative flex flex-col gap-8 p-10 md:p-12",
                   pkg.highlight && "bg-sand/[0.025]",
                 )}
@@ -184,15 +203,20 @@ export function ServicesAndPricing({ packages }: ServicesAndPricingProps) {
                     Book Your Session
                   </Button>
                 </div>
-              </div>
+              </MotionReveal>
             );
           })}
-        </div>
+        </MotionRevealGroup>
       )}
 
-      <div className="reveal reveal-delay-4 mt-24 border-t border-sand/10 pt-16 text-center">
+      <MotionReveal
+        variant="rise-blur"
+        duration={1}
+        delay={0.1}
+        className="mt-24 border-t border-sand/10 pt-16 text-center"
+      >
         <p className="eyebrow mb-5 text-sand/55">Custom</p>
-        <h3 className="headline-secondary reveal-axis mb-6 text-2xl text-sand md:text-[1.75rem]">
+        <h3 className="headline-secondary mb-6 text-2xl text-sand md:text-[1.75rem]">
           Need Something Different?
         </h3>
         <p className="body-text mx-auto mb-10 max-w-xl text-ivory/55">
@@ -212,7 +236,7 @@ export function ServicesAndPricing({ packages }: ServicesAndPricingProps) {
         >
           Get Custom Quote
         </Button>
-      </div>
+      </MotionReveal>
     </SectionShell>
   );
 }
