@@ -1,8 +1,14 @@
 "use client";
 
-import { usePreloadedQuery, useQuery, type Preloaded } from "convex/react";
+import { type Preloaded } from "convex/react";
 import { api } from "../../convex/_generated/api";
 import { HomepageShell } from "@/components/homepage-shell";
+import {
+  PUBLIC_CONVEX_QUERY_FAILED,
+  usePublicConvexQuery,
+  useSafePreloadedQuery,
+  type PublicConvexQueryResult,
+} from "@/lib/use-public-convex-query";
 import type { PublishedAmenitiesNearby } from "@/components/amenities-nearby";
 import type { GalleryPhoto } from "@/components/the-space";
 import type { FaqCategoryProps } from "@/components/faq";
@@ -10,7 +16,7 @@ import type { MarketingFeatureFlags } from "@/lib/site-settings";
 
 type PreloadedPricing = Preloaded<typeof api.public.getPublishedPricingFlags> | null;
 type PreloadedGear = Preloaded<typeof api.public.getPublishedGear> | null;
-type PreloadedPhotos = Preloaded<typeof api.public.getPublishedGalleryPhotos> | null;
+type PreloadedPhotos = Preloaded<typeof api.public.getPublishedCarouselPhotos> | null;
 type PreloadedFaq = Preloaded<typeof api.public.getPublishedFaq> | null;
 type PreloadedMarketing =
   | Preloaded<typeof api.public.getPublishedMarketingFeatureFlags>
@@ -21,12 +27,31 @@ type PreloadedAmenities =
 
 type PublishedFaqPayload = { categories: readonly FaqCategoryProps[] };
 
+function faqCategoriesFromFaq(
+  faq: PublicConvexQueryResult<PublishedFaqPayload>,
+):
+  | readonly FaqCategoryProps[]
+  | null
+  | undefined
+  | typeof PUBLIC_CONVEX_QUERY_FAILED {
+  if (faq === PUBLIC_CONVEX_QUERY_FAILED) {
+    return PUBLIC_CONVEX_QUERY_FAILED;
+  }
+  if (faq === null) {
+    return null;
+  }
+  if (faq === undefined) {
+    return undefined;
+  }
+  return faq.categories;
+}
+
 function PhotosData({
   preloaded,
   children,
 }: {
   preloaded: PreloadedPhotos | null;
-  children: (photos: GalleryPhoto[] | undefined) => React.ReactNode;
+  children: (photos: PublicConvexQueryResult<GalleryPhoto[]>) => React.ReactNode;
 }) {
   if (preloaded) {
     return <PhotosFromPreload preloaded={preloaded}>{children}</PhotosFromPreload>;
@@ -39,18 +64,22 @@ function PhotosFromPreload({
   children,
 }: {
   preloaded: NonNullable<PreloadedPhotos>;
-  children: (photos: GalleryPhoto[] | undefined) => React.ReactNode;
+  children: (photos: PublicConvexQueryResult<GalleryPhoto[]>) => React.ReactNode;
 }) {
-  const photos = usePreloadedQuery(preloaded);
+  const photos = useSafePreloadedQuery(preloaded, { section: "home_photos" });
   return <>{children(photos)}</>;
 }
 
 function PhotosLive({
   children,
 }: {
-  children: (photos: GalleryPhoto[] | undefined) => React.ReactNode;
+  children: (photos: PublicConvexQueryResult<GalleryPhoto[]>) => React.ReactNode;
 }) {
-  const photos = useQuery(api.public.getPublishedGalleryPhotos);
+  const photos = usePublicConvexQuery(
+    api.public.getPublishedCarouselPhotos,
+    {},
+    { section: "home_photos" },
+  );
   return <>{children(photos)}</>;
 }
 
@@ -59,7 +88,7 @@ function FaqData({
   children,
 }: {
   preloaded: PreloadedFaq;
-  children: (faq: PublishedFaqPayload | undefined) => React.ReactNode;
+  children: (faq: PublicConvexQueryResult<PublishedFaqPayload>) => React.ReactNode;
 }) {
   if (preloaded) {
     return <FaqFromPreload preloaded={preloaded}>{children}</FaqFromPreload>;
@@ -72,18 +101,20 @@ function FaqFromPreload({
   children,
 }: {
   preloaded: NonNullable<PreloadedFaq>;
-  children: (faq: PublishedFaqPayload | undefined) => React.ReactNode;
+  children: (faq: PublicConvexQueryResult<PublishedFaqPayload>) => React.ReactNode;
 }) {
-  const faq = usePreloadedQuery(preloaded);
+  const faq = useSafePreloadedQuery(preloaded, { section: "home_faq" });
   return <>{children(faq)}</>;
 }
 
 function FaqLive({
   children,
 }: {
-  children: (faq: PublishedFaqPayload | undefined) => React.ReactNode;
+  children: (faq: PublicConvexQueryResult<PublishedFaqPayload>) => React.ReactNode;
 }) {
-  const faq = useQuery(api.public.getPublishedFaq);
+  const faq = usePublicConvexQuery(api.public.getPublishedFaq, {}, {
+    section: "home_faq",
+  });
   return <>{children(faq)}</>;
 }
 
@@ -93,7 +124,7 @@ function MarketingData({
 }: {
   preloaded: PreloadedMarketing;
   children: (
-    marketing: MarketingFeatureFlags | null | undefined,
+    marketing: PublicConvexQueryResult<MarketingFeatureFlags | null>,
   ) => React.ReactNode;
 }) {
   if (preloaded) {
@@ -112,10 +143,12 @@ function MarketingFromPreload({
 }: {
   preloaded: NonNullable<PreloadedMarketing>;
   children: (
-    marketing: MarketingFeatureFlags | null | undefined,
+    marketing: PublicConvexQueryResult<MarketingFeatureFlags | null>,
   ) => React.ReactNode;
 }) {
-  const marketing = usePreloadedQuery(preloaded);
+  const marketing = useSafePreloadedQuery(preloaded, {
+    section: "home_marketing_flags",
+  });
   return <>{children(marketing)}</>;
 }
 
@@ -123,10 +156,14 @@ function MarketingLive({
   children,
 }: {
   children: (
-    marketing: MarketingFeatureFlags | null | undefined,
+    marketing: PublicConvexQueryResult<MarketingFeatureFlags | null>,
   ) => React.ReactNode;
 }) {
-  const marketing = useQuery(api.public.getPublishedMarketingFeatureFlags);
+  const marketing = usePublicConvexQuery(
+    api.public.getPublishedMarketingFeatureFlags,
+    {},
+    { section: "home_marketing_flags" },
+  );
   return <>{children(marketing)}</>;
 }
 
@@ -136,7 +173,7 @@ function AmenitiesData({
 }: {
   preloaded: PreloadedAmenities;
   children: (
-    amenities: PublishedAmenitiesNearby | null | undefined,
+    amenities: PublicConvexQueryResult<PublishedAmenitiesNearby | null>,
   ) => React.ReactNode;
 }) {
   if (preloaded) {
@@ -155,10 +192,12 @@ function AmenitiesFromPreload({
 }: {
   preloaded: NonNullable<PreloadedAmenities>;
   children: (
-    amenities: PublishedAmenitiesNearby | null | undefined,
+    amenities: PublicConvexQueryResult<PublishedAmenitiesNearby | null>,
   ) => React.ReactNode;
 }) {
-  const amenities = usePreloadedQuery(preloaded);
+  const amenities = useSafePreloadedQuery(preloaded, {
+    section: "home_amenities",
+  });
   return <>{children(amenities)}</>;
 }
 
@@ -166,10 +205,14 @@ function AmenitiesLive({
   children,
 }: {
   children: (
-    amenities: PublishedAmenitiesNearby | null | undefined,
+    amenities: PublicConvexQueryResult<PublishedAmenitiesNearby | null>,
   ) => React.ReactNode;
 }) {
-  const amenities = useQuery(api.public.getPublishedAmenitiesNearby);
+  const amenities = usePublicConvexQuery(
+    api.public.getPublishedAmenitiesNearby,
+    {},
+    { section: "home_amenities" },
+  );
   return <>{children(amenities)}</>;
 }
 
@@ -183,20 +226,22 @@ function BothPreloaded({
 }: {
   preloadedPricing: NonNullable<PreloadedPricing>;
   preloadedGear: NonNullable<PreloadedGear>;
-  photos: GalleryPhoto[] | undefined;
-  faq: PublishedFaqPayload | undefined;
-  marketing: MarketingFeatureFlags | null | undefined;
-  amenities: PublishedAmenitiesNearby | null | undefined;
+  photos: PublicConvexQueryResult<GalleryPhoto[]>;
+  faq: PublicConvexQueryResult<PublishedFaqPayload>;
+  marketing: PublicConvexQueryResult<MarketingFeatureFlags | null>;
+  amenities: PublicConvexQueryResult<PublishedAmenitiesNearby | null>;
 }) {
-  const pricingFlags = usePreloadedQuery(preloadedPricing);
-  const gear = usePreloadedQuery(preloadedGear);
+  const pricingFlags = useSafePreloadedQuery(preloadedPricing, {
+    section: "home_pricing",
+  });
+  const gear = useSafePreloadedQuery(preloadedGear, { section: "home_gear" });
   return (
     <HomepageShell
       pricingFlags={pricingFlags}
       marketingFeatureFlags={marketing}
       gear={gear}
       photos={photos}
-      faqCategories={faq?.categories}
+      faqCategories={faqCategoriesFromFaq(faq)}
       amenities={amenities}
     />
   );
@@ -210,20 +255,24 @@ function PricingPreloadedGearLive({
   amenities,
 }: {
   preloadedPricing: NonNullable<PreloadedPricing>;
-  photos: GalleryPhoto[] | undefined;
-  faq: PublishedFaqPayload | undefined;
-  marketing: MarketingFeatureFlags | null | undefined;
-  amenities: PublishedAmenitiesNearby | null | undefined;
+  photos: PublicConvexQueryResult<GalleryPhoto[]>;
+  faq: PublicConvexQueryResult<PublishedFaqPayload>;
+  marketing: PublicConvexQueryResult<MarketingFeatureFlags | null>;
+  amenities: PublicConvexQueryResult<PublishedAmenitiesNearby | null>;
 }) {
-  const pricingFlags = usePreloadedQuery(preloadedPricing);
-  const gear = useQuery(api.public.getPublishedGear);
+  const pricingFlags = useSafePreloadedQuery(preloadedPricing, {
+    section: "home_pricing",
+  });
+  const gear = usePublicConvexQuery(api.public.getPublishedGear, {}, {
+    section: "home_gear",
+  });
   return (
     <HomepageShell
       pricingFlags={pricingFlags}
       marketingFeatureFlags={marketing}
       gear={gear}
       photos={photos}
-      faqCategories={faq?.categories}
+      faqCategories={faqCategoriesFromFaq(faq)}
       amenities={amenities}
     />
   );
@@ -237,20 +286,24 @@ function PricingLiveGearPreloaded({
   amenities,
 }: {
   preloadedGear: NonNullable<PreloadedGear>;
-  photos: GalleryPhoto[] | undefined;
-  faq: PublishedFaqPayload | undefined;
-  marketing: MarketingFeatureFlags | null | undefined;
-  amenities: PublishedAmenitiesNearby | null | undefined;
+  photos: PublicConvexQueryResult<GalleryPhoto[]>;
+  faq: PublicConvexQueryResult<PublishedFaqPayload>;
+  marketing: PublicConvexQueryResult<MarketingFeatureFlags | null>;
+  amenities: PublicConvexQueryResult<PublishedAmenitiesNearby | null>;
 }) {
-  const pricingFlags = useQuery(api.public.getPublishedPricingFlags);
-  const gear = usePreloadedQuery(preloadedGear);
+  const pricingFlags = usePublicConvexQuery(
+    api.public.getPublishedPricingFlags,
+    {},
+    { section: "home_pricing" },
+  );
+  const gear = useSafePreloadedQuery(preloadedGear, { section: "home_gear" });
   return (
     <HomepageShell
       pricingFlags={pricingFlags}
       marketingFeatureFlags={marketing}
       gear={gear}
       photos={photos}
-      faqCategories={faq?.categories}
+      faqCategories={faqCategoriesFromFaq(faq)}
       amenities={amenities}
     />
   );
@@ -262,20 +315,26 @@ function BothLive({
   marketing,
   amenities,
 }: {
-  photos: GalleryPhoto[] | undefined;
-  faq: PublishedFaqPayload | undefined;
-  marketing: MarketingFeatureFlags | null | undefined;
-  amenities: PublishedAmenitiesNearby | null | undefined;
+  photos: PublicConvexQueryResult<GalleryPhoto[]>;
+  faq: PublicConvexQueryResult<PublishedFaqPayload>;
+  marketing: PublicConvexQueryResult<MarketingFeatureFlags | null>;
+  amenities: PublicConvexQueryResult<PublishedAmenitiesNearby | null>;
 }) {
-  const pricingFlags = useQuery(api.public.getPublishedPricingFlags);
-  const gear = useQuery(api.public.getPublishedGear);
+  const pricingFlags = usePublicConvexQuery(
+    api.public.getPublishedPricingFlags,
+    {},
+    { section: "home_pricing" },
+  );
+  const gear = usePublicConvexQuery(api.public.getPublishedGear, {}, {
+    section: "home_gear",
+  });
   return (
     <HomepageShell
       pricingFlags={pricingFlags}
       marketingFeatureFlags={marketing}
       gear={gear}
       photos={photos}
-      faqCategories={faq?.categories}
+      faqCategories={faqCategoriesFromFaq(faq)}
       amenities={amenities}
     />
   );

@@ -1,5 +1,6 @@
 "use client";
 
+import posthog from "posthog-js";
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 
@@ -107,7 +108,15 @@ export function BookingAvailability() {
                   return (
                     <button
                       key={date}
-                      onClick={() => availableDate && setSelectedDate(date)}
+                      onClick={() => {
+                        if (!availableDate) return;
+                        posthog.capture("booking_date_selected", {
+                          date,
+                          month: AVAILABILITY_MONTHS[0].month,
+                          availability_type: availableDate.type,
+                        });
+                        setSelectedDate(date);
+                      }}
                       className={`p-2 text-sm rounded transition-colors ${
                         availableDate
                           ? isSelected
@@ -152,26 +161,35 @@ export function BookingAvailability() {
                 Need to book immediately? Choose from our most popular packages:
               </p>
               <div className="space-y-3">
-                <Button 
-                  variant="outline" 
+                <Button
+                  variant="outline"
                   className="w-full h-10 justify-between"
-                  onClick={() => document.getElementById('artist-inquiries')?.scrollIntoView({ behavior: 'smooth' })}
+                  onClick={() => {
+                    posthog.capture("booking_quick_package_clicked", { package: "Single Day Recording" });
+                    document.getElementById('artist-inquiries')?.scrollIntoView({ behavior: 'smooth' });
+                  }}
                 >
                   <span>Single Day Recording</span>
                   <span>$400</span>
                 </Button>
-                <Button 
-                  variant="outline" 
+                <Button
+                  variant="outline"
                   className="w-full h-10 justify-between"
-                  onClick={() => document.getElementById('artist-inquiries')?.scrollIntoView({ behavior: 'smooth' })}
+                  onClick={() => {
+                    posthog.capture("booking_quick_package_clicked", { package: "3-Day Album Package" });
+                    document.getElementById('artist-inquiries')?.scrollIntoView({ behavior: 'smooth' });
+                  }}
                 >
                   <span>3-Day Album Package</span>
                   <span>$1,200</span>
                 </Button>
-                <Button 
-                  variant="outline" 
+                <Button
+                  variant="outline"
                   className="w-full h-10 justify-between"
-                  onClick={() => document.getElementById('artist-inquiries')?.scrollIntoView({ behavior: 'smooth' })}
+                  onClick={() => {
+                    posthog.capture("booking_quick_package_clicked", { package: "Mixing & Mastering" });
+                    document.getElementById('artist-inquiries')?.scrollIntoView({ behavior: 'smooth' });
+                  }}
                 >
                   <span>Mixing & Mastering</span>
                   <span>$150/song</span>

@@ -1,3 +1,6 @@
+"use client";
+
+import posthog from "posthog-js";
 import { Button } from "@/components/ui/button";
 import {
   billingCadenceLabel,
@@ -158,11 +161,16 @@ export function ServicesAndPricing({ packages }: ServicesAndPricingProps) {
                     variant={pkg.highlight ? "accent-gold" : "outline"}
                     size="lg"
                     className="w-full"
-                    onClick={() =>
+                    onClick={() => {
+                      posthog.capture("pricing_book_session_clicked", {
+                        package_name: pkg.name,
+                        price_cents: pkg.priceCents,
+                        highlighted: pkg.highlight,
+                      });
                       document
                         .getElementById("artist-inquiries")
-                        ?.scrollIntoView({ behavior: "smooth" })
-                    }
+                        ?.scrollIntoView({ behavior: "smooth" });
+                    }}
                   >
                     Book Your Session
                   </Button>
@@ -186,11 +194,12 @@ export function ServicesAndPricing({ packages }: ServicesAndPricingProps) {
         <Button
           variant="ghost"
           size="lg"
-          onClick={() =>
+          onClick={() => {
+            posthog.capture("pricing_custom_quote_clicked");
             document
               .getElementById("artist-inquiries")
-              ?.scrollIntoView({ behavior: "smooth" })
-          }
+              ?.scrollIntoView({ behavior: "smooth" });
+          }}
         >
           Get Custom Quote
         </Button>

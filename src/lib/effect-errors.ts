@@ -2,7 +2,7 @@
  * CMS / admin Effect error catalog (INF-73).
  * Import tagged errors and `fromConvexCmsError` from here — single entry for app code.
  */
-import { Data, Effect } from "effect";
+import { Data, Effect, pipe } from "effect";
 import { ConvexError } from "convex/values";
 
 /** Convex `ConvexError` payload shape (mirrors `convex/errors.ts`). */
@@ -79,7 +79,7 @@ function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null;
 }
 
-function isCmsConvexErrorPayload(
+export function isCmsConvexErrorPayload(
   value: unknown,
 ): value is CmsConvexErrorPayload {
   if (!isRecord(value)) return false;
@@ -179,6 +179,16 @@ export function convexMutationEffect<A>(
     try: run,
     catch: fromConvexCmsError,
   });
+}
+
+/** Run effects in order, short-circuiting on the first error. */
+export function sequentialEffects(
+  effects: Array<Effect.Effect<unknown, CmsAppError>>,
+): Effect.Effect<void, CmsAppError> {
+  return effects.reduce(
+    (acc, e) => pipe(acc, Effect.flatMap(() => e)),
+    Effect.succeed(undefined) as Effect.Effect<void, CmsAppError>,
+  );
 }
 
 export function cmsErrorToastMessage(err: CmsAppError): string {

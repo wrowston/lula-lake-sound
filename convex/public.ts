@@ -9,6 +9,7 @@ import { loadGearDocs, mapSortedGearTree } from "./gearTree";
 import type { Doc } from "./_generated/dataModel";
 import { loadGalleryPhotos, materializeGalleryPhotos } from "./galleryPhotos";
 import { loadAudioTracks, materializeAudioTracks } from "./audioTracks";
+import { loadVideos, materializeVideos } from "./videos";
 import { getSectionMetaRow, publishedIsEnabled } from "./cmsMeta";
 import {
   fallbackAmenitiesSnapshotFromTree,
@@ -18,6 +19,77 @@ import {
 } from "./amenitiesTree";
 import { FAQ_DEFAULTS } from "./cmsShared";
 import { loadFaqTree, materializeFaqCategories } from "./faqTree";
+
+type MaterializedGalleryPhoto = Awaited<
+  ReturnType<typeof materializeGalleryPhotos>
+>[number];
+type MaterializedAudioTrack = Awaited<
+  ReturnType<typeof materializeAudioTracks>
+>[number];
+type MaterializedVideo = Awaited<ReturnType<typeof materializeVideos>>[number];
+
+function hasResolvedUrl<T extends { url: string | null }>(
+  row: T,
+): row is T & { url: string } {
+  return row.url !== null;
+}
+
+function publicGalleryPhoto(photo: MaterializedGalleryPhoto) {
+  return {
+    stableId: photo.stableId,
+    url: photo.url,
+    alt: photo.alt,
+    caption: photo.caption,
+    width: photo.width,
+    height: photo.height,
+    sortOrder: photo.sortOrder,
+    contentType: photo.contentType,
+    categories: photo.categories,
+  };
+}
+
+function publicCarouselPhoto(photo: MaterializedGalleryPhoto) {
+  return {
+    stableId: photo.stableId,
+    url: photo.url,
+    alt: photo.alt,
+    width: photo.width,
+    height: photo.height,
+    sortOrder: photo.sortOrder,
+  };
+}
+
+function publicAudioTrack(track: MaterializedAudioTrack & { url: string }) {
+  return {
+    stableId: track.stableId,
+    url: track.url,
+    title: track.title,
+    artist: track.artist,
+    genre: track.genre,
+    year: track.year,
+    role: track.role,
+    sortOrder: track.sortOrder,
+    albumThumbnailDisplayUrl: track.albumThumbnailDisplayUrl,
+    spotifyUrl: track.spotifyUrl,
+    appleMusicUrl: track.appleMusicUrl,
+  };
+}
+
+function publicVideo(video: MaterializedVideo) {
+  return {
+    stableId: video.stableId,
+    title: video.title,
+    description: video.description,
+    sortOrder: video.sortOrder,
+    provider: video.provider,
+    externalId: video.externalId,
+    playbackUrl: video.playbackUrl,
+    videoUrl: video.videoUrl,
+    thumbnailUrl: video.thumbnailUrl,
+    resolvedThumbnailUrl: video.resolvedThumbnailUrl,
+    durationSec: video.durationSec,
+  };
+}
 
 /**
  * **Public (anonymous) site reads** — published only.
@@ -89,13 +161,30 @@ export const getPublishedAbout = query({
 
 /**
  * Published studio gallery photos only. Anonymous; reads `scope === "published"`.
+ * Excludes images with `showInGallery === false`.
  */
 export const getPublishedGalleryPhotos = query({
   args: {},
   handler: async (ctx) => {
     const rows = await loadGalleryPhotos(ctx, "published");
     const photos = await materializeGalleryPhotos(ctx, rows);
-    return photos.filter((photo) => photo.url !== null);
+    return photos
+      .filter((photo) => photo.url !== null && photo.showInGallery !== false)
+      .map(publicGalleryPhoto);
+  },
+});
+
+/**
+ * Images for the homepage "The Space" carousel — same table, filtered by `showInCarousel !== false`.
+ */
+export const getPublishedCarouselPhotos = query({
+  args: {},
+  handler: async (ctx) => {
+    const rows = await loadGalleryPhotos(ctx, "published");
+    const photos = await materializeGalleryPhotos(ctx, rows);
+    return photos
+      .filter((photo) => photo.url !== null && photo.showInCarousel !== false)
+      .map(publicCarouselPhoto);
   },
 });
 
@@ -113,7 +202,21 @@ export const getPublishedAudioTracks = query({
   handler: async (ctx) => {
     const rows = await loadAudioTracks(ctx, "published");
     const tracks = await materializeAudioTracks(ctx, rows);
-    return tracks.filter((t) => t.url !== null);
+    return tracks.filter(hasResolvedUrl).map(publicAudioTrack);
+  },
+});
+
+/**
+ * Published CMS videos (INF-92). Anonymous; `scope === "published"` only.
+ * Embed URLs are **not** stored — clients build YouTube/Vimeo/Mux iframes from
+ * `provider` + `externalId`; uploads expose `videoUrl` from storage.
+ */
+export const getPublishedVideos = query({
+  args: {},
+  handler: async (ctx) => {
+    const rows = await loadVideos(ctx, "published");
+    const videos = await materializeVideos(ctx, rows);
+    return videos.map(publicVideo);
   },
 });
 
@@ -173,21 +276,22 @@ export const getPublishedFaq = query({
 
 /**
  * Marketing-site visibility flags. Reads each section's `cmsSections.isEnabled`
- * and returns the historical shape `{ aboutPage, recordingsPage, pricingSection }`
- * so the existing frontend consumers keep working without changes.
+ * and returns `{ aboutPage, recordingsPage, pricingSection, galleryPage }`.
  */
 export const getPublishedMarketingFeatureFlags = query({
   args: {},
   handler: async (ctx) => {
-    const [aboutRow, recordingsRow, pricingRow] = await Promise.all([
+    const [aboutRow, recordingsRow, pricingRow, photosRow] = await Promise.all([
       getSectionMetaRow(ctx, "about"),
       getSectionMetaRow(ctx, "recordings"),
       getSectionMetaRow(ctx, "pricing"),
+      getSectionMetaRow(ctx, "photos"),
     ]);
     return {
       aboutPage: publishedIsEnabled(aboutRow, "about"),
       recordingsPage: publishedIsEnabled(recordingsRow, "recordings"),
       pricingSection: publishedIsEnabled(pricingRow, "pricing"),
+      galleryPage: publishedIsEnabled(photosRow, "photos"),
     };
   },
 });

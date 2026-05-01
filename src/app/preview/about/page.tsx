@@ -60,6 +60,7 @@ function AboutPreviewContent() {
         aboutPage: marketing.aboutPage,
         recordingsPage: marketing.recordingsPage,
         pricingSection: marketing.pricingSection,
+        galleryPage: marketing.galleryPage,
       }}
       banner={<PreviewBanner hasDraftChanges={hasDraftChanges} />}
     />

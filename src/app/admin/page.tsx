@@ -1,15 +1,23 @@
-import Link from "next/link";
 import { AdminHeader } from "@/components/admin/admin-header";
-import { ADMIN_MANAGE_NAV_ITEMS } from "@/lib/admin-nav";
+import { AdminAnalyticsTiles } from "@/components/admin/admin-analytics-tiles";
+import { AdminDashboardNavCards } from "@/components/admin/admin-dashboard-nav-cards";
+import { InquiriesDashboardPreview } from "@/components/admin/inquiries-dashboard-preview";
+import {
+  ADMIN_DASHBOARD_INNER_CLASS,
+  ADMIN_PAGE_OUTER_CLASS,
+} from "@/lib/admin-pending-layout";
+import { getAdminAnalytics } from "@/lib/posthog-analytics";
 
-export const revalidate = 300;
+export const dynamic = "force-dynamic";
 
-export default function DashboardPage() {
+export default async function DashboardPage() {
+  const analytics = await getAdminAnalytics();
+
   return (
     <>
       <AdminHeader title="Dashboard" />
-      <div className="flex-1 p-6">
-        <div className="mx-auto max-w-4xl space-y-8">
+      <div className={ADMIN_PAGE_OUTER_CLASS}>
+        <div className={ADMIN_DASHBOARD_INNER_CLASS}>
           <div>
             <h2 className="headline-secondary text-foreground text-lg mb-1">
               Welcome back
@@ -19,25 +27,11 @@ export default function DashboardPage() {
             </p>
           </div>
 
-          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-            {ADMIN_MANAGE_NAV_ITEMS.map((item) => (
-              <Link
-                key={item.href}
-                href={item.href}
-                className="group rounded-lg border border-border bg-card p-5 transition-all hover:border-border hover:bg-muted/60"
-              >
-                <div className="mb-3 flex size-9 items-center justify-center rounded-md bg-muted text-muted-foreground transition-colors group-hover:bg-accent group-hover:text-foreground">
-                  <item.icon className="size-4" />
-                </div>
-                <h3 className="headline-secondary text-foreground text-sm mb-1">
-                  {item.title}
-                </h3>
-                <p className="body-text-small text-muted-foreground">
-                  {item.description}
-                </p>
-              </Link>
-            ))}
-          </div>
+          <AdminAnalyticsTiles analytics={analytics} />
+
+          <InquiriesDashboardPreview />
+
+          <AdminDashboardNavCards />
         </div>
       </div>
     </>

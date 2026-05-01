@@ -23,6 +23,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Switch } from "@/components/ui/switch";
+import { SiteVisibilityRow } from "@/components/admin/site-visibility-row";
 import { cn } from "@/lib/utils";
 import { convexMutationEffect } from "@/lib/effect-errors";
 import { runAdminEffect } from "@/lib/admin-run-effect";
@@ -533,27 +534,22 @@ function PricingForm() {
 
   return (
     <div className="space-y-10 pb-24" ref={handleEditorRef}>
-      <fieldset className="space-y-4">
-        <legend className="label-text text-muted-foreground">Site visibility</legend>
-        <div className="flex items-start gap-3">
-          <Switch
-            id="ff-pricing-section-embedded"
-            checked={featureFlagsSource?.pricingSection ?? false}
-            onCheckedChange={setPricingSection}
-          />
-          <div className="space-y-1">
-            <label
-              htmlFor="ff-pricing-section-embedded"
-              className="body-text-small cursor-pointer text-foreground"
-            >
-              Pricing section on homepage
-            </label>
-            <p className="body-text-small text-muted-foreground">
-              Toggles the Services &amp; Pricing block on the marketing homepage.
-            </p>
-          </div>
-        </div>
-      </fieldset>
+      <div className="space-y-4">
+        <p className="label-text text-muted-foreground">Site visibility</p>
+        <SiteVisibilityRow
+          id="ff-pricing-section-embedded"
+          title="Homepage pricing visibility"
+          description={
+            <>
+              When off, the Services & Pricing block and the Pricing nav
+              link are hidden from the marketing site. Publish to apply.
+            </>
+          }
+          checked={featureFlagsSource?.pricingSection ?? false}
+          onCheckedChange={setPricingSection}
+          disabled={busy !== null}
+        />
+      </div>
 
       <section className="space-y-4">
         <div className="flex items-center justify-between">

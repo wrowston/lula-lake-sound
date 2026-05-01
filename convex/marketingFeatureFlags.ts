@@ -34,7 +34,13 @@ import { publishSectionCore } from "./cmsPublishHelpers";
 import { requireCmsOwner } from "./lib/auth";
 import type { CmsSection } from "./cmsShared";
 
-const SECTIONS: Array<"about" | "recordings" | "pricing"> = [
+const SECTIONS: Array<"about" | "recordings" | "pricing" | "photos"> = [
+  "about",
+  "recordings",
+  "pricing",
+  "photos",
+];
+const MARKETING_FLAG_SECTIONS: Array<"about" | "recordings" | "pricing"> = [
   "about",
   "recordings",
   "pricing",
@@ -56,13 +62,14 @@ function latestTimestamp(values: Array<number | null | undefined>): number | nul
 export const getPublishedMarketingFeatureFlags = query({
   args: {},
   handler: async (ctx) => {
-    const [aboutRow, recordingsRow, pricingRow] = await Promise.all(
+    const [aboutRow, recordingsRow, pricingRow, photosRow] = await Promise.all(
       SECTIONS.map((section) => getSectionMetaRow(ctx, section)),
     );
     return {
       aboutPage: publishedIsEnabled(aboutRow, "about"),
       recordingsPage: publishedIsEnabled(recordingsRow, "recordings"),
       pricingSection: publishedIsEnabled(pricingRow, "pricing"),
+      galleryPage: publishedIsEnabled(photosRow, "photos"),
     };
   },
 });
@@ -76,18 +83,20 @@ export const listDraft = query({
   args: {},
   handler: async (ctx) => {
     await requireCmsOwner(ctx);
-    const [aboutRow, recordingsRow, pricingRow] = await Promise.all(
+    const [aboutRow, recordingsRow, pricingRow, photosRow] = await Promise.all(
       SECTIONS.map((section) => getSectionMetaRow(ctx, section)),
     );
     const flags = {
       aboutPage: effectiveIsEnabled(aboutRow, "about"),
       recordingsPage: effectiveIsEnabled(recordingsRow, "recordings"),
       pricingSection: effectiveIsEnabled(pricingRow, "pricing"),
+      galleryPage: publishedIsEnabled(photosRow, "photos"),
     };
     const hasDraftChanges = anyMarketingFlagDraftPending(
       aboutRow,
       recordingsRow,
       pricingRow,
+      photosRow,
     );
 
     const publishedAt = latestTimestamp([
@@ -136,19 +145,21 @@ export const getPreviewMarketingFeatureFlags = query({
       return null;
     }
 
-    const [aboutRow, recordingsRow, pricingRow] = await Promise.all(
+    const [aboutRow, recordingsRow, pricingRow, photosRow] = await Promise.all(
       SECTIONS.map((section) => getSectionMetaRow(ctx, section)),
     );
     const hasDraftChanges = anyMarketingFlagDraftPending(
       aboutRow,
       recordingsRow,
       pricingRow,
+      photosRow,
     );
 
     return {
       aboutPage: effectiveIsEnabled(aboutRow, "about"),
       recordingsPage: effectiveIsEnabled(recordingsRow, "recordings"),
       pricingSection: effectiveIsEnabled(pricingRow, "pricing"),
+      galleryPage: effectiveIsEnabled(photosRow, "photos"),
       hasDraftChanges,
     };
   },
@@ -197,7 +208,7 @@ export const publishMarketingFeatureFlags = mutation({
     const published: Array<
       Awaited<ReturnType<typeof publishSectionCore>>
     > = [];
-    for (const section of SECTIONS) {
+    for (const section of MARKETING_FLAG_SECTIONS) {
       const row = await getSectionMetaRow(ctx, section);
       if (!row) continue;
       const flagPending =
@@ -231,14 +242,15 @@ export const publishMarketingFeatureFlags = mutation({
 
 /**
  * Legacy `marketingFeatureFlags:discardMarketingFeatureFlagsDraft`. Clears
- * `isEnabledDraft` on every section without touching their content drafts.
+ * `isEnabledDraft` on legacy marketing sections without touching their
+ * content drafts. Gallery-page visibility drafts belong to `/admin/photos`.
  */
 export const discardMarketingFeatureFlagsDraft = mutation({
   args: {},
   handler: async (ctx) => {
     const { updatedBy } = await requireCmsOwner(ctx);
     let discarded = false;
-    for (const section of SECTIONS) {
+    for (const section of MARKETING_FLAG_SECTIONS) {
       const row = await getSectionMetaRow(ctx, section);
       if (!row || row.isEnabledDraft === undefined) continue;
       await ctx.db.patch(row._id, {

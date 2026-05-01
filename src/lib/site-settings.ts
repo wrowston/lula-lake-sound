@@ -33,12 +33,33 @@ export type PricingFlags = {
   packages?: PricingPackage[];
 };
 
-/** Published marketing page/section visibility (Convex `marketingFeatureFlags` table). */
+/** Published marketing page/section visibility (Convex `cmsSections` rows). */
 export type MarketingFeatureFlags = {
   aboutPage: boolean;
   recordingsPage: boolean;
   pricingSection: boolean;
+  /** Public `/gallery` page + "Gallery" nav; distinct from per-photo `showInGallery`. */
+  galleryPage: boolean;
 };
+
+/** Conservative defaults when Convex marketing flags are unavailable (error UI). */
+export const DEFAULT_MARKETING_FEATURE_FLAGS: MarketingFeatureFlags = {
+  aboutPage: false,
+  recordingsPage: true,
+  pricingSection: true,
+  galleryPage: true,
+};
+
+/**
+ * When `false`, `/gallery` 404s and the Gallery nav item is hidden.
+ * Missing `galleryPage` is treated as on (matches `DEFAULT_IS_ENABLED.photos`).
+ */
+export function isGalleryPageEnabled(
+  flags: MarketingFeatureFlags | null | undefined,
+): boolean {
+  if (flags == null) return false;
+  return flags.galleryPage !== false;
+}
 
 /**
  * Homepage pricing block + primary-nav "Pricing" link.

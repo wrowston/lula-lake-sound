@@ -123,6 +123,7 @@ describe("defaultSnapshotForSection", () => {
     expect(defaultSnapshotForSection("about")).toEqual(ABOUT_DEFAULTS);
     expect(defaultSnapshotForSection("faq")).toEqual(FAQ_DEFAULTS);
     expect(defaultSnapshotForSection("amenitiesNearby")).toEqual({ rows: [] });
+    expect(defaultSnapshotForSection("photos")).toEqual({ rows: [] });
   });
 
   test("recordings returns an about-shaped placeholder (no content table)", () => {

@@ -16,6 +16,9 @@ import { DEFAULT_FAQ_CATEGORIES } from "./faqSeedData";
 
 export type CmsSection = Infer<typeof cmsSectionValidator>;
 
+/** Max rows when scanning `cmsSections` for pending drafts (list + publish-all). */
+export const CMS_PENDING_DRAFT_QUERY_LIMIT = 16;
+
 /**
  * @deprecated Represents the pre-refactor `publishedSnapshot`/`draftSnapshot`
  * JSON blob on `cmsSections`. Kept so the one-shot migration can type the
@@ -248,6 +251,9 @@ export function defaultSnapshotForSection(section: CmsSection): CmsSnapshot {
     case "faq":
       return FAQ_DEFAULTS;
     case "amenitiesNearby":
+      return { rows: [] };
+    case "photos":
+      // No snapshot table for studio photos; placeholder for the legacy `saveDraft` union.
       return { rows: [] };
   }
 }

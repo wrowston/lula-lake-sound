@@ -201,9 +201,10 @@ export const cmsSnapshotValidator = v.union(
 );
 
 /**
- * The set of sections tracked in `cmsSections`. `recordings` was added when
- * flags moved off the `marketingFeatureFlags` singleton and onto `cmsSections`
- * rows; its visibility is flag-only while audio content is stored separately.
+ * The set of active sections tracked in `cmsSections`. `recordings` was added
+ * when flags moved off the `marketingFeatureFlags` singleton and onto
+ * `cmsSections` rows; its visibility is flag-only while audio content is stored
+ * separately.
  */
 export const cmsSectionValidator = v.union(
   v.literal("settings"),
@@ -212,6 +213,20 @@ export const cmsSectionValidator = v.union(
   v.literal("recordings"),
   v.literal("faq"),
   v.literal("amenitiesNearby"),
+  v.literal("photos"),
+);
+
+/**
+ * Table-level validator for `cmsSections.section`.
+ *
+ * Some deployments have a stale `"photos"` row from before gallery publishing
+ * moved fully to `galleryPhotoMeta`. Keep the row schema tolerant so Convex can
+ * validate existing data, but keep public/admin function args on
+ * `cmsSectionValidator` so new CMS section mutations cannot target it.
+ */
+export const cmsSectionRowValidator = v.union(
+  cmsSectionValidator,
+  v.literal("photos"),
 );
 
 /**
@@ -317,6 +332,40 @@ export const amenitiesNearbyItemRowValidator = {
 
 /** Draft vs published rows in `gearCategories` / `gearItems` (INF-86). */
 export const gearScopeValidator = cmsScopeValidator;
+
+/**
+ * CMS video embed/upload providers (INF-92). Only these values may drive embed UI;
+ * arbitrary iframe URLs are rejected — see `videoUrls.ts` and `docs/cms-videos.md`.
+ */
+export const videoProviderValidator = v.union(
+  v.literal("youtube"),
+  v.literal("vimeo"),
+  v.literal("mux"),
+  v.literal("upload"),
+);
+
+/**
+ * One row per studio video in draft or published scope (same pattern as `galleryPhotos`).
+ */
+export const videoRowValidator = {
+  scope: cmsScopeValidator,
+  stableId: v.string(),
+  title: v.string(),
+  description: v.optional(v.string()),
+  sortOrder: v.number(),
+  provider: videoProviderValidator,
+  /** Provider-native id when applicable (e.g. YouTube video id, Vimeo numeric id). */
+  externalId: v.optional(v.string()),
+  /**
+   * HTTPS playback URL when stored explicitly (e.g. Mux `.m3u8`); upload rows may omit and use `videoStorageId` only.
+   */
+  playbackUrl: v.optional(v.string()),
+  /** Uploaded video blob (`provider === "upload"`). */
+  videoStorageId: v.optional(v.id("_storage")),
+  thumbnailStorageId: v.optional(v.id("_storage")),
+  thumbnailUrl: v.optional(v.string()),
+  durationSec: v.optional(v.number()),
+} as const;
 
 /**
  * Item specs: markdown string or structured key/value pairs.

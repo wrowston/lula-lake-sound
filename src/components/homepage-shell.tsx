@@ -1,8 +1,11 @@
 "use client";
 
-import { useQuery } from "convex/react";
 import { usePathname } from "next/navigation";
 import { api } from "../../convex/_generated/api";
+import {
+  PUBLIC_CONVEX_QUERY_FAILED,
+  usePublicConvexQuery,
+} from "@/lib/use-public-convex-query";
 import { AmenitiesNearby } from "@/components/amenities-nearby";
 import { ArtistInquiries } from "@/components/artist-inquiries";
 import { MarketingPricingSection } from "@/components/dynamic-pricing";
@@ -18,6 +21,7 @@ import {
   type MarketingFeatureFlags,
   type PricingFlags,
   isHomepagePricingSectionEnabled,
+  isGalleryPageEnabled,
   previewHasActivePricingPackages,
 } from "@/lib/site-settings";
 
@@ -27,23 +31,47 @@ function calculateLogoScale(scrollY: number): number {
 
 interface HomepageShellProps {
   /** `undefined` while the client is still subscribing (preview only if not preloaded). */
-  readonly pricingFlags: PricingFlags | null | undefined;
+  readonly pricingFlags:
+    | PricingFlags
+    | null
+    | undefined
+    | typeof PUBLIC_CONVEX_QUERY_FAILED;
   /**
-   * `undefined` when not preloaded: live-subscribe. `null` on error. Pass from
+   * `undefined` when not preloaded: live-subscribe. Pass from
    * `getPublishedMarketingFeatureFlags` or `getPreviewMarketingFeatureFlags`.
    */
-  readonly marketingFeatureFlags?: MarketingFeatureFlags | null | undefined;
+  readonly marketingFeatureFlags?:
+    | MarketingFeatureFlags
+    | null
+    | undefined
+    | typeof PUBLIC_CONVEX_QUERY_FAILED;
   /**
    * Published (or preview) gear payload. `undefined` renders the skeleton;
    * `null` renders the graceful empty state.
    */
-  readonly gear: GearPayload | null | undefined;
+  readonly gear:
+    | GearPayload
+    | null
+    | undefined
+    | typeof PUBLIC_CONVEX_QUERY_FAILED;
   /** Published (or preview) gallery payload. */
-  readonly photos: GalleryPhoto[] | null | undefined;
+  readonly photos:
+    | GalleryPhoto[]
+    | null
+    | undefined
+    | typeof PUBLIC_CONVEX_QUERY_FAILED;
   /** FAQ categories from Convex; `undefined` renders the loading state. */
-  readonly faqCategories?: readonly FaqCategoryProps[] | null | undefined;
+  readonly faqCategories?:
+    | readonly FaqCategoryProps[]
+    | null
+    | undefined
+    | typeof PUBLIC_CONVEX_QUERY_FAILED;
   /** Amenities payload from Convex; `undefined` renders the loading state. */
-  readonly amenities?: PublishedAmenitiesNearby | null | undefined;
+  readonly amenities?:
+    | PublishedAmenitiesNearby
+    | null
+    | undefined
+    | typeof PUBLIC_CONVEX_QUERY_FAILED;
   readonly banner?: React.ReactNode;
 }
 
@@ -58,18 +86,30 @@ export function HomepageShell({
 }: HomepageShellProps) {
   const { scrollY, containerRef } = useScrollAndReveal();
   const pathname = usePathname();
+  const marketingFromPropsResolved =
+    marketingFromProps === PUBLIC_CONVEX_QUERY_FAILED
+      ? undefined
+      : marketingFromProps;
   const isPreview =
     pathname === "/preview" || pathname.startsWith("/preview/");
   const aboutHref = isPreview ? "/preview/about" : "/about";
   const homeSectionBase = isPreview ? "/preview" : "/";
   const recordingsNavHref = isPreview ? "/preview/recordings" : "/recordings";
 
-  const liveMarketing = useQuery(
+  const liveMarketing = usePublicConvexQuery(
     api.public.getPublishedMarketingFeatureFlags,
-    marketingFromProps === undefined ? {} : "skip",
+    {},
+    {
+      section: "home_marketing_flags",
+      skip: marketingFromPropsResolved !== undefined,
+    },
   );
   const marketing =
-    marketingFromProps === undefined ? liveMarketing : marketingFromProps;
+    marketingFromPropsResolved === undefined
+      ? liveMarketing
+      : marketingFromPropsResolved;
+  const marketingForUi =
+    marketing === PUBLIC_CONVEX_QUERY_FAILED ? undefined : marketing;
 
   const logoScale = calculateLogoScale(scrollY);
   // Nav-link visibility intentionally defaults to OFF while the marketing
@@ -77,13 +117,21 @@ export function HomepageShell({
   // "Pricing" / "Recordings" / "About" tabs before Convex resolves and any
   // disabled tabs disappear — the visible flicker reported on the homepage.
   const showPricing =
-    (marketing != null && isHomepagePricingSectionEnabled(marketing)) ||
+    (marketingForUi != null &&
+      isHomepagePricingSectionEnabled(marketingForUi)) ||
     (isPreview &&
-      marketing == null &&
-      previewHasActivePricingPackages(pricingFlags));
-  const showAbout = marketing != null && marketing.aboutPage === true;
+      marketingForUi == null &&
+      previewHasActivePricingPackages(
+        pricingFlags === PUBLIC_CONVEX_QUERY_FAILED
+          ? undefined
+          : pricingFlags,
+      ));
+  const showAbout =
+    marketingForUi != null && marketingForUi.aboutPage === true;
   const showRecordings =
-    marketing != null && marketing.recordingsPage === true;
+    marketingForUi != null && marketingForUi.recordingsPage === true;
+  const showGallery =
+    marketingForUi != null && isGalleryPageEnabled(marketingForUi);
 
   return (
     <div
@@ -97,6 +145,7 @@ export function HomepageShell({
         showAbout={showAbout}
         aboutHref={aboutHref}
         showRecordings={showRecordings}
+        showGallery={showGallery}
         homeSectionBase={homeSectionBase}
         recordingsHref={recordingsNavHref}
       />
@@ -107,7 +156,7 @@ export function HomepageShell({
         <EquipmentSpecs gear={gear} />
         <MarketingPricingSection
           pricingFlags={pricingFlags}
-          marketingFeatureFlags={marketing ?? null}
+          marketingFeatureFlags={marketingForUi ?? null}
           isPreviewRoute={isPreview}
         />
         <AmenitiesNearby amenities={amenities} />

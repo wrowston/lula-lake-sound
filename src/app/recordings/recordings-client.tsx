@@ -4,15 +4,19 @@ import { Music } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import posthog from "posthog-js";
 import { useRef, useState, type ReactNode } from "react";
 
 import { Header } from "@/components/header";
+import { PageHeader } from "@/components/page-header";
+import { PublicSectionNotice } from "@/components/public-section-notice";
 import { SiteFooter } from "@/components/site-footer";
 import { useScrollAndReveal } from "@/hooks/use-scroll-and-reveal";
 import { MAX_REVEAL_DELAY, revealDelay } from "@/lib/reveal-delay";
 import { cn } from "@/lib/utils";
 import {
   type MarketingFeatureFlags,
+  isGalleryPageEnabled,
   isHomepagePricingSectionEnabled,
 } from "@/lib/site-settings";
 
@@ -210,6 +214,13 @@ function StreamingLinks({
           rel="noopener noreferrer"
           className={linkClass}
           aria-label={`${track.title} — listen on Spotify`}
+          onClick={() =>
+            posthog.capture("streaming_link_clicked", {
+              platform: "spotify",
+              track_title: track.title,
+              track_artist: track.artist,
+            })
+          }
         >
           <SpotifyGlyph className="h-4 w-4" />
         </a>
@@ -221,6 +232,13 @@ function StreamingLinks({
           rel="noopener noreferrer"
           className={linkClass}
           aria-label={`${track.title} — listen on Apple Music`}
+          onClick={() =>
+            posthog.capture("streaming_link_clicked", {
+              platform: "apple_music",
+              track_title: track.title,
+              track_artist: track.artist,
+            })
+          }
         >
           <Music className="h-4 w-4" strokeWidth={1.75} aria-hidden />
         </a>
@@ -533,12 +551,15 @@ interface RecordingsClientProps {
   readonly marketing: MarketingFeatureFlags;
   /** Preview banner, aligned with `HomepageShell` / `AboutLayout`. */
   readonly banner?: ReactNode;
+  /** True when live Convex subscription failed; page stays usable with nav. */
+  readonly convexUnavailable?: boolean;
 }
 
 export function RecordingsClient({
   recordings,
   marketing,
   banner,
+  convexUnavailable = false,
 }: RecordingsClientProps) {
   const pathname = usePathname();
   const isPreview =
@@ -550,6 +571,7 @@ export function RecordingsClient({
   const showPricing = isHomepagePricingSectionEnabled(marketing);
   const showAbout = marketing.aboutPage === true;
   const showRecordings = marketing.recordingsPage === true;
+  const showGallery = isGalleryPageEnabled(marketing);
 
   const { scrollY, containerRef } = useScrollAndReveal();
   const [active, setActive] = useState<ActiveTrackState | null>(null);
@@ -576,6 +598,12 @@ export function RecordingsClient({
     // Switch tracks — stop the current one, point `<audio>` at the new URL,
     // then call play(). Browsers fire `loadedmetadata` when duration is
     // available; we sync state from that event.
+    posthog.capture("recording_played", {
+      track_title: track.title,
+      track_artist: track.artist,
+      track_genre: track.genre ?? null,
+      track_year: track.year ?? null,
+    });
     audioEl.pause();
     audioEl.src = track.audioUrl;
     audioEl.currentTime = 0;
@@ -634,46 +662,30 @@ export function RecordingsClient({
         showAbout={showAbout}
         aboutHref={aboutHref}
         showRecordings={showRecordings}
+        showGallery={showGallery}
         homeSectionBase={homeSectionBase}
         recordingsHref={recordingsNavHref}
       />
 
       <main>
+        <PageHeader
+          eyebrow="Recordings"
+          title="Selected Recordings"
+          meta="Tracked · Mixed · Mastered"
+          backHref={backToHomeHref}
+          titleId="recordings-title"
+          titleSize="standard"
+        />
+
         <section
-          className="relative bg-washed-black px-6 pb-24 pt-36 md:px-16 md:pb-36 md:pt-44"
-          aria-labelledby="recordings-title"
+          className="relative bg-washed-black px-6 pb-24 md:px-16 md:pb-36"
+          aria-label="Recordings list"
         >
           <div className="mx-auto max-w-6xl">
-            <nav aria-label="Breadcrumb" className={revealDelay(0)}>
-              <Link
-                href={backToHomeHref}
-                className="label-text text-[11px] tracking-[0.2em] text-sand/60 transition-colors hover:text-sand"
-              >
-                ← Lula Lake Sound
-              </Link>
-            </nav>
             <p
               className={cn(
-                revealDelay(1),
-                "label-text mt-8 text-[11px] tracking-[0.2em] text-sand/50",
-              )}
-            >
-              Listen
-            </p>
-            <h1
-              id="recordings-title"
-              className={cn(
-                revealDelay(2),
-                "headline-primary mt-4 text-balance leading-[1.05] text-warm-white",
-              )}
-              style={{ fontSize: "clamp(2rem, 4.5vw, 4rem)" }}
-            >
-              Selected Recordings
-            </h1>
-            <p
-              className={cn(
-                revealDelay(3),
-                "editorial-lede mt-6 max-w-2xl text-ivory/70",
+                revealDelay(0),
+                "editorial-lede max-w-2xl text-ivory/70",
               )}
             >
               A curated selection of projects tracked, mixed, or mastered at
@@ -681,10 +693,20 @@ export function RecordingsClient({
               mountain — press play to hear the room.
             </p>
 
-            {recordings.length === 0 ? (
+            {convexUnavailable ? (
+              <div className={cn(revealDelay(1), "mt-10")}>
+                <PublicSectionNotice title="Unable to refresh recordings">
+                  You may be seeing a cached list. Playback links might be out
+                  of date until the connection is restored. Try refreshing the
+                  page in a little while.
+                </PublicSectionNotice>
+              </div>
+            ) : null}
+
+            {recordings.length === 0 && !convexUnavailable ? (
               <div
                 className={cn(
-                  revealDelay(4),
+                  revealDelay(1),
                   "mt-16 border border-dashed border-sand/15 px-8 py-20 text-center",
                 )}
               >
@@ -698,7 +720,7 @@ export function RecordingsClient({
                 </p>
               </div>
             ) : (
-              <div className={cn(revealDelay(4), "mt-14")}>
+              <div className={cn(revealDelay(1), "mt-14")}>
                 {/* Column headers — desktop only */}
                 <div
                   aria-hidden
@@ -742,7 +764,7 @@ export function RecordingsClient({
 
             <div
               className={cn(
-                revealDelay(5),
+                revealDelay(2),
                 "mt-20 border-t border-sand/10 pt-16 flex flex-col gap-8 md:flex-row md:items-center md:justify-between",
               )}
             >

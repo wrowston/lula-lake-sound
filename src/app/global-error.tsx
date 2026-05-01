@@ -15,7 +15,10 @@ export default function GlobalError({
 
   if (lastReportedError.current !== error) {
     lastReportedError.current = error;
-    Sentry.captureException(error);
+    const captured = error;
+    queueMicrotask(() => {
+      Sentry.captureException(captured);
+    });
   }
 
   return (

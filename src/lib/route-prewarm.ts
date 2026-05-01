@@ -88,9 +88,14 @@ export function prewarmAdminNavigation(
       makeRouteQuerySpec(api.cms.getSection, { section: "settings" }),
     ]);
   }
+  if (href === "/admin/inquiries") {
+    prewarmSpecs(convex, [
+      makeRouteQuerySpec(api.admin.inquiries.listForAdmin, {}),
+    ]);
+  }
   if (href === "/admin/pricing") {
     prewarmSpecs(convex, [
-      makeRouteQuerySpec(api.cms.getSection, { section: "pricing" }),
+      makeRouteQuerySpec(api.admin.pricing.listDraft, {}),
       makeRouteQuerySpec(api.cms.listMarketingFlagsDraft, {}),
     ]);
   }
@@ -103,11 +108,36 @@ export function prewarmAdminNavigation(
   if (href === "/admin/faq") {
     prewarmSpecs(convex, [
       makeRouteQuerySpec(api.cms.getSection, { section: "faq" }),
+      makeRouteQuerySpec(api.cms.validatePublishSection, { section: "faq" }),
+    ]);
+  }
+  if (href === "/admin/amenities-nearby") {
+    prewarmSpecs(convex, [
+      makeRouteQuerySpec(api.amenitiesNearbyCms.getAdminAmenitiesNearby, {}),
+      makeRouteQuerySpec(api.cms.validatePublishSection, {
+        section: "amenitiesNearby",
+      }),
+    ]);
+  }
+  if (href === "/admin/gear") {
+    prewarmSpecs(convex, [
+      makeRouteQuerySpec(api.admin.gear.listDraftGear, {}),
+    ]);
+  }
+  if (href === "/admin/photos") {
+    prewarmSpecs(convex, [
+      makeRouteQuerySpec(api.admin.photos.listDraftPhotos, {}),
     ]);
   }
   if (href === "/admin/audio") {
     prewarmSpecs(convex, [
+      makeRouteQuerySpec(api.admin.audio.listDraftAudioTracks, {}),
       makeRouteQuerySpec(api.cms.listMarketingFlagsDraft, {}),
+    ]);
+  }
+  if (href === "/admin/videos") {
+    prewarmSpecs(convex, [
+      makeRouteQuerySpec(api.admin.videos.listDraftVideos, {}),
     ]);
   }
 }

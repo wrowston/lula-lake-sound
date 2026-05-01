@@ -1,6 +1,10 @@
 import dynamic from "next/dynamic";
 import type { Metadata } from "next";
 import { AdminHeader } from "@/components/admin/admin-header";
+import {
+  ADMIN_PAGE_INNER_CLASS,
+  ADMIN_PAGE_OUTER_CLASS,
+} from "@/lib/admin-pending-layout";
 import { AmenitiesEditorSkeleton } from "./amenities-editor-skeleton";
 
 const AmenitiesEditor = dynamic(
@@ -17,8 +21,8 @@ export default function AmenitiesNearbyAdminPage() {
   return (
     <>
       <AdminHeader title="Amenities nearby" />
-      <div className="flex-1 p-6">
-        <div className="mx-auto max-w-3xl">
+      <div className={ADMIN_PAGE_OUTER_CLASS}>
+        <div className={ADMIN_PAGE_INNER_CLASS}>
           <AmenitiesEditor />
         </div>
       </div>

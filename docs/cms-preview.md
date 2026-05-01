@@ -1,7 +1,64 @@
+# CMS preview (owner session + cache safety)
+
+This file combines the **ADR for preview delivery** (INF-68) with **operational
+notes for caching and Vercel** (INF-107).
+
+---
+
+## Caching, CDN, and draft leakage (INF-107)
+
+### Goal
+
+Preview HTML and RSC payloads must **never** be treated as publicly cacheable at
+the edge. If they were, a shared cache could theoretically serve one owner’s
+draft HTML to another visitor.
+
+### What the app does
+
+| Layer | Behavior |
+|-------|----------|
+| **`src/app/preview/layout.tsx`** | `export const dynamic = "force-dynamic"` so the segment opts out of static rendering and full route cache. |
+| **`next.config.ts` → `headers()`** | For `/preview` and `/preview/:path*`, sets `Cache-Control`, `CDN-Cache-Control`, and `Vercel-CDN-Cache-Control` to the value in `src/lib/preview-cache-headers.ts` (`private, no-cache, no-store, max-age=0, must-revalidate`). This applies to **every** response on those paths, including Clerk **`auth.protect()` redirects** from `src/middleware.ts`, which would not inherit layout segment cache rules. |
+| **Convex** | Draft reads stay owner-gated in preview queries; published site uses separate published-scope reads. |
+
+### `VERCEL_ENV` on Vercel
+
+| Value | Typical URL | Meaning |
+|-------|-------------|---------|
+| `production` | Production domain (e.g. custom domain or `*.vercel.app` production alias) | Production deployment. |
+| `preview` | Git branch / PR preview URLs (`*.vercel.app` without production assignment) | Preview deployment — **not** the same as the `/preview` **route** in this app. |
+| `development` | `next dev` locally | Local only. |
+
+`VERCEL_ENV === "preview"` means “this **deployment** is a Vercel preview,” not
+“the request path is `/preview`.” The CMS owner preview **route** is always
+under `/preview` on whichever deployment you open.
+
+**Gotcha:** Do not rely on `VERCEL_ENV` alone to decide whether to serve draft
+content. Draft vs published is enforced by **Clerk + Convex** on `/preview/*`.
+Use cache headers + dynamic rendering so draft HTML is not CDN-cached as
+public static assets.
+
+### Manual verification (production or any deployment)
+
+After signing in as the owner and loading a draft preview, anonymous users
+should still see **published** content on `/`, `/about`, etc. Verify cache
+headers on preview paths (no auth needed to see redirect/sign-in responses;
+headers should still be `no-store`):
+
+```bash
+curl -sI "https://<your-host>/preview" | grep -i cache-control
+curl -sI "https://<your-host>/preview/about" | grep -i cache-control
+```
+
+Expect `Cache-Control` (and Vercel-specific headers if present) to include
+`no-store` and `private`. Automated coverage: `src/lib/preview-cache-headers.test.ts`.
+
+---
+
 # ADR: CMS Preview Delivery Mechanism
 
-**Status:** Proposed
-**Date:** 2026-04-14
+**Status:** Proposed  
+**Date:** 2026-04-14  
 **Ticket:** INF-68
 
 ## Context
@@ -57,7 +114,7 @@ incremental enhancement if external collaborators need link-based preview access
 | Threat | Mitigation |
 |--------|------------|
 | **Draft leakage via URL guessing** | Preview routes require a valid Clerk session; unauthenticated requests get 404. |
-| **Draft leakage via CDN cache** | All preview routes use `export const dynamic = "force-dynamic"` (equivalent to `Cache-Control: no-store`). Vercel will not cache these at the edge. |
+| **Draft leakage via CDN cache** | Preview segment uses `force-dynamic` plus `next.config.ts` `headers()` on `/preview` paths (`no-store`, `private`, Vercel CDN override headers). See the INF-107 section at the top of this file. |
 | **Session hijacking** | Delegated to Clerk's session management (HttpOnly cookies, short-lived JWTs, rotation). No custom token handling. |
 | **Privilege escalation (non-owner sees drafts)** | Convex `preview` query checks `tokenIdentifier` against an owner allowlist stored in the DB or env. Returns `null` for non-owners. |
 | **Referrer leakage** | Preview URLs contain no secret tokens, so referrer headers are benign. Add `<meta name="referrer" content="no-referrer">` on preview pages as defense-in-depth. |

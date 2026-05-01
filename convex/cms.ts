@@ -8,6 +8,7 @@ import {
   settingsContentValidator,
 } from "./schema.shared";
 import {
+  CMS_PENDING_DRAFT_QUERY_LIMIT,
   defaultSnapshotForSection,
   type AboutSnapshot,
   type AmenitiesNearbySnapshot,
@@ -65,6 +66,8 @@ import {
   replaceFaqDraftFromCategories,
 } from "./faqTree";
 import { cmsValidationError } from "./errors";
+
+const MARKETING_FLAG_SECTIONS = ["about", "recordings", "pricing"] as const;
 
 /**
  * Snapshot-shaped admin view of a section. Reads per-section scoped tables
@@ -178,11 +181,18 @@ export const saveDraft = mutation({
           "content",
         );
       }
-    } else {
+    } else if (args.section === "recordings") {
       cmsValidationError(
         "Recordings has no content; only the visibility flag is editable.",
         "section",
       );
+    } else if (args.section === "photos") {
+      cmsValidationError(
+        "Gallery photos are edited in the admin photos workspace, not via saveDraft.",
+        "section",
+      );
+    } else {
+      cmsValidationError("This section has no saveDraft content path.", "section");
     }
 
     await ensureSectionMetaRow(ctx, args.section, updatedBy);
@@ -247,20 +257,28 @@ export const listPendingDrafts = query({
           | "amenitiesNearby"
           | "gear"
           | "photos"
+          | "videos"
         >,
       };
     }
 
     await requireCmsOwner(ctx);
 
-    const [cmsRows, gearMeta, galleryMeta] = await Promise.all([
-      ctx.db.query("cmsSections").collect(),
+    const [cmsRows, gearMeta, galleryMeta, videoMeta] = await Promise.all([
+      ctx.db
+        .query("cmsSections")
+        .withIndex("by_hasDraftChanges", (q) => q.eq("hasDraftChanges", true))
+        .take(CMS_PENDING_DRAFT_QUERY_LIMIT),
       ctx.db
         .query("gearMeta")
         .withIndex("by_singleton", (q) => q.eq("singletonKey", "default"))
         .unique(),
       ctx.db
         .query("galleryPhotoMeta")
+        .withIndex("by_singleton", (q) => q.eq("singletonKey", "default"))
+        .unique(),
+      ctx.db
+        .query("videoMeta")
         .withIndex("by_singleton", (q) => q.eq("singletonKey", "default"))
         .unique(),
     ]);
@@ -274,14 +292,19 @@ export const listPendingDrafts = query({
       | "amenitiesNearby"
       | "gear"
       | "photos"
+      | "videos"
     > = [];
     for (const row of cmsRows) {
+      // Legacy deployments may still have a `cmsSections` row for photos; the
+      // active photo draft state lives in `galleryPhotoMeta`.
+      if (row.section === "photos") continue;
       if (row.hasDraftChanges) sections.push(row.section);
     }
     if (gearMeta?.hasDraftChanges) sections.push("gear");
     if (galleryMeta?.hasDraftChanges) sections.push("photos");
+    if (videoMeta?.hasDraftChanges) sections.push("videos");
 
-    return { sections };
+    return { sections: [...new Set(sections)] };
   },
 });
 
@@ -294,22 +317,25 @@ export const listMarketingFlagsDraft = query({
   args: {},
   handler: async (ctx) => {
     await requireCmsOwner(ctx);
-    const [aboutRow, recordingsRow, pricingRow] = await Promise.all([
+    const [aboutRow, recordingsRow, pricingRow, photosRow] = await Promise.all([
       getSectionMetaRow(ctx, "about"),
       getSectionMetaRow(ctx, "recordings"),
       getSectionMetaRow(ctx, "pricing"),
+      getSectionMetaRow(ctx, "photos"),
     ]);
 
     const flags = {
       aboutPage: effectiveIsEnabled(aboutRow, "about"),
       recordingsPage: effectiveIsEnabled(recordingsRow, "recordings"),
       pricingSection: effectiveIsEnabled(pricingRow, "pricing"),
+      galleryPage: publishedIsEnabled(photosRow, "photos"),
     };
 
     const hasDraftChanges = anyMarketingFlagDraftPending(
       aboutRow,
       recordingsRow,
       pricingRow,
+      photosRow,
     );
 
     // Expose per-section meta so the publish toolbar can disambiguate which
@@ -330,7 +356,11 @@ export const listMarketingFlagsDraft = query({
       hasDraftChanges,
       publishedAt,
       publishedBy:
-        mostRecentPublishedBy([aboutRow, recordingsRow, pricingRow]) ?? null,
+        mostRecentPublishedBy([
+          aboutRow,
+          recordingsRow,
+          pricingRow,
+        ]) ?? null,
       updatedAt,
       updatedBy:
         mostRecentUpdatedBy([aboutRow, recordingsRow, pricingRow]) ?? null,
@@ -358,6 +388,14 @@ export const listMarketingFlagsDraft = query({
             pricingRow.isEnabledDraft !==
               publishedIsEnabled(pricingRow, "pricing"),
         },
+        photos: {
+          isEnabled: publishedIsEnabled(photosRow, "photos"),
+          isEnabledDraft: photosRow?.isEnabledDraft ?? null,
+          hasPendingFlagChange:
+            photosRow?.isEnabledDraft !== undefined &&
+            photosRow.isEnabledDraft !==
+              publishedIsEnabled(photosRow, "photos"),
+        },
       },
     };
   },
@@ -378,22 +416,27 @@ export const getPreviewMarketingFeatureFlags = query({
       return null;
     }
 
-    const [aboutRow, recordingsRow, pricingRow] = await Promise.all([
+    const [aboutRow, recordingsRow, pricingRow, photosRow] = await Promise.all([
       getSectionMetaRow(ctx, "about"),
       getSectionMetaRow(ctx, "recordings"),
       getSectionMetaRow(ctx, "pricing"),
+      getSectionMetaRow(ctx, "photos"),
     ]);
 
     const hasDraftChanges = anyMarketingFlagDraftPending(
       aboutRow,
       recordingsRow,
       pricingRow,
+      photosRow,
     );
 
     return {
       aboutPage: effectiveIsEnabled(aboutRow, "about"),
       recordingsPage: effectiveIsEnabled(recordingsRow, "recordings"),
       pricingSection: effectiveIsEnabled(pricingRow, "pricing"),
+      galleryPage: effectiveIsEnabled(photosRow, "photos"),
+      /** Published-only; when `false`, public `/gallery` 404s unless draft changes this. */
+      galleryPagePublished: publishedIsEnabled(photosRow, "photos"),
       hasDraftChanges,
     };
   },
@@ -453,7 +496,7 @@ export const publishMarketingFlags = mutation({
     const published: Array<
       Awaited<ReturnType<typeof publishSectionCore>>
     > = [];
-    for (const section of ["about", "recordings", "pricing"] as const) {
+    for (const section of MARKETING_FLAG_SECTIONS) {
       const row = await getSectionMetaRow(ctx, section);
       if (!row || !sectionHasPendingFlagDraft(row, section)) continue;
       const result = await publishSectionCore(ctx, {
@@ -485,13 +528,14 @@ export const publishMarketingFlags = mutation({
 /**
  * Discard marketing-flag drafts: clears `isEnabledDraft` on About /
  * Recordings / Pricing (without rewinding their content drafts).
+ * Gallery-page visibility drafts are discarded from `/admin/photos` only.
  */
 export const discardMarketingFlagsDraft = mutation({
   args: {},
   handler: async (ctx) => {
     const { updatedBy } = await requireCmsOwner(ctx);
     let discarded = false;
-    for (const section of ["about", "recordings", "pricing"] as const) {
+    for (const section of MARKETING_FLAG_SECTIONS) {
       const row = await getSectionMetaRow(ctx, section);
       if (!row || row.isEnabledDraft === undefined) continue;
       await ctx.db.patch(row._id, {
@@ -737,6 +781,10 @@ async function readSnapshotForAdmin(
   if (section === "amenitiesNearby") {
     const tree = await loadAmenitiesNearbyTree(ctx, scope);
     return snapshotFromAmenitiesTree(tree);
+  }
+
+  if (section === "photos") {
+    return defaultSnapshotForSection("photos");
   }
 
   // recordings — flag-only, no content. Return an empty about-shaped default

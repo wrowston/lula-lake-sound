@@ -39,6 +39,11 @@ interface HeaderProps {
    * `"/recordings"`.
    */
   readonly recordingsHref?: string;
+  /**
+   * Shows the "Gallery" route link when the CMS gallery page flag is on.
+   * Defaults to `false` (hidden while marketing flags are loading).
+   */
+  readonly showGallery?: boolean;
 }
 
 /**
@@ -57,6 +62,7 @@ export function Header({
   showRecordings = false,
   homeSectionBase = "/",
   recordingsHref = "/recordings",
+  showGallery = false,
 }: HeaderProps) {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
@@ -87,6 +93,17 @@ export function Header({
         ]
       : []),
     { kind: "hash", id: "the-space", label: "The Studio" },
+    ...(showGallery
+      ? [
+          {
+            kind: "route" as const,
+            key: "gallery",
+            href:
+              homeSectionBase === "/preview" ? "/preview/gallery" : "/gallery",
+            label: "Gallery",
+          },
+        ]
+      : []),
     { kind: "hash", id: "equipment-specs", label: "Gear" },
     ...(showRecordings
       ? [
@@ -124,7 +141,6 @@ export function Header({
               width={1024}
               height={135}
               className="h-8 w-auto max-w-[min(100%,260px)] object-contain object-left md:h-9 md:max-w-[min(100%,300px)]"
-              priority
             />
           </button>
 

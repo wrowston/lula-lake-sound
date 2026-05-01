@@ -22,6 +22,79 @@ export const MAX_GALLERY_IMAGE_BYTES = 50 * 1024 * 1024;
 export const MAX_GALLERY_PHOTOS = 40;
 const GALLERY_QUERY_LIMIT = 128;
 
+/**
+ * INF-47 — controlled vocabulary for the `/gallery` page filter pills
+ * (Variant C header pattern). Stored on each photo as lower-case slugs.
+ * The implicit `"all"` filter never lives in the array; the public page
+ * derives it.
+ */
+export const GALLERY_CATEGORY_SLUGS = ["rooms", "gear", "grounds"] as const;
+
+export type GalleryCategorySlug = (typeof GALLERY_CATEGORY_SLUGS)[number];
+
+/** Display labels for the public filter pills. Order matches the design. */
+export const GALLERY_CATEGORY_LABELS: Record<GalleryCategorySlug, string> = {
+  rooms: "Rooms",
+  gear: "Gear",
+  grounds: "Grounds",
+};
+
+/**
+ * Admin checkbox copy for each catalogue slug. Single source for public pills
+ * (`GALLERY_CATEGORY_LABELS`) + editor UI.
+ */
+export const GALLERY_CATEGORY_ADMIN_OPTIONS: ReadonlyArray<{
+  readonly slug: GalleryCategorySlug;
+  readonly label: string;
+  readonly description: string;
+}> = [
+  {
+    slug: "rooms",
+    label: GALLERY_CATEGORY_LABELS.rooms,
+    description: "Live rooms, control room, iso booths.",
+  },
+  {
+    slug: "gear",
+    label: GALLERY_CATEGORY_LABELS.gear,
+    description: "Console, racks, mics, instruments.",
+  },
+  {
+    slug: "grounds",
+    label: GALLERY_CATEGORY_LABELS.grounds,
+    description: "Exteriors, hallway, residential wing.",
+  },
+];
+
+export function isGalleryCategorySlug(
+  value: string,
+): value is GalleryCategorySlug {
+  return (GALLERY_CATEGORY_SLUGS as readonly string[]).includes(value);
+}
+
+/**
+ * Normalise a raw categories array (already trimmed in the caller) by
+ * lower-casing, validating against the controlled vocabulary, and removing
+ * duplicates while preserving the catalogue order. Returns `undefined` when
+ * no valid categories remain so callers can omit the field on the
+ * underlying document.
+ */
+export function normalizeGalleryCategories(
+  raw: readonly string[] | null | undefined,
+): GalleryCategorySlug[] | undefined {
+  if (!raw || raw.length === 0) return undefined;
+  const seen = new Set<GalleryCategorySlug>();
+  for (const value of raw) {
+    if (typeof value !== "string") continue;
+    const slug = value.trim().toLowerCase();
+    if (slug.length === 0) continue;
+    if (isGalleryCategorySlug(slug)) {
+      seen.add(slug);
+    }
+  }
+  if (seen.size === 0) return undefined;
+  return GALLERY_CATEGORY_SLUGS.filter((slug) => seen.has(slug));
+}
+
 export type GalleryScope = Doc<"galleryPhotos">["scope"];
 export type GalleryPhotoDoc = Doc<"galleryPhotos">;
 export type GalleryMetaDoc = Doc<"galleryPhotoMeta">;
@@ -39,6 +112,10 @@ function comparablePhoto(row: GalleryPhotoDoc) {
     contentType: row.contentType,
     sizeBytes: row.sizeBytes,
     originalFileName: row.originalFileName ?? null,
+    categories:
+      normalizeGalleryCategories(row.categories ?? null) ?? null,
+    showInCarousel: row.showInCarousel !== false,
+    showInGallery: row.showInGallery !== false,
   };
 }
 
@@ -122,6 +199,7 @@ export async function replaceGalleryScope(
   }
 
   for (const row of source) {
+    const categories = normalizeGalleryCategories(row.categories);
     await ctx.db.insert("galleryPhotos", {
       scope: toScope,
       stableId: row.stableId,
@@ -135,6 +213,13 @@ export async function replaceGalleryScope(
       sizeBytes: row.sizeBytes,
       ...(row.originalFileName !== undefined
         ? { originalFileName: row.originalFileName }
+        : {}),
+      ...(categories !== undefined ? { categories } : {}),
+      ...(row.showInCarousel !== undefined
+        ? { showInCarousel: row.showInCarousel }
+        : {}),
+      ...(row.showInGallery !== undefined
+        ? { showInGallery: row.showInGallery }
         : {}),
     });
   }
@@ -177,6 +262,9 @@ export async function materializeGalleryPhotos(
     contentType: string;
     sizeBytes: number;
     originalFileName: string | null;
+    categories: GalleryCategorySlug[];
+    showInCarousel: boolean;
+    showInGallery: boolean;
   }>
 > {
   return await Promise.all(
@@ -192,6 +280,9 @@ export async function materializeGalleryPhotos(
       contentType: row.contentType,
       sizeBytes: row.sizeBytes,
       originalFileName: row.originalFileName ?? null,
+      categories: normalizeGalleryCategories(row.categories) ?? [],
+      showInCarousel: row.showInCarousel !== false,
+      showInGallery: row.showInGallery !== false,
     })),
   );
 }

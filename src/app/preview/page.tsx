@@ -12,7 +12,7 @@ function PreviewContent() {
     api.pricingPreviewDraft.getPreviewPricingFlags,
   );
   const gearPreview = useQuery(api.gearPreviewDraft.getPreviewGear);
-  const photoPreview = useQuery(api.photosPreviewDraft.getPreviewGalleryPhotos);
+  const photoPreview = useQuery(api.photosPreviewDraft.getPreviewCarouselPhotos);
   const audioPreview = useQuery(api.audioPreviewDraft.getPreviewAudioTracks);
   // Tracks whether the About section has unpublished draft content so the
   // preview banner can reflect it. Owner-only — returns `null` for non-owners.
@@ -87,6 +87,7 @@ function PreviewContent() {
         aboutPage: marketingPreview.aboutPage,
         recordingsPage: marketingPreview.recordingsPage,
         pricingSection: marketingPreview.pricingSection,
+        galleryPage: marketingPreview.galleryPage,
       }}
       gear={{ categories: gearPreview.categories }}
       photos={photoPreview.photos}

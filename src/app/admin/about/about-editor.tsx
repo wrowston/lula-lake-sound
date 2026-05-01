@@ -44,8 +44,9 @@ import type { Id } from "../../../../convex/_generated/dataModel";
 import { api } from "../../../../convex/_generated/api";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Skeleton } from "@/components/ui/skeleton";
 import { Textarea } from "@/components/ui/textarea";
-import { Switch } from "@/components/ui/switch";
+import { SiteVisibilityRow } from "@/components/admin/site-visibility-row";
 import { cn } from "@/lib/utils";
 import { convexMutationEffect } from "@/lib/effect-errors";
 import { runAdminEffect } from "@/lib/admin-run-effect";
@@ -810,29 +811,22 @@ function AboutForm() {
   return (
     <div className="space-y-8 pb-24" ref={handleEditorRef}>
         <div className="space-y-8">
-          <fieldset className="space-y-4">
-            <legend className="label-text text-muted-foreground">
-              Site visibility
-            </legend>
-            <div className="flex items-start gap-3">
-              <Switch
-                id="ff-about-embedded"
-                checked={featureFlagsSource?.aboutPage ?? false}
-                onCheckedChange={setAboutPage}
-              />
-              <div className="space-y-1">
-                <label
-                  htmlFor="ff-about-embedded"
-                  className="body-text-small cursor-pointer text-foreground"
-                >
-                  About page (<code className="text-xs">/about</code>)
-                </label>
-                <p className="body-text-small text-muted-foreground">
-                  When off, the route returns 404 and the header link is hidden.
-                </p>
-              </div>
-            </div>
-          </fieldset>
+          <div className="space-y-4">
+            <p className="label-text text-muted-foreground">Site visibility</p>
+            <SiteVisibilityRow
+              id="ff-about-embedded"
+              title="About page visibility"
+              description={
+                <>
+                  When off, <code>/about</code> returns 404 and the About nav
+                  link is hidden. Publish to apply.
+                </>
+              }
+              checked={featureFlagsSource?.aboutPage ?? false}
+              onCheckedChange={setAboutPage}
+              disabled={busy !== null}
+            />
+          </div>
 
           <fieldset className="space-y-3">
             <legend className="label-text text-muted-foreground">Hero</legend>
@@ -928,7 +922,7 @@ function AboutForm() {
             <legend className="label-text text-muted-foreground">Team</legend>
             <p className="body-text-small text-muted-foreground">
               Add people with a headshot, name, and title. Images are stored in
-              Convex file storage (same limits as the gallery).
+              file storage (same limits as the gallery).
             </p>
             <TeamMembersEditor
               members={base.teamMembers}
@@ -1044,7 +1038,12 @@ const HeroImagePicker = memo(function HeroImagePicker({
   uploadBusyKey,
   setUploadBusyKey,
 }: HeroImagePickerProps) {
-  const draft = useQuery(api.admin.photos.listDraftPhotos);
+  const [galleryOpen, setGalleryOpen] = useState(false);
+  const draft = useQuery(
+    api.admin.photos.listDraftPhotos,
+    galleryOpen ? {} : "skip",
+  );
+  const galleryLoaded = draft !== undefined;
 
   const photos = useMemo<GalleryPickerPhoto[]>(
     () =>
@@ -1056,16 +1055,20 @@ const HeroImagePicker = memo(function HeroImagePicker({
   );
 
   const selectedInGallery = useMemo(
-    () => photos.find((p) => p.storageId === selectedStorageId),
-    [photos, selectedStorageId],
+    () =>
+      galleryLoaded
+        ? photos.find((p) => p.storageId === selectedStorageId)
+        : undefined,
+    [galleryLoaded, photos, selectedStorageId],
   );
 
   // Resolve a URL for bespoke (non-gallery) hero uploads so we can still
-  // show a preview. Skipped when the selected id is already in the gallery
-  // list (we reuse the gallery-provided URL) or nothing is selected.
+  // show a preview without loading the full gallery picker. Skipped when the
+  // selected id is already in the loaded gallery list (we reuse that URL) or
+  // nothing is selected.
   const bespokeUrl = useQuery(
     api.admin.about.getHeroImageUrl,
-    selectedStorageId !== undefined && !selectedInGallery
+    selectedStorageId !== undefined && (!galleryLoaded || !selectedInGallery)
       ? { storageId: selectedStorageId }
       : "skip",
   );
@@ -1097,12 +1100,17 @@ const HeroImagePicker = memo(function HeroImagePicker({
   };
 
   const selectedUrl = selectedInGallery?.url ?? bespokeUrl ?? null;
-  // Only treat the selection as orphaned once we've heard back from both
-  // the gallery list and the bespoke URL query. Otherwise the first render
-  // after selection flashes a false warning.
-  const selectedIsOrphaned =
+  const selectedLookupComplete =
     selectedStorageId !== undefined &&
-    draft !== undefined &&
+    (!galleryOpen
+      ? bespokeUrl !== undefined
+      : galleryLoaded &&
+        (selectedInGallery !== undefined || bespokeUrl !== undefined));
+  // Only treat the selection as orphaned once every query needed for the
+  // current picker state has responded. Otherwise opening the gallery can
+  // flash a false warning while the list is still loading.
+  const selectedIsOrphaned =
+    selectedLookupComplete &&
     !selectedInGallery &&
     bespokeUrl === null;
 
@@ -1138,14 +1146,6 @@ const HeroImagePicker = memo(function HeroImagePicker({
       </Button>
     </>
   );
-
-  if (draft === undefined) {
-    return (
-      <p className="rounded-md border border-dashed border-border px-3 py-4 text-xs text-muted-foreground">
-        Loading gallery photos…
-      </p>
-    );
-  }
 
   return (
     <div className="space-y-3">
@@ -1207,14 +1207,38 @@ const HeroImagePicker = memo(function HeroImagePicker({
 
       <div className="flex items-center justify-between gap-3">
         <p className="body-text-small text-muted-foreground">
-          {photos.length === 0
-            ? "No gallery photos yet — upload a bespoke image for the hero."
-            : "Pick from the gallery below or upload a bespoke image."}
+          {!galleryOpen
+            ? "Open the gallery picker only when you need an existing upload."
+            : !galleryLoaded
+              ? "Loading gallery photos…"
+              : photos.length === 0
+                ? "No gallery photos yet — upload a bespoke image for the hero."
+                : "Pick from the gallery below or upload a bespoke image."}
         </p>
-        {uploadButton}
+        <div className="flex shrink-0 items-center gap-2">
+          {!galleryOpen ? (
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={() => setGalleryOpen(true)}
+            >
+              Browse gallery photos
+            </Button>
+          ) : null}
+          {uploadButton}
+        </div>
       </div>
 
-      {photos.length > 0 ? (
+      {galleryOpen && !galleryLoaded ? (
+        <div className="grid grid-cols-3 gap-2 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6">
+          {Array.from({ length: 12 }).map((_, i) => (
+            <Skeleton key={i} className="aspect-square rounded-md" />
+          ))}
+        </div>
+      ) : null}
+
+      {galleryOpen && photos.length > 0 ? (
         <div
           role="radiogroup"
           aria-label="Hero image"

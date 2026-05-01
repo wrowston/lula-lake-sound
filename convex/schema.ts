@@ -6,7 +6,8 @@ import {
   aboutTeamMemberRowValidator,
   amenitiesNearbyCopyRowValidator,
   amenitiesNearbyItemRowValidator,
-  cmsSectionValidator,
+  cmsSectionRowValidator,
+  videoRowValidator,
   faqCategoryRowValidator,
   faqQuestionRowValidator,
   gearScopeValidator,
@@ -40,10 +41,10 @@ export default defineSchema({
     phone: v.optional(v.string()),
     message: v.string(),
     createdAt: v.number(),
-  }),
+  }).index("by_createdAt", ["createdAt"]),
 
   cmsSections: defineTable({
-    section: cmsSectionValidator,
+    section: cmsSectionRowValidator,
     /** Published visibility. Controls route/section visibility on the public site. */
     isEnabled: v.optional(v.boolean()),
     /** Draft override for `isEnabled`; cleared on publish / discard. */
@@ -55,7 +56,10 @@ export default defineSchema({
     updatedAt: v.number(),
     /** Clerk user id (`subject`) when the last write was authenticated. */
     updatedBy: v.optional(v.string()),
-  }).index("by_section", ["section"]),
+  })
+    .index("by_section", ["section"])
+    // Admin pending-draft badges and publish-all only need rows with drafts.
+    .index("by_hasDraftChanges", ["hasDraftChanges"]),
 
   aboutContent: defineTable(aboutContentRowValidator).index("by_scope", [
     "scope",
@@ -156,6 +160,20 @@ export default defineSchema({
     contentType: v.string(),
     sizeBytes: v.number(),
     originalFileName: v.optional(v.string()),
+    /**
+     * INF-47 — gallery filter tags. Lower-case slugs from
+     * `GALLERY_CATEGORY_SLUGS` (`rooms` / `gear` / `grounds`). Optional so
+     * existing rows keep validating; missing means "uncategorized" and the
+     * photo only appears under the implicit "All" filter on the public
+     * gallery page.
+     */
+    categories: v.optional(v.array(v.string())),
+    /**
+     * Which surfaces show this image. Missing defaults to `true` for back-compat.
+     * Both can be `true` so one upload can power the homepage carousel and /gallery.
+     */
+    showInCarousel: v.optional(v.boolean()),
+    showInGallery: v.optional(v.boolean()),
   })
     .index("by_scope_and_sort", ["scope", "sortOrder"])
     .index("by_scope_and_stableId", ["scope", "stableId"])
@@ -208,4 +226,25 @@ export default defineSchema({
     .index("by_storageId", ["storageId"])
     .index("by_albumThumbnailStorageId", ["albumThumbnailStorageId"])
     .index("by_scope_and_createdAt", ["scope", "createdAt"]),
+
+  /**
+   * Video portfolio (INF-92): draft/publish bookkeeping — mirrors `galleryPhotoMeta`.
+   */
+  videoMeta: defineTable({
+    singletonKey: v.literal("default"),
+    hasDraftChanges: v.boolean(),
+    publishedAt: v.union(v.number(), v.null()),
+    publishedBy: v.optional(v.string()),
+    updatedAt: v.number(),
+    updatedBy: v.optional(v.string()),
+  }).index("by_singleton", ["singletonKey"]),
+
+  /**
+   * Video portfolio (INF-92): scoped rows — mirrors `galleryPhotos` / `audioTracks`.
+   */
+  videos: defineTable(videoRowValidator)
+    .index("by_scope_and_sort", ["scope", "sortOrder"])
+    .index("by_scope_and_stableId", ["scope", "stableId"])
+    .index("by_videoStorageId", ["videoStorageId"])
+    .index("by_thumbnailStorageId", ["thumbnailStorageId"]),
 });

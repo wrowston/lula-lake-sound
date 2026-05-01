@@ -5,6 +5,7 @@ import { SidebarProvider, SidebarInset } from "@/components/ui/sidebar";
 import { AdminSidebar } from "@/components/admin/admin-sidebar";
 import {
   CmsWorkspaceProvider,
+  CmsAdminPageSlot,
   CmsPersistentToolbarHost,
 } from "@/components/admin/cms-workspace";
 import {
@@ -43,7 +44,7 @@ export default async function AdminLayout({
         <CmsWorkspaceProvider>
           <AdminSidebar />
           <SidebarInset className="text-foreground">
-            {children}
+            <CmsAdminPageSlot>{children}</CmsAdminPageSlot>
             <CmsPersistentToolbarHost />
           </SidebarInset>
         </CmsWorkspaceProvider>
