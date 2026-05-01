@@ -41,7 +41,12 @@ export default defineSchema({
     phone: v.optional(v.string()),
     message: v.string(),
     createdAt: v.number(),
-  }).index("by_createdAt", ["createdAt"]),
+    legacySupabaseId: v.optional(v.string()),
+    legacyEmailSent: v.optional(v.boolean()),
+    legacyEmailSentAt: v.optional(v.number()),
+  })
+    .index("by_createdAt", ["createdAt"])
+    .index("by_legacySupabaseId", ["legacySupabaseId"]),
 
   cmsSections: defineTable({
     section: cmsSectionRowValidator,
