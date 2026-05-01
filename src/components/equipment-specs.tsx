@@ -13,6 +13,7 @@ import {
 } from "@/components/ui/accordion";
 import { PublicSectionNotice } from "@/components/public-section-notice";
 import { PUBLIC_CONVEX_QUERY_FAILED } from "@/lib/use-public-convex-query";
+import { cn } from "@/lib/utils";
 
 /**
  * Published (or preview) gear payload surfaced to the marketing site.
@@ -268,12 +269,21 @@ function EquipmentCategoriesAccordion({
               </AccordionTrigger>
               <AccordionPanel>
                 <div className="grid grid-cols-1 gap-x-10 gap-y-0 md:grid-cols-2">
-                  {category.items.map((item) => {
+                  {category.items.map((item, index) => {
                     const specsLabel = formatSpecs(item.specs);
+                    // On the 2-column desktop grid, items in the final row
+                    // shouldn't have a bottom divider. When the count is even,
+                    // the second-to-last item also lives in that final row.
+                    const hidesDesktopBorder =
+                      category.items.length % 2 === 0 &&
+                      index === category.items.length - 2;
                     return (
                       <div
                         key={item.stableId}
-                        className="flex items-baseline justify-between gap-4 border-b border-sand/12 py-3 last:border-0"
+                        className={cn(
+                          "flex items-baseline justify-between gap-4 border-b border-sand/12 py-3 last:border-0",
+                          hidesDesktopBorder && "md:border-b-0",
+                        )}
                       >
                         <span className="body-text text-sm text-ivory/90">
                           {item.url ? (
