@@ -769,7 +769,7 @@ export function RecordingsClient({
               )}
             >
               <div className="max-w-lg">
-                <h2 className="headline-secondary text-2xl text-sand">
+                <h2 className="headline-secondary reveal-axis text-2xl text-sand">
                   Hear yourself here
                 </h2>
                 <p className="body-text-small mt-3 text-ivory/55">

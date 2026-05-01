@@ -3,6 +3,7 @@
 import posthog from "posthog-js";
 import { POSTHOG_EVENTS } from "@/lib/analytics-events";
 import { Button } from "@/components/ui/button";
+import { revealDelay } from "@/lib/reveal-delay";
 import {
   billingCadenceLabel,
   formatPrice,
@@ -28,13 +29,13 @@ function sortedActivePackages(
 
 function SectionHeader() {
   return (
-    <div className="reveal mb-20 text-center">
-      <p className="eyebrow mb-6 text-sand/60">Rates</p>
-      <h2 className="headline-primary mb-8 text-[2.25rem] text-warm-white md:text-[3rem] lg:text-[3.5rem]">
+    <div className="mb-20 text-center">
+      <p className="eyebrow reveal mb-6 text-sand/60">Rates</p>
+      <h2 className="headline-primary reveal-axis reveal-delay-1 mb-8 text-[2.25rem] text-warm-white md:text-[3rem] lg:text-[3.5rem]">
         Services &amp; Pricing
       </h2>
-      <div className="section-rule mx-auto mb-10 max-w-[9rem]" />
-      <p className="editorial-lede mx-auto max-w-2xl">
+      <div className="section-rule reveal-rule reveal-delay-2 mx-auto mb-10 max-w-[9rem]" />
+      <p className="editorial-lede reveal reveal-delay-3 mx-auto max-w-2xl">
         Transparent pricing for professional recording services. Every package
         includes our full attention to your artistic vision and access to our
         complete facility.
@@ -52,11 +53,13 @@ function SectionShell({ children }: { children: React.ReactNode }) {
       {/* News-pulp ink-wash ground — echoes the brand guide's "Sunset Ink
        * Wash" treatment (§5.1) without competing with the pricing table. */}
       <div className="absolute inset-0 bg-texture-ink-wash opacity-55" />
-      <div className="absolute inset-0 bg-texture-stone opacity-20" />
+      <div className="absolute inset-0 bg-texture-stone opacity-20 parallax-soft" />
       <div className="relative z-10 mx-auto max-w-6xl">
         <SectionHeader />
         {children}
       </div>
+      {/* Cinematic seam into the forest-grounded amenities section. */}
+      <div aria-hidden className="section-fade-bottom section-fade-bottom--forest" />
     </section>
   );
 }
@@ -94,7 +97,7 @@ export function ServicesAndPricing({ packages }: ServicesAndPricingProps) {
       ) : (
         <div
           className={cn(
-            "reveal reveal-delay-2 grid grid-cols-1 border-y border-sand/10",
+            "grid grid-cols-1 border-y border-sand/10",
             rows.length >= 3
               ? "md:grid-cols-3 md:divide-x md:divide-sand/10"
               : rows.length === 2
@@ -102,13 +105,14 @@ export function ServicesAndPricing({ packages }: ServicesAndPricingProps) {
                 : "mx-auto max-w-xl",
           )}
         >
-          {rows.map((pkg) => {
+          {rows.map((pkg, index) => {
             const unit =
               pkg.unitLabel ?? billingCadenceLabel(pkg.billingCadence);
             return (
               <div
                 key={pkg.id}
                 className={cn(
+                  revealDelay(index + 1),
                   "relative flex flex-col gap-8 p-10 md:p-12",
                   pkg.highlight && "bg-sand/[0.025]",
                 )}
@@ -186,9 +190,9 @@ export function ServicesAndPricing({ packages }: ServicesAndPricingProps) {
         </div>
       )}
 
-      <div className="reveal reveal-delay-3 mt-24 border-t border-sand/10 pt-16 text-center">
+      <div className="reveal reveal-delay-4 mt-24 border-t border-sand/10 pt-16 text-center">
         <p className="eyebrow mb-5 text-sand/55">Custom</p>
-        <h3 className="headline-secondary mb-6 text-2xl text-sand md:text-[1.75rem]">
+        <h3 className="headline-secondary reveal-axis mb-6 text-2xl text-sand md:text-[1.75rem]">
           Need Something Different?
         </h3>
         <p className="body-text mx-auto mb-10 max-w-xl text-ivory/55">

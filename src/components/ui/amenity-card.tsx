@@ -1,9 +1,13 @@
+import { cn } from "@/lib/utils";
+
 interface AmenityCardProps {
   readonly name: string;
   readonly type: string;
   readonly description: string;
   /** When empty, the card renders as static content (no outer link). */
   readonly website: string;
+  /** Optional extra classes (used by callers for reveal stagger, etc). */
+  readonly className?: string;
 }
 
 const cardClassName =
@@ -20,6 +24,7 @@ export function AmenityCard({
   type,
   description,
   website,
+  className,
 }: AmenityCardProps) {
   const href = website.trim();
   const body = (
@@ -61,7 +66,7 @@ export function AmenityCard({
   );
 
   if (href.length === 0) {
-    return <div className={cardClassName}>{body}</div>;
+    return <div className={cn(cardClassName, className)}>{body}</div>;
   }
 
   return (
@@ -69,7 +74,7 @@ export function AmenityCard({
       href={href}
       target="_blank"
       rel="noopener noreferrer"
-      className={cardClassName}
+      className={cn(cardClassName, className)}
     >
       {body}
     </a>
