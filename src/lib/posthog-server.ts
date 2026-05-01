@@ -27,11 +27,17 @@ export type PostHogAnalyticsSeries = {
   readonly data: readonly PostHogAnalyticsSeriesPoint[];
 };
 
+export type PostHogPathTrafficRow = {
+  readonly path: string;
+  readonly views: number;
+};
+
 export type PostHogAnalyticsState =
   | {
       readonly status: "ready";
       readonly metrics: readonly PostHogAnalyticsMetric[];
       readonly chartSeries: readonly PostHogAnalyticsSeries[];
+      readonly pathTraffic: readonly PostHogPathTrafficRow[];
     }
   | {
       readonly status: "unconfigured";
@@ -43,6 +49,8 @@ export type PostHogAnalyticsState =
 
 const POSTHOG_QUERY_CACHE_SECONDS = 300;
 const DEFAULT_POSTHOG_HOST = "https://us.posthog.com";
+const PATH_TRAFFIC_LOOKBACK_DAYS = 30;
+const PATH_TRAFFIC_TOP_N = 15;
 
 const ADMIN_ANALYTICS_QUERIES = [
   {
@@ -200,6 +208,18 @@ function eventSeriesQuery({
   )} and timestamp >= now() - interval ${days} day group by date order by date asc`;
 }
 
+function topPageviewPathsQuery({
+  days,
+  limit,
+}: {
+  readonly days: number;
+  readonly limit: number;
+}): string {
+  const pathExpr =
+    "coalesce(nullIf(trim(toString(properties.$pathname)), ''), '(not set)')";
+  return `select ${pathExpr} as path, count() as views from events where event = '$pageview' and timestamp >= now() - interval ${days} day group by ${pathExpr} order by views desc limit ${limit}`;
+}
+
 function numericResult(response: PostHogQueryResponse): number {
   return numericValue(response.results?.[0]?.[0]);
 }
@@ -251,17 +271,17 @@ function seriesResult(
   }));
 }
 
-async function executeHogQLQuery({
-  host,
-  personalApiKey,
-  projectId,
-  query,
-}: {
+type PostHogHogQLQueryParams = {
   readonly host: string;
   readonly personalApiKey: string;
   readonly projectId: string;
   readonly query: string;
-}): Promise<PostHogQueryResponse> {
+};
+
+async function runPostHogHogQLQuery<T>(
+  { host, personalApiKey, projectId, query }: PostHogHogQLQueryParams,
+  parseResult: (response: PostHogQueryResponse) => T,
+): Promise<T> {
   const response = await fetch(`${host}/api/projects/${projectId}/query/`, {
     method: "POST",
     headers: {
@@ -280,49 +300,48 @@ async function executeHogQLQuery({
     throw new Error(`PostHog query failed: ${response.status}`);
   }
 
-  return (await response.json()) as PostHogQueryResponse;
+  return parseResult((await response.json()) as PostHogQueryResponse);
 }
 
-async function queryPostHogMetric({
-  host,
-  personalApiKey,
-  projectId,
-  query,
-}: {
-  readonly host: string;
-  readonly personalApiKey: string;
-  readonly projectId: string;
-  readonly query: string;
-}): Promise<number> {
-  const body = await executeHogQLQuery({
-    host,
-    personalApiKey,
-    projectId,
-    query,
-  });
-  return numericResult(body);
+async function queryPostHogMetric(
+  params: PostHogHogQLQueryParams,
+): Promise<number> {
+  return runPostHogHogQLQuery(params, numericResult);
 }
 
 async function queryPostHogSeries({
-  host,
-  personalApiKey,
-  projectId,
-  query,
   days,
-}: {
-  readonly host: string;
-  readonly personalApiKey: string;
-  readonly projectId: string;
-  readonly query: string;
+  ...params
+}: PostHogHogQLQueryParams & {
   readonly days: number;
 }): Promise<PostHogAnalyticsSeriesPoint[]> {
-  const body = await executeHogQLQuery({
-    host,
-    personalApiKey,
-    projectId,
-    query,
-  });
-  return seriesResult(body, days);
+  return runPostHogHogQLQuery(params, (resp) => seriesResult(resp, days));
+}
+
+function pathTrafficResult(
+  response: PostHogQueryResponse,
+): PostHogPathTrafficRow[] {
+  const rows: PostHogPathTrafficRow[] = [];
+
+  for (const row of response.results ?? []) {
+    const pathRaw = row[0];
+    const viewsRaw = row[1];
+    const path =
+      typeof pathRaw === "string"
+        ? pathRaw
+        : pathRaw == null
+          ? "(not set)"
+          : String(pathRaw);
+    rows.push({ path, views: numericValue(viewsRaw) });
+  }
+
+  return rows;
+}
+
+async function queryPostHogPathTraffic(
+  params: PostHogHogQLQueryParams,
+): Promise<PostHogPathTrafficRow[]> {
+  return runPostHogHogQLQuery(params, pathTrafficResult);
 }
 
 async function loadPostHogAdminAnalytics(): Promise<PostHogAnalyticsState> {
@@ -360,10 +379,20 @@ async function loadPostHogAdminAnalytics(): Promise<PostHogAnalyticsState> {
         }),
       ),
     );
+    const pathTrafficPromise = queryPostHogPathTraffic({
+      host,
+      personalApiKey: apiKey,
+      projectId,
+      query: topPageviewPathsQuery({
+        days: PATH_TRAFFIC_LOOKBACK_DAYS,
+        limit: PATH_TRAFFIC_TOP_N,
+      }),
+    });
 
-    const [values, seriesValues] = await Promise.all([
+    const [values, seriesValues, pathTraffic] = await Promise.all([
       valuesPromise,
       seriesValuesPromise,
+      pathTrafficPromise,
     ]);
 
     return {
@@ -378,6 +407,7 @@ async function loadPostHogAdminAnalytics(): Promise<PostHogAnalyticsState> {
         description: series.description,
         data: seriesValues[index] ?? [],
       })),
+      pathTraffic,
     };
   } catch (error) {
     console.warn(

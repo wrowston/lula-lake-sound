@@ -2,8 +2,10 @@
 
 import Image from "next/image";
 import { useState } from "react";
+import posthog from "posthog-js";
 
 import { Button } from "@/components/ui/button";
+import { POSTHOG_EVENTS } from "@/lib/analytics-events";
 import { PUBLIC_CONVEX_QUERY_FAILED } from "@/lib/use-public-convex-query";
 
 export type GalleryPhoto = {
@@ -285,11 +287,14 @@ export function TheSpace({
             <Button
               variant="default"
               size="lg"
-              onClick={() =>
+              onClick={() => {
+                posthog.capture(POSTHOG_EVENTS.PRICING_BOOK_SESSION_CLICK, {
+                  location: "the-space",
+                });
                 document
                   .getElementById("artist-inquiries")
-                  ?.scrollIntoView({ behavior: "smooth" })
-              }
+                  ?.scrollIntoView({ behavior: "smooth" });
+              }}
             >
               Book Your Session
             </Button>
