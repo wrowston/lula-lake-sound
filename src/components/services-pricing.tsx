@@ -2,6 +2,7 @@
 
 import posthog from "posthog-js";
 import { Button } from "@/components/ui/button";
+import { POSTHOG_EVENTS } from "@/lib/analytics-events";
 import {
   billingCadenceLabel,
   formatPrice,
@@ -162,11 +163,15 @@ export function ServicesAndPricing({ packages }: ServicesAndPricingProps) {
                     size="lg"
                     className="w-full"
                     onClick={() => {
-                      posthog.capture("pricing_book_session_clicked", {
-                        package_name: pkg.name,
-                        price_cents: pkg.priceCents,
-                        highlighted: pkg.highlight,
-                      });
+                      posthog.capture(
+                        POSTHOG_EVENTS.PRICING_BOOK_SESSION_CLICK,
+                        {
+                          location: "services-pricing",
+                          package_name: pkg.name,
+                          price_cents: pkg.priceCents,
+                          highlighted: pkg.highlight,
+                        },
+                      );
                       document
                         .getElementById("artist-inquiries")
                         ?.scrollIntoView({ behavior: "smooth" });
