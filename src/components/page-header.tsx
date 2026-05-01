@@ -122,7 +122,6 @@ export function PageHeader({
         {meta || aside ? (
           <div
             className={cn(
-              revealDelay(3),
               "flex flex-col md:flex-row md:items-end md:justify-between",
               compact
                 ? "mt-8 gap-6 md:mt-10 md:gap-10"

@@ -291,7 +291,7 @@ export function VideoShowcase({
       />
 
       <div className="relative z-10 mx-auto w-full max-w-[92rem]">
-        <header className="reveal mb-12 max-w-[42rem] border-b border-sand/[0.12] pb-10 md:mb-16 md:pb-12 lg:pb-14">
+        <header className="mb-12 max-w-[42rem] border-b border-sand/[0.12] pb-10 md:mb-16 md:pb-12 lg:pb-14">
           <p className="eyebrow mb-6 text-[0.6875rem] tracking-[var(--letter-spacing-wide)] text-sand/82">
             Watch
           </p>
