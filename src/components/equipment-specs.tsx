@@ -109,6 +109,7 @@ function StudioSpecsList() {
       {STUDIO_SPECS.map((spec) => (
         <MotionReveal
           key={spec.label}
+          inheritFromParent
           as="li"
           variant="rise-blur"
           duration={0.95}
@@ -252,6 +253,7 @@ function EquipmentCategoriesAccordion({
         {categories.map((category) => (
           <MotionReveal
             key={category.stableId}
+            inheritFromParent
             variant="rise-blur"
             duration={0.9}
           >

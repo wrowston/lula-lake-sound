@@ -115,6 +115,7 @@ export function FAQ({ categories }: FaqProps) {
             {categoriesResolved.map((category) => (
               <MotionReveal
                 key={category.stableId}
+                inheritFromParent
                 variant="rise-blur"
                 duration={0.95}
               >

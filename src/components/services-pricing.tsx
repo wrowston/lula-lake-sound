@@ -129,6 +129,7 @@ export function ServicesAndPricing({ packages }: ServicesAndPricingProps) {
             return (
               <MotionReveal
                 key={pkg.id}
+                inheritFromParent
                 variant="scale-in"
                 duration={1}
                 className={cn(

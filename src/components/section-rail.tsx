@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, useState, type CSSProperties } from "react";
+import { useCallback, useRef, useState, type CSSProperties } from "react";
 import { motion, useScroll, useTransform } from "motion/react";
 
 import { cn } from "@/lib/utils";
@@ -31,11 +31,13 @@ const SECTIONS: ReadonlyArray<{ id: string; label: string }> = [
 
 export function SectionRail() {
   const containerRef = useRef<HTMLDivElement | null>(null);
+  const activeIdRef = useRef<string>(SECTIONS[0].id);
   const { scrollYProgress } = useScroll();
   const railScale = useTransform(scrollYProgress, [0, 1], [0, 1]);
   const [activeId, setActiveId] = useState<string>(SECTIONS[0].id);
+  activeIdRef.current = activeId;
 
-  const observeSections = (node: HTMLDivElement | null) => {
+  const observeSections = useCallback((node: HTMLDivElement | null) => {
     containerRef.current = node;
     if (!node) return;
 
@@ -57,7 +59,8 @@ export function SectionRail() {
             entry.isIntersecting ? entry.intersectionRatio : 0,
           );
         }
-        let bestId = activeId;
+        const currentActive = activeIdRef.current;
+        let bestId = currentActive;
         let bestRatio = -1;
         visibility.forEach((ratio, id) => {
           if (ratio > bestRatio) {
@@ -65,7 +68,7 @@ export function SectionRail() {
             bestId = id;
           }
         });
-        if (bestRatio > 0 && bestId !== activeId) {
+        if (bestRatio > 0 && bestId !== currentActive) {
           setActiveId(bestId);
         }
       },
@@ -79,7 +82,7 @@ export function SectionRail() {
     }
 
     return () => observer?.disconnect();
-  };
+  }, []);
 
   function handleJump(id: string) {
     const target = document.getElementById(id);

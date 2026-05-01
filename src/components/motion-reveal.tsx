@@ -66,6 +66,11 @@ interface MotionRevealProps {
   readonly duration?: number;
   /** Re-trigger every time the element enters the viewport. Default: false (once). */
   readonly repeat?: boolean;
+  /**
+   * When true, omit viewport-driven props so this node follows a parent
+   * `MotionRevealGroup` stagger instead of animating on its own in-view.
+   */
+  readonly inheritFromParent?: boolean;
   /** Viewport amount required before triggering. Default: 0.25. */
   readonly amount?: number;
   /** Optional extra props (e.g. `id`, `role`, `aria-*`). */
@@ -81,6 +86,7 @@ export function MotionReveal({
   delay = 0,
   duration = 0.95,
   repeat = false,
+  inheritFromParent = false,
   amount = 0.25,
   motionProps,
 }: MotionRevealProps) {
@@ -95,9 +101,17 @@ export function MotionReveal({
         ...style,
       }}
       variants={variants}
-      initial="hidden"
-      whileInView="visible"
-      viewport={{ once: !repeat, amount, margin: "0px 0px -10% 0px" }}
+      {...(inheritFromParent
+        ? {}
+        : {
+            initial: "hidden" as const,
+            whileInView: "visible" as const,
+            viewport: {
+              once: !repeat,
+              amount,
+              margin: "0px 0px -10% 0px",
+            },
+          })}
       transition={{ duration, ease: EDITORIAL_EASE, delay }}
       {...motionProps}
     >
