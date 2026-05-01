@@ -17,8 +17,7 @@ function AnalyticsSetupInstructions({
       </h2>
       <p className="body-text-small text-muted-foreground">
         Add {analytics.missing.join(", ")} in Vercel to show dashboard metrics.
-        The PostHog Personal API key only needs HogQL query read access and stays
-        server-only.
+        The PostHog API key only needs HogQL query read access and stays server-only.
       </p>
       <p className="body-text-small mt-3 text-muted-foreground">
         Optional: set POSTHOG_HOST for EU projects, for example

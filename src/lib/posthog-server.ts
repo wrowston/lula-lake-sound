@@ -68,7 +68,7 @@ const ADMIN_ANALYTICS_QUERIES = [
 
 export function getPostHogClient(): PostHog {
   if (!posthogClient) {
-    posthogClient = new PostHog(process.env.NEXT_PUBLIC_POSTHOG_KEY!, {
+    posthogClient = new PostHog(process.env.NEXT_PUBLIC_POSTHOG_PROJECT_TOKEN!, {
       host: process.env.NEXT_PUBLIC_POSTHOG_HOST,
       flushAt: 1,
       flushInterval: 0,
@@ -177,15 +177,15 @@ async function queryPostHogMetric({
 }
 
 async function loadPostHogAdminAnalytics(): Promise<PostHogAnalyticsState> {
-  const personalApiKey = firstEnv("POSTHOG_PERSONAL_API_KEY");
+  const apiKey = firstEnv("POSTHOG_API_KEY");
   const projectId = firstEnv("POSTHOG_PROJECT_ID");
   const host = normalizePostHogHost(firstEnv("POSTHOG_HOST"));
   const missing = [
-    personalApiKey ? null : "POSTHOG_PERSONAL_API_KEY",
+    apiKey ? null : "POSTHOG_API_KEY",
     projectId ? null : "POSTHOG_PROJECT_ID",
   ].filter((name): name is string => Boolean(name));
 
-  if (missing.length > 0 || !personalApiKey || !projectId) {
+  if (missing.length > 0 || !apiKey || !projectId) {
     return { status: "unconfigured", missing };
   }
 
@@ -194,7 +194,7 @@ async function loadPostHogAdminAnalytics(): Promise<PostHogAnalyticsState> {
       ADMIN_ANALYTICS_QUERIES.map((metric) =>
         queryPostHogMetric({
           host,
-          personalApiKey,
+          personalApiKey: apiKey,
           projectId,
           query: metric.query,
         }),
