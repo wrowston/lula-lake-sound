@@ -763,10 +763,13 @@ export function RecordingsClient({
             )}
 
             <div
-              className="mt-20 border-t border-sand/10 pt-16 flex flex-col gap-8 md:flex-row md:items-center md:justify-between"
+              className={cn(
+                revealDelay(2),
+                "mt-20 border-t border-sand/10 pt-16 flex flex-col gap-8 md:flex-row md:items-center md:justify-between",
+              )}
             >
               <div className="max-w-lg">
-                <h2 className="headline-secondary reveal-axis reveal-delay-2 text-2xl text-sand">
+                <h2 className="headline-secondary text-2xl text-sand">
                   Hear yourself here
                 </h2>
                 <p className="body-text-small mt-3 text-ivory/55">

@@ -61,7 +61,7 @@ function BodyCopy({ data }: { readonly data: PublicAboutSnapshot }) {
         block.type === "heading" ? (
           <h2
             key={i}
-            className="headline-secondary reveal-axis text-sand text-2xl md:text-3xl"
+            className="headline-secondary text-sand text-2xl md:text-3xl"
           >
             {block.text}
           </h2>

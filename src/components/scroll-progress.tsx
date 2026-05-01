@@ -16,10 +16,7 @@ export function ScrollProgress() {
       aria-hidden
       className="pointer-events-none absolute inset-x-0 bottom-0 h-px overflow-hidden"
     >
-      <div
-        className="scroll-progress-bar h-full w-full origin-left bg-sand/45"
-        style={{ transformOrigin: "left center" }}
-      />
+      <div className="scroll-progress-bar h-full w-full origin-left bg-sand/45" />
     </div>
   );
 }
