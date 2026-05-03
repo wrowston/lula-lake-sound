@@ -11,7 +11,7 @@ on:
 # Separate groups per event so a PR synchronize does not cancel the push run
 # (and vice versa), which previously showed "cancelled" and a red commit status.
 concurrency:
-  group: ${{ github.workflow }}-${{ github.event_name }}-${{ github.head_ref || github.ref_name }}
+  group: ${{ github.workflow }}-${{ github.event_name }}-${{ github.head_ref || github.ref_name }}-${{ github.sha }}
   cancel-in-progress: true
 
 jobs:
@@ -54,27 +54,10 @@ jobs:
 
   cursor-autofix:
     needs: [test-and-build]
-    if: >-
-      ${{
-        always() &&
-        needs.test-and-build.result == 'failure' &&
-        !startsWith(github.head_ref || github.ref_name, 'cursor/') &&
-        (
-          github.event_name != 'pull_request' ||
-          github.event.pull_request.head.repo.full_name == github.repository
-        )
-      }}
+    if: ${{ failure() }}
     permissions:
       contents: read
       pull-requests: read
     uses: wrowston/ci-autofix/.github/workflows/cursor-autofix.yml@main
     secrets:
       CURSOR_API_KEY: ${{ secrets.CURSOR_API_KEY }}
-    with:
-      workflows: CI
-      workflow_name: ${{ github.workflow }}
-      pr_url: ${{ github.event.pull_request.html_url || '' }}
-      # Cursor Cloud Agent expects a branch/ref name here; passing a commit SHA makes
-      # createCloudAgent fail with "Branch '<sha>' does not exist".
-      ref: ${{ github.head_ref || github.ref_name }}
-      branch: ${{ github.head_ref || github.ref_name }}
