@@ -62,7 +62,6 @@
   "trustedDependencies": [
     "@tailwindcss/oxide",
     "@vercel/speed-insights",
-    "sqlite3",
     "unrs-resolver"
   ],
   "overrides": {
