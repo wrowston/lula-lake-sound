@@ -53,17 +53,8 @@ jobs:
         run: bun run build
 
   cursor-autofix:
-    name: Cursor autofix
-    needs: test-and-build
-    if: >-
-      ${{
-        failure() &&
-        !startsWith(github.head_ref || github.ref_name, 'cursor/') &&
-        (
-          github.event_name != 'pull_request' ||
-          github.event.pull_request.head.repo.full_name == github.repository
-        )
-      }}
+    needs: [test-and-build]
+    if: ${{ failure() }}
     permissions:
       contents: read
       pull-requests: read
