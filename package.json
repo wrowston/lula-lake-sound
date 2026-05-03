@@ -48,7 +48,6 @@
     "zod": "^4.3.6"
   },
   "devDependencies": {
-    "@cursor/february": "^1.0.7",
     "@eslint/eslintrc": "^3",
     "@tailwindcss/postcss": "^4",
     "@types/node": "^20",
