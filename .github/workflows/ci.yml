@@ -67,5 +67,7 @@ jobs:
       workflows: CI
       workflow_name: ${{ github.workflow }}
       pr_url: ${{ github.event.pull_request.html_url || '' }}
-      ref: ${{ github.event.pull_request.head.sha || github.sha }}
+      # Cursor Cloud Agent expects a branch/ref name here; passing a commit SHA makes
+      # createCloudAgent fail with "Branch '<sha>' does not exist".
+      ref: ${{ github.head_ref || github.ref_name }}
       branch: ${{ github.head_ref || github.ref_name }}
