@@ -66,6 +66,10 @@ jobs:
     with:
       workflows: CI
       workflow_name: ${{ github.workflow }}
+      # Avoid calling the Cursor API when CI already succeeded; ci-autofix's "Start Cursor
+      # Cloud Agent" step exits non-zero immediately on some setups and turns green builds red.
+      # Dry-run prints the prompt only and still satisfies a required autofix job.
+      dry_run: ${{ needs.test-and-build.result == 'success' }}
       pr_url: ${{ github.event.pull_request.html_url || '' }}
       # Cursor Cloud Agent expects a branch/ref name here; passing a commit SHA makes
       # createCloudAgent fail with "Branch '<sha>' does not exist".
