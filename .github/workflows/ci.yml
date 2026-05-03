@@ -54,9 +54,10 @@ jobs:
 
   cursor-autofix:
     needs: [test-and-build]
-    # Always run after test-and-build so the check is green when we skip the agent.
-    # A skipped job fails required status checks; a successful no-op does not.
-    if: always()
+    # Only run when tests or build fail. Running the Cursor agent on every push can
+    # fail the whole workflow (API/timeout) even when the app is healthy; green runs
+    # should not depend on autofix infrastructure.
+    if: needs.test-and-build.result == 'failure'
     permissions:
       contents: read
       pull-requests: read
