@@ -377,3 +377,34 @@ export const gearSpecsValidator = v.union(
     pairs: v.array(v.object({ key: v.string(), value: v.string() })),
   }),
 );
+
+/** INF-132 — outreach / CRM leads pipeline */
+export const outreachLeadStatusValidator = v.union(
+  v.literal("new"),
+  v.literal("reviewed"),
+  v.literal("queued"),
+  v.literal("sent"),
+  v.literal("skipped"),
+);
+
+export const outreachDraftBodyFormatValidator = v.union(
+  v.literal("markdown"),
+  v.literal("plain"),
+);
+
+/** Batch send job aggregate status */
+export const outreachSendJobStatusValidator = v.union(
+  v.literal("draft"),
+  v.literal("queued"),
+  v.literal("processing"),
+  v.literal("completed"),
+  v.literal("failed"),
+);
+
+/** Per-recipient send outcome */
+export const outreachSendRecipientStatusValidator = v.union(
+  v.literal("pending"),
+  v.literal("sent"),
+  v.literal("failed"),
+  v.literal("skipped"),
+);

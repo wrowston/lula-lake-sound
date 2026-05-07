@@ -12,6 +12,10 @@ import {
   faqQuestionRowValidator,
   gearScopeValidator,
   gearSpecsValidator,
+  outreachDraftBodyFormatValidator,
+  outreachLeadStatusValidator,
+  outreachSendJobStatusValidator,
+  outreachSendRecipientStatusValidator,
   pricingPackageRowValidator,
   settingsContentRowValidator,
 } from "./schema.shared";
@@ -252,4 +256,88 @@ export default defineSchema({
     .index("by_scope_and_stableId", ["scope", "stableId"])
     .index("by_videoStorageId", ["videoStorageId"])
     .index("by_thumbnailStorageId", ["thumbnailStorageId"]),
+
+  /**
+   * INF-132 — Optional membership rows for shared workspaces. Personal workspaces
+   * use `workspaceId === identity.tokenIdentifier` without a row.
+   */
+  outreachWorkspaceMembers: defineTable({
+    workspaceId: v.string(),
+    memberTokenIdentifier: v.string(),
+    createdAt: v.number(),
+  }).index("by_workspaceId_and_memberTokenIdentifier", [
+    "workspaceId",
+    "memberTokenIdentifier",
+  ]),
+
+  outreachLeads: defineTable({
+    workspaceId: v.string(),
+    name: v.string(),
+    company: v.optional(v.string()),
+    links: v.array(v.string()),
+    email: v.optional(v.string()),
+    phone: v.optional(v.string()),
+    source: v.string(),
+    status: outreachLeadStatusValidator,
+    createdAt: v.number(),
+    updatedAt: v.number(),
+    createdByTokenIdentifier: v.string(),
+  })
+    .index("by_workspaceId_and_status", ["workspaceId", "status"])
+    .index("by_workspaceId_and_createdByTokenIdentifier", [
+      "workspaceId",
+      "createdByTokenIdentifier",
+    ])
+    .index("by_workspaceId_and_createdAt", ["workspaceId", "createdAt"]),
+
+  outreachDrafts: defineTable({
+    workspaceId: v.string(),
+    leadId: v.id("outreachLeads"),
+    subject: v.string(),
+    body: v.string(),
+    bodyFormat: outreachDraftBodyFormatValidator,
+    version: v.number(),
+    agentRunRef: v.optional(v.string()),
+    createdAt: v.number(),
+    updatedAt: v.number(),
+    createdByTokenIdentifier: v.string(),
+  }).index("by_workspaceId_and_leadId", ["workspaceId", "leadId"]),
+
+  /**
+   * Send batch metadata. Recipient-level rows live in `outreachSendRecipients`
+   * so lead id lists are not unbounded arrays on one document.
+   */
+  outreachSendJobs: defineTable({
+    workspaceId: v.string(),
+    status: outreachSendJobStatusValidator,
+    createdAt: v.number(),
+    updatedAt: v.number(),
+    createdByTokenIdentifier: v.string(),
+  }).index("by_workspaceId_and_createdAt", ["workspaceId", "createdAt"]),
+
+  outreachSendRecipients: defineTable({
+    workspaceId: v.string(),
+    sendJobId: v.id("outreachSendJobs"),
+    leadId: v.id("outreachLeads"),
+    resendMessageId: v.optional(v.string()),
+    status: outreachSendRecipientStatusValidator,
+    error: v.optional(v.string()),
+    updatedAt: v.number(),
+  })
+    .index("by_workspaceId_and_sendJobId", ["workspaceId", "sendJobId"])
+    .index("by_workspaceId_and_sendJobId_and_leadId", [
+      "workspaceId",
+      "sendJobId",
+      "leadId",
+    ]),
+
+  outreachAuditLog: defineTable({
+    workspaceId: v.string(),
+    actorTokenIdentifier: v.string(),
+    action: v.string(),
+    entityType: v.string(),
+    entityId: v.string(),
+    details: v.optional(v.record(v.string(), v.string())),
+    createdAt: v.number(),
+  }).index("by_workspaceId_and_createdAt", ["workspaceId", "createdAt"]),
 });
