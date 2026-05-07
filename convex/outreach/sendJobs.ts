@@ -27,7 +27,19 @@ export const createWithRecipients = mutation({
     if (args.leadIds.length === 0) {
       return null;
     }
-    if (args.leadIds.length > MAX_LEADS_PER_JOB) {
+    const uniqueLeadIds = [...new Set(args.leadIds)];
+    if (uniqueLeadIds.length > MAX_LEADS_PER_JOB) {
+      return null;
+    }
+
+    const validLeadIds = [];
+    for (const leadId of uniqueLeadIds) {
+      const lead = await ctx.db.get(leadId);
+      if (lead !== null && lead.workspaceId === workspaceId) {
+        validLeadIds.push(leadId);
+      }
+    }
+    if (validLeadIds.length === 0) {
       return null;
     }
 
@@ -40,11 +52,7 @@ export const createWithRecipients = mutation({
       createdByTokenIdentifier: identity.tokenIdentifier,
     });
 
-    for (const leadId of args.leadIds) {
-      const lead = await ctx.db.get(leadId);
-      if (lead === null || lead.workspaceId !== workspaceId) {
-        continue;
-      }
+    for (const leadId of validLeadIds) {
       await ctx.db.insert("outreachSendRecipients", {
         workspaceId,
         sendJobId,
@@ -60,7 +68,7 @@ export const createWithRecipients = mutation({
       action: "send_job.created",
       entityType: "outreachSendJob",
       entityId: sendJobId,
-      details: { leadCount: String(args.leadIds.length) },
+      details: { leadCount: String(validLeadIds.length) },
     });
 
     return sendJobId;
@@ -143,7 +151,7 @@ export const updateRecipientOutcome = mutation({
           .eq("sendJobId", args.sendJobId)
           .eq("leadId", args.leadId),
       )
-      .unique();
+      .first();
 
     if (recipient === null) {
       return null;

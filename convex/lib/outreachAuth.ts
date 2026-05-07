@@ -24,7 +24,7 @@ async function assertMemberOfOutreachWorkspace(
         .eq("workspaceId", workspaceId)
         .eq("memberTokenIdentifier", memberTokenIdentifier),
     )
-    .unique();
+    .first();
   if (membership === null) {
     cmsUnauthorized(
       "You do not have access to this workspace.",

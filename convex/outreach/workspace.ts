@@ -14,6 +14,17 @@ export const grantMemberAccess = mutation({
   },
   handler: async (ctx, args) => {
     await requireCmsOwner(ctx);
+    const existing = await ctx.db
+      .query("outreachWorkspaceMembers")
+      .withIndex("by_workspaceId_and_memberTokenIdentifier", (q) =>
+        q
+          .eq("workspaceId", args.workspaceId)
+          .eq("memberTokenIdentifier", args.memberTokenIdentifier),
+      )
+      .first();
+    if (existing !== null) {
+      return null;
+    }
     const now = Date.now();
     await ctx.db.insert("outreachWorkspaceMembers", {
       workspaceId: args.workspaceId,
