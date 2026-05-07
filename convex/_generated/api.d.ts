@@ -41,6 +41,7 @@ import type * as gearLegacySeed from "../gearLegacySeed.js";
 import type * as gearPreviewDraft from "../gearPreviewDraft.js";
 import type * as gearTree from "../gearTree.js";
 import type * as inquiries from "../inquiries.js";
+import type * as inferencePartnersDashboard from "../inferencePartnersDashboard.js";
 import type * as lib_amenitiesUrl from "../lib/amenitiesUrl.js";
 import type * as lib_auth from "../lib/auth.js";
 import type * as lib_sentryConvex from "../lib/sentryConvex.js";
@@ -102,6 +103,7 @@ declare const fullApi: ApiFromModules<{
   gearPreviewDraft: typeof gearPreviewDraft;
   gearTree: typeof gearTree;
   inquiries: typeof inquiries;
+  inferencePartnersDashboard: typeof inferencePartnersDashboard;
   "lib/amenitiesUrl": typeof lib_amenitiesUrl;
   "lib/auth": typeof lib_auth;
   "lib/sentryConvex": typeof lib_sentryConvex;
