@@ -76,32 +76,3 @@ export async function resolveInferencePartnersDashboardIdentity(
   }
   return { kind: "ok" as const, identity };
 }
-
-/**
- * Inference Partners dashboard — Convex-side gate (JWT from Clerk).
- * When `INFERENCE_PARTNERS_TOKEN_IDENTIFIERS` is set on the deployment, only those
- * `identity.tokenIdentifier` values are allowed; when unset, any authenticated user passes.
- */
-export async function requireInferencePartnersUser(
-  ctx: QueryCtx | MutationCtx,
-) {
-  const resolved = await resolveInferencePartnersDashboardIdentity(ctx);
-  if (resolved.kind === "signed_out") {
-    cmsUnauthorized(
-      "Sign in required to access the Inference Partners dashboard.",
-      "sign_in_required",
-    );
-  }
-  if (resolved.kind === "forbidden") {
-    cmsUnauthorized(
-      "You do not have permission to access the Inference Partners dashboard.",
-      "forbidden",
-    );
-  }
-  const { identity } = resolved;
-  return {
-    identity,
-    userId: identity.subject,
-    updatedBy: identity.tokenIdentifier,
-  };
-}
