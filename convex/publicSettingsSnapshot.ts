@@ -164,6 +164,7 @@ function aboutSnapshotFromTree(tree: AboutTree): AboutSnapshot {
             id: m.stableId,
             name: m.name,
             title: m.title,
+            bio: m.bio ?? "",
             ...(m.storageId !== undefined
               ? { storageId: m.storageId as Id<"_storage"> }
               : {}),
@@ -222,6 +223,7 @@ export async function materializePublicAbout(
             id: m.id,
             name: m.name,
             title: m.title,
+            bio: m.bio ?? "",
             imageUrl:
               m.storageId !== undefined
                 ? await ctx.storage.getUrl(m.storageId)

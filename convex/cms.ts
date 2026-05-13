@@ -758,6 +758,7 @@ async function readSnapshotForAdmin(
               id: m.stableId,
               name: m.name,
               title: m.title,
+              bio: m.bio ?? "",
               ...(m.storageId !== undefined ? { storageId: m.storageId } : {}),
             })),
           }
@@ -848,6 +849,7 @@ async function replaceAboutDraftFromSnapshot(
       stableId: m.id,
       name: m.name,
       title: m.title,
+      bio: m.bio ?? "",
       ...(m.storageId !== undefined ? { storageId: m.storageId } : {}),
       sort: index,
     })),

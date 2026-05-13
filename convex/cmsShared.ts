@@ -54,6 +54,7 @@ export type PublicAboutTeamMember = {
   id: string;
   name: string;
   title: string;
+  bio: string;
   imageUrl: string | null;
 };
 

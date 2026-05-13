@@ -130,6 +130,7 @@ export const aboutTeamMemberValidator = v.object({
   id: v.string(),
   name: v.string(),
   title: v.string(),
+  bio: v.optional(v.string()),
   /** Required to publish; optional while drafting so rows can be added before upload. */
   storageId: v.optional(v.id("_storage")),
 });
@@ -266,6 +267,7 @@ export const aboutTeamMemberRowValidator = {
   stableId: v.string(),
   name: v.string(),
   title: v.string(),
+  bio: v.optional(v.string()),
   storageId: v.optional(v.id("_storage")),
   sort: v.number(),
 } as const;

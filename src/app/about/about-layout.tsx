@@ -85,6 +85,7 @@ interface HeadshotProps {
 
 function Headshot({ member, fallbackRole }: HeadshotProps) {
   const role = member?.title ?? fallbackRole;
+  const bio = member?.bio.trim();
   return (
     <div className="flex flex-col items-center">
       <div className="relative aspect-square w-full max-w-[220px] overflow-hidden rounded-full border border-sand/10 bg-charcoal/40">
@@ -110,13 +111,18 @@ function Headshot({ member, fallbackRole }: HeadshotProps) {
           </div>
         )}
       </div>
-      <div className="mt-5 text-center">
+      <div className="mt-5 max-w-xs text-center">
         {member?.name ? (
           <p className="headline-secondary text-ivory text-lg">{member.name}</p>
         ) : null}
         <p className="label-text text-sand/60 text-[10px] tracking-[0.2em] mt-1">
           {role}
         </p>
+        {bio ? (
+          <p className="body-text-small mt-4 text-sm leading-[1.7] text-ivory/60">
+            {bio}
+          </p>
+        ) : null}
       </div>
     </div>
   );
