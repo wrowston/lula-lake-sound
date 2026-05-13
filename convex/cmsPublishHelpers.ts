@@ -259,6 +259,12 @@ async function collectAboutIssuesFromTree(
           message: `${who} needs a title.`,
         });
       }
+      if ((team[i].bio ?? "").trim().length === 0) {
+        issues.push({
+          path: `${base}.bio`,
+          message: `${who} needs a short bio.`,
+        });
+      }
       if (team[i].storageId === undefined) {
         issues.push({
           path: `${base}.storageId`,

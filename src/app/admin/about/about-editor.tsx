@@ -65,6 +65,7 @@ export type AboutTeamMemberRow = {
   id: string;
   name: string;
   title: string;
+  bio: string;
   storageId?: Id<"_storage">;
 };
 
@@ -205,6 +206,7 @@ export function toAboutContent(raw: unknown): AboutContent {
           id: m.id,
           name: m.name,
           title: m.title,
+          bio: typeof m.bio === "string" ? m.bio : "",
           ...(m.storageId !== undefined ? { storageId: m.storageId } : {}),
         }))
     : [];
@@ -292,6 +294,12 @@ export function collectAboutIssues(
         issues.push({
           path: `${base}.title`,
           message: `${who} needs a title.`,
+        });
+      }
+      if (team[i].bio.trim().length === 0) {
+        issues.push({
+          path: `${base}.bio`,
+          message: `${who} needs a short bio.`,
         });
       }
       if (team[i].storageId === undefined) {
@@ -582,6 +590,7 @@ function AboutForm() {
                 id: m.id,
                 name: m.name,
                 title: m.title,
+                bio: m.bio,
                 ...(m.storageId !== undefined ? { storageId: m.storageId } : {}),
               })),
             },
@@ -1336,7 +1345,7 @@ const TeamMembersEditor = memo(function TeamMembersEditor({
     if (members.length >= MAX_TEAM_MEMBERS) return;
     onChange([
       ...members,
-      { id: crypto.randomUUID(), name: "", title: "" },
+      { id: crypto.randomUUID(), name: "", title: "", bio: "" },
     ]);
   };
 
@@ -1354,7 +1363,7 @@ const TeamMembersEditor = memo(function TeamMembersEditor({
 
   const updateField = (
     idx: number,
-    field: "name" | "title",
+    field: "name" | "title" | "bio",
     value: string,
   ) => {
     const next = [...members];
@@ -1389,6 +1398,7 @@ const TeamMembersEditor = memo(function TeamMembersEditor({
       id: cur.id,
       name: cur.name,
       title: cur.title,
+      bio: cur.bio,
     };
     onChange(next);
     toast.success("Photo removed.");
@@ -1445,6 +1455,17 @@ const TeamMembersEditor = memo(function TeamMembersEditor({
                       onChange={(e) => updateField(idx, "title", e.target.value)}
                       placeholder="Engineer / Producer"
                       className="text-foreground placeholder:text-muted-foreground"
+                    />
+                  </label>
+                  <label className="block space-y-1">
+                    <span className="body-text-small text-muted-foreground">
+                      Short bio
+                    </span>
+                    <Textarea
+                      value={m.bio}
+                      onChange={(e) => updateField(idx, "bio", e.target.value)}
+                      placeholder="A few sentences about this person's role, creative background, or studio focus."
+                      className="min-h-24 text-foreground placeholder:text-muted-foreground"
                     />
                   </label>
                   <div className="flex flex-wrap items-center gap-2">

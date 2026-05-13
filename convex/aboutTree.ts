@@ -28,6 +28,7 @@ export type AboutTeamMemberInput = {
   stableId: string;
   name: string;
   title: string;
+  bio: string;
   storageId?: Id<"_storage">;
   sort: number;
 };
@@ -137,6 +138,7 @@ export function normalizeAboutTreeForCompare(tree: AboutTree): unknown {
       stableId: m.stableId,
       name: m.name,
       title: m.title,
+      bio: m.bio ?? "",
       storageId: m.storageId ?? null,
       sort: m.sort,
     }));
@@ -246,6 +248,7 @@ export async function copyAboutScope(
       stableId: m.stableId,
       name: m.name,
       title: m.title,
+      bio: m.bio ?? "",
       ...(m.storageId !== undefined ? { storageId: m.storageId } : {}),
       sort: m.sort,
     });
@@ -308,6 +311,7 @@ export async function replaceAboutDraftTree(
       stableId: m.stableId,
       name: m.name,
       title: m.title,
+      bio: m.bio,
       ...(m.storageId !== undefined ? { storageId: m.storageId } : {}),
       sort: m.sort,
     });

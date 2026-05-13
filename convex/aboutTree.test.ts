@@ -46,6 +46,7 @@ function member(patch: Partial<TeamMemberDoc> = {}): TeamMemberDoc {
     stableId: "m1",
     name: "Alice",
     title: "Engineer",
+    bio: "Builds records.",
     sort: 0,
     ...patch,
   } as TeamMemberDoc;
@@ -110,6 +111,16 @@ describe("normalizeAboutTreeForCompare", () => {
     };
     expect(shape.teamMembers[0].storageId).toBeNull();
   });
+
+  test("team members normalize missing legacy bio to empty string", () => {
+    const tree = emptyTree({
+      teamMembers: [member({ bio: undefined } as Partial<TeamMemberDoc>)],
+    });
+    const shape = normalizeAboutTreeForCompare(tree) as {
+      teamMembers: { bio: string }[];
+    };
+    expect(shape.teamMembers[0].bio).toBe("");
+  });
 });
 
 describe("aboutDraftMatchesPublished", () => {
@@ -132,6 +143,20 @@ describe("aboutDraftMatchesPublished", () => {
   test("mismatched heroTitle is not equal", () => {
     const a: AboutTree = { content: contentDoc({ heroTitle: "A" }), highlights: [], teamMembers: [] };
     const b: AboutTree = { content: contentDoc({ heroTitle: "B" }), highlights: [], teamMembers: [] };
+    expect(aboutDraftMatchesPublished(a, b)).toBe(false);
+  });
+
+  test("mismatched team member bio is not equal", () => {
+    const a: AboutTree = {
+      content: null,
+      highlights: [],
+      teamMembers: [member({ bio: "Runs the room." })],
+    };
+    const b: AboutTree = {
+      content: null,
+      highlights: [],
+      teamMembers: [member({ bio: "Designs the sound." })],
+    };
     expect(aboutDraftMatchesPublished(a, b)).toBe(false);
   });
 

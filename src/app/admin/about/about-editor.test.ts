@@ -115,14 +115,24 @@ describe("toAboutContent", () => {
     const c = toAboutContent({
       heroTitle: "Hi",
       teamMembers: [
-        { id: "a", name: "Alice", title: "Engineer" },
+        { id: "a", name: "Alice", title: "Engineer", bio: "Builds records." },
         { id: "b" },
         null,
         { id: "c", name: 1, title: "x" },
       ],
     });
     expect(c.teamMembers).toEqual([
-      { id: "a", name: "Alice", title: "Engineer" },
+      { id: "a", name: "Alice", title: "Engineer", bio: "Builds records." },
+    ]);
+  });
+
+  test("defaults missing legacy team member bio to an empty string", () => {
+    const c = toAboutContent({
+      heroTitle: "Hi",
+      teamMembers: [{ id: "a", name: "Alice", title: "Engineer" }],
+    });
+    expect(c.teamMembers).toEqual([
+      { id: "a", name: "Alice", title: "Engineer", bio: "" },
     ]);
   });
 
@@ -177,14 +187,15 @@ describe("collectAboutIssues", () => {
     expect(issues.some((i) => i.path === "highlights[0]")).toBe(false);
   });
 
-  test("team member missing storageId / name / title reported", () => {
+  test("team member missing storageId / name / title / bio reported", () => {
     const team: AboutTeamMemberRow[] = [
-      { id: "a", name: "", title: "" },
+      { id: "a", name: "", title: "", bio: "" },
     ];
     const issues = collectAboutIssues(content({ teamMembers: team }));
     const paths = issues.map((i) => i.path);
     expect(paths).toContain("teamMembers[0].name");
     expect(paths).toContain("teamMembers[0].title");
+    expect(paths).toContain("teamMembers[0].bio");
     expect(paths).toContain("teamMembers[0].storageId");
   });
 
@@ -193,6 +204,7 @@ describe("collectAboutIssues", () => {
       id: `p-${i}`,
       name: `N${i}`,
       title: "T",
+      bio: "Short bio",
       storageId: "st-x" as never,
     }));
     const issues = collectAboutIssues(content({ teamMembers: team }));
