@@ -85,7 +85,7 @@ interface HeadshotProps {
 
 function Headshot({ member, fallbackRole }: HeadshotProps) {
   const role = member?.title ?? fallbackRole;
-  const bio = member?.bio.trim();
+  const bio = member?.bio?.trim();
   return (
     <div className="flex flex-col items-center">
       <div className="relative aspect-square w-full max-w-[220px] overflow-hidden rounded-full border border-sand/10 bg-charcoal/40">
